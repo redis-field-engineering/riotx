@@ -32,6 +32,7 @@ asciidoctor {
       file("$outputDir/index.pdf").
               renameTo("$outputDir/riotx-${project.version}.pdf")
     }
+    dependsOn ':aggregateCopyDocFiles'
 }
 
 eclipse {
