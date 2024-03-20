@@ -1,0 +1,117 @@
+config {
+    info {
+        description = 'RIOTX'
+        inceptionYear = '2024'
+        vendor = 'Redis'
+        tags = ['redis', 'tool', 'import', 'export', 'replication', 'enterprise']
+
+        links {
+            website      = "https://github.com/redis-field-engineering/${project.rootProject.name}"
+            issueTracker = "https://github.com/redis-field-engineering/${project.rootProject.name}/issues"
+            scm          = "https://github.com/redis-field-engineering/${project.rootProject.name}.git"
+        }
+
+        scm {
+            url                 = "https://github.com/redis-field-engineering/${project.rootProject.name}"
+            connection          = "scm:git:https://github.com/redis-field-engineering/${project.rootProject.name}.git"
+            developerConnection = "scm:git:git@github.com:redis-field-engineering/${project.rootProject.name}.git"
+        }
+
+        specification {
+            enabled = true
+        }
+
+        implementation {
+            enabled = true
+        }
+        
+        people {
+            person {
+                id    = 'jruaux'
+                name  = 'Julien Ruaux'
+                roles = ['developer', 'author']
+            }
+        }
+    }
+
+    docs {
+        javadoc {
+            enabled = false
+        }
+    }
+
+    coverage {
+        jacoco {
+            enabled = true
+            toolVersion = jacocoVersion
+        }
+    }
+    
+    licensing {
+        enabled = false
+    }
+}
+
+allprojects {
+    repositories {
+        mavenLocal()
+        gradlePluginPortal()
+    }
+
+    tasks.withType(GenerateModuleMetadata) {
+        enabled = false
+    }
+
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+    }
+}
+
+subprojects { subproj ->
+    if (!subproj.name.contains('guide')) {
+    
+        config {
+	        info {
+	            description = project.project_description
+	        }
+	    }
+	
+	    license {
+	        exclude('build/**')
+	    }
+
+	    dependencies {
+            testImplementation 'org.junit.jupiter:junit-jupiter-api'
+            testImplementation 'org.junit.jupiter:junit-jupiter-params'
+            testImplementation 'org.junit.jupiter:junit-jupiter-engine'
+            testImplementation 'org.junit.platform:junit-platform-launcher'
+            testImplementation 'org.testcontainers:junit-jupiter'
+            testImplementation 'org.slf4j:slf4j-simple'
+	        testImplementation group: 'com.redis', name: 'testcontainers-redis', version: testcontainersRedisVersion
+	    }
+	
+	    test {
+	        useJUnitPlatform()
+	    }
+
+	    configurations {
+	        all*.exclude module: 'spring-boot-starter-logging'
+	    }
+	    
+	}
+}
+
+subprojects { p ->
+    config {
+        coverage {
+            jacoco {
+                enabled = hasTestsAt(p.file('src/test'))
+		        toolVersion = jacocoVersion
+            }
+        }
+    }
+}
+
+boolean hasTestsAt(File testDir) {
+    testDir.exists() && testDir.listFiles()?.size()
+}

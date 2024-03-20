@@ -1,0 +1,129 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+
+permissions:
+  actions: write
+  id-token: write
+  contents: write
+
+jobs:
+  precheck:
+    name: Precheck
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.vars.outputs.VERSION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Version
+        id: vars
+        shell: bash
+        run: |
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          echo ${{ github.event.inputs.version }} > VERSION
+          git add VERSION
+          sed -i -e "s/^\:project-version\:\ .*/:project-version: ${{ github.event.inputs.version }}/g" README.adoc
+          git config --global user.email "${{ secrets.COMMIT_EMAIL }}"
+          git config --global user.name "Julien Ruaux"
+          git commit -a -m "Releasing version ${{ github.event.inputs.version }}"
+          git push origin main
+
+  jlink:
+    name: Jlink
+    needs: [precheck]
+    uses: redis-field-engineering/riotx/.github/workflows/step-jlink.yml@main
+    with:
+      project-version: ${{ needs.precheck.outputs.version }}
+    secrets:
+      gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+  release:
+    name: Release
+    needs: [precheck, jlink]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts
+          path: plugins/riotx/build
+
+      - name: Download repos
+        uses: actions/download-artifact@v4
+        with:
+          name: repos
+          path: build/repos/local/release
+
+      - name: Download docs
+        uses: actions/download-artifact@v4
+        with:
+          name: docs
+          path: docs/guide/build/guide
+
+      - name: Download jlink
+        uses: actions/download-artifact@v4
+        with:
+          name: jlink
+          path: out/jreleaser/assemble/riotx-standalone/jlink
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          distribution: ${{ vars.JAVA_DISTRO }}
+          cache: gradle
+
+      - name: Deploy
+        env:
+          GRGIT_USER: ${{ secrets.GIT_USER }}
+          GRGIT_PASS: ${{ secrets.GIT_ACCESS_TOKEN }}
+        run: |
+          ./gradlew -Prelease=true -PreproducibleBuild=true publish gitPublishPush -S
+
+      - name: Upload deploy artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 7
+          name: deploy
+          path: |
+            build/repos/local/release/
+
+      - name: Release
+        uses: jreleaser/release-action@v2
+        with:
+          version: latest
+          arguments: full-release
+        env:
+          JRELEASER_PROJECT_VERSION: ${{ needs.precheck.outputs.version }}
+          JRELEASER_GITHUB_TOKEN: ${{ secrets.GIT_ACCESS_TOKEN }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
+          JRELEASER_DOCKER_DEFAULT_PASSWORD: ${{ secrets.JRELEASER_DOCKER_PASSWORD }}
+          JRELEASER_SDKMAN_CONSUMER_KEY: ${{ secrets.SDKMAN_CONSUMER_KEY }}
+          JRELEASER_SDKMAN_CONSUMER_TOKEN: ${{ secrets.SDKMAN_CONSUMER_TOKEN }}
+          JRELEASER_NEXUS2_MAVEN_CENTRAL_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          JRELEASER_NEXUS2_MAVEN_CENTRAL_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          JRELEASER_SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: JReleaser release output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jreleaser-release
+          path: |
+            out/jreleaser/trace.log
+            out/jreleaser/output.properties

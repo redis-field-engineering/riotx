@@ -1,0 +1,55 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+
+permissions:
+  actions: write
+  id-token: write
+  contents: write
+
+jobs:
+  precheck:
+    name: Precheck
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.vars.outputs.VERSION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+  publish:
+    name: Publish
+    needs: [precheck]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Version
+        id: vars
+        shell: bash
+        run: |
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          echo ${{ github.event.inputs.version }} > VERSION
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          distribution: ${{ vars.JAVA_DISTRO }}
+          cache: gradle
+
+      - name: Deploy
+        env:
+          GRGIT_USER: ${{ secrets.GIT_USER }}
+          GRGIT_PASS: ${{ secrets.GIT_ACCESS_TOKEN }}
+        run: |
+          ./gradlew -Prelease=true -PreproducibleBuild=true gitPublishPush -S

@@ -1,0 +1,33 @@
+name: X-Precheck
+
+on:
+  workflow_call:
+    outputs:
+      version:
+        description: version
+        value: ${{ jobs.precheck.outputs.version }}
+
+permissions:
+  contents: read
+
+jobs:
+  precheck:
+    name: Precheck
+    if: github.repository == 'redis-field-engineering/riotx' && startsWith(github.event.head_commit.message, 'Releasing version') != true
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.vars.outputs.VERSION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cancel previous run
+        uses: styfle/cancel-workflow-action@0.12.1
+        with:
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Version
+        id: vars
+        shell: bash
+        run: |
+          echo "VERSION=$(cat VERSION)" >> $GITHUB_OUTPUT

@@ -1,0 +1,136 @@
+plugins {
+    id 'application'
+    id 'org.jreleaser.jdks'
+}
+
+application {
+    applicationName = 'riotx'
+    mainClass       = 'com.redis.riotx.cli.Main'
+}
+
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+    archiveClassifier = ''
+    manifest {
+        attributes([
+            'Main-Class': 'com.redis.riotx.cli.Main',
+            'Automatic-Module-Name': project.findProperty('automatic.module.name')
+        ])
+    }
+}
+
+startScripts {
+    classpath = files('$APP_HOME/lib/*')
+}
+
+config {
+    info {
+        specification { enabled = true }
+    }
+    licensing {
+        enabled = false
+    }
+}
+
+dependencies {
+    api project(':riotx-core')
+    api group: 'info.picocli', name: 'picocli', version: picocliVersion
+    annotationProcessor group: 'info.picocli', name: 'picocli-codegen', version: picocliVersion
+    implementation group: 'me.tongfei', name: 'progressbar', version: progressbarVersion
+    implementation 'org.slf4j:slf4j-simple'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml'
+    implementation 'com.mysql:mysql-connector-j'
+    implementation 'org.postgresql:postgresql'
+    implementation 'org.springframework:spring-oxm'
+    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    testImplementation group: 'com.redis', name: 'spring-batch-redis', version: springBatchRedisVersion, classifier: 'tests'
+    testImplementation 'org.awaitility:awaitility'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:oracle-xe'
+    testImplementation 'org.springframework.boot:spring-boot-autoconfigure'
+    testImplementation 'org.hsqldb:hsqldb'
+}
+
+distributions {
+    main {
+        contents {
+            from('../..') {
+                include 'LICENSE'
+                include 'VERSION'
+            }
+        }
+    }
+}
+
+jdks {
+    zulu17Linux {
+        platform = 'linux-x86_64'
+        url = 'https://cdn.azul.com/zulu/bin/zulu17.32.13-ca-jdk17.0.2-linux_x64.zip'
+        checksum = '7668ebaecc81041d8d1e79e857552887f56c445ef4c6e8d634007b7b67f5a1d3'
+    }
+    zulu17LinuxArm {
+        platform = 'linux-aarch64'
+        url = 'https://cdn.azul.com/zulu/bin/zulu17.32.13-ca-jdk17.0.2-linux_aarch64.tar.gz'
+        checksum = '2b8066bbdbc5cff422bb6b6db1b8f8d362b576340cce8492f1255502af632b06'
+    }
+    zulu17LinuxMusl {
+        platform = 'linux_musl-x86_64'
+        url = 'https://cdn.azul.com/zulu/bin/zulu17.32.13-ca-jdk17.0.2-linux_musl_x64.tar.gz'
+        checksum = 'bcc5342011bd9f3643372aadbdfa68d47463ff0d8621668a0bdf2910614d95c6'
+    }
+    zulu17LinuxMuslArm {
+        platform = 'linux_musl-aarch64'
+        url = 'https://cdn.azul.com/zulu/bin/zulu17.32.13-ca-jdk17.0.2-linux_musl_aarch64.tar.gz'
+        checksum = '6b920559abafbe9bdef386a20ecf3a2f318bc1f0d8359eb1f95aee26606bbc70'
+    }
+    zulu17Windows {
+        platform = 'windows-x86_64'
+        url = 'https://cdn.azul.com/zulu/bin/zulu17.32.13-ca-jdk17.0.2-win_x64.zip'
+        checksum = 'e965aa0ea7a0661a3446cf8f10ee00684b851f883b803315289f26b4aa907fdb'
+    }
+    zulu17WindowsArm {
+        platform = 'windows-aarch64'
+        url = 'https://cdn.azul.com/zulu/bin/zulu17.32.13-ca-jdk17.0.2-win_aarch64.zip'
+        checksum = '1a9d4ab3b52ce3db7354691163e5a36979af9c37d80c3c490c12af07de21d8f3'
+    }
+    zulu17Osx {
+        platform = 'osx-x86_64'
+        url = 'https://cdn.azul.com/zulu/bin/zulu17.32.13-ca-jdk17.0.2-macosx_x64.zip'
+        checksum = 'f75fe30aced4fbee8db108fbb123b3af328503a2af46e173cbe43613b995e492'
+    }
+    zulu17OsxArm {
+        platform = 'osx-aarch64'
+        url = 'https://cdn.azul.com/zulu/bin/zulu17.32.13-ca-jdk17.0.2-macosx_aarch64.zip'
+        checksum = '8c287018d358ec2c43995bf09a0cdaa235f0bdd434673777a564daee2c3872df'
+    }
+}
+
+bootStartScripts.dependsOn jar
+
+afterEvaluate {
+    def copyJdksToCache = project.tasks.findByName('copyJdksToCache')
+    ['zulu17Linux', 'zulu17LinuxArm', 'zulu17LinuxMusl', 'zulu17LinuxMuslArm',
+     'zulu17Windows', 'zulu17WindowsArm', 'zulu17Osx', 'zulu17OsxArm'].each { jdk ->
+        def copyTask = project.tasks.findByName('copyJdkFromCache' + jdk.capitalize())
+        if (copyJdksToCache && copyTask) copyTask.dependsOn(copyJdksToCache)
+    }
+}
+
+mainClassName = "com.redis.riotx.cli.Main"
+
+eclipse {
+    project {
+        name = 'riotx-cli'
+    }
+}
+
+task copyRuntimeDependencies(type: Copy) {
+    into "$buildDir/dependencies/flat"
+    from configurations.runtimeClasspath
+}
+
+assemble.dependsOn(copyRuntimeDependencies)

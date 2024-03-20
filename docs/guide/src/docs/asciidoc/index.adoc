@@ -1,0 +1,10 @@
+= {project-title}
+Julien Ruaux
+:title-logo-image: image:riotx.svg[]
+:author: {project-author}
+:revnumber: {project-version}
+:toclevels: 2
+:docinfo1:
+
+include::{includedir}/_links.adoc[]
+

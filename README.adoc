@@ -1,0 +1,27 @@
+:linkattrs:
+:project-owner:   redis-field-engineering
+:project-name:    riotx
+:project-group:   com.redis
+:project-version: 0.1.0-SNAPSHOT
+:project-title:   RIOTX
+
+image::docs/guide/images/riotx.svg[RIOTX]
+
+---
+
+{project-title} is a RIOT extension designed to help enterprises get data in and out of Redis.
+
+== Documentation
+
+== Support
+
+{project-title} is supported by Redis, Inc.
+
+== Badges
+image:https://img.shields.io/github/release/{project-owner}/{project-name}.svg["Latest", link="https://github.com/{project-owner}/{project-name}/releases/latest"]
+image:https://codecov.io/gh/{project-owner}/{project-name}/branch/master/graph/badge.svg?token=LDK7BAJLJI["Coverage", link="https://codecov.io/gh/{project-owner}/{project-name}"]
+
+== License
+
+{project-title} is licensed under the Apache 2.0 License.
+Copyright (C) 2023 Redis, Inc.

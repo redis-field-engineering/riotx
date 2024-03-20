@@ -1,0 +1,116 @@
+name: X-Jlink
+
+on:
+  workflow_call:
+    inputs:
+      project-version:
+        required: true
+        type: string
+    secrets:
+      gpg-passphrase:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  jlink:
+    name: Jlink
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ vars.JAVA_VERSION }}
+          distribution: ${{ vars.JAVA_DISTRO }}
+          cache: gradle
+
+      - name: Version
+        if: endsWith(${{ inputs.project-version }}, '-SNAPSHOT') != true
+        run: |
+          echo ${{ inputs.project-version }} > VERSION
+
+      - name: Build
+        run: ./gradlew -Prelease=true -PreproducibleBuild=true build aggregateTestReports aggregateJacocoReport publish :guide:createGuide -S
+        
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            build/reports/aggregate-tests/
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Jlink
+        uses: jreleaser/release-action@v2
+        with:
+          version: early-access
+          arguments: assemble --assembler jlink
+          setup-java: false
+        env:
+          JRELEASER_PROJECT_VERSION: ${{ inputs.project-version }}
+
+      - name: JReleaser output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: riotx-jlink
+          path: |
+            out/jreleaser/trace.log
+            out/jreleaser/output.properties
+
+      - name: Dependencies
+        run: |
+          ls -l plugins/riotx/build/dependencies/flat
+          
+      - name: Upload repos
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 1
+          name: repos
+          path: |
+            build/repos/local/release
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 1
+          name: artifacts
+          path: |
+            plugins/riotx/build/libs/
+            plugins/riotx/build/dependencies/
+            plugins/riotx/build/distributions/
+            
+      - name: Upload docs
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 1
+          name: docs
+          path: |
+            docs/guide/build/guide/
+
+      - name: Stop Gradle daemon
+        shell: bash
+        run: ./gradlew -stop
+
+      - name: Upload jlink
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 1
+          name: jlink
+          path: |
+            out/jreleaser/assemble/riotx-standalone/jlink/*.zip
