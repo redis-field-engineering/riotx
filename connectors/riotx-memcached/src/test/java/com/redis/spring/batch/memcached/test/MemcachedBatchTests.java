@@ -80,7 +80,7 @@ public class MemcachedBatchTests {
 		actualEntries.forEach(e -> {
 			MemcachedEntry entry = entries.get(e.getKey());
 			Assertions.assertArrayEquals(entry.getValue(), e.getValue());
-			Assertions.assertEquals(startTime + entry.getExpiration(), e.getExpiration(), 30);
+			Assertions.assertTrue(Math.abs(startTime + entry.getExpiration() - e.getExpiration()) < 30);
 		});
 		reader.close();
 	}
