@@ -14,7 +14,7 @@ project:
   authors:
     - Julien Ruaux
   license: Apache-2.0
-  inceptionYear: '2020'
+  inceptionYear: '2024'
   stereotype: CLI
   vendor: Redis
   icons:
@@ -25,16 +25,8 @@ project:
     groupId: com.redis
     version: '21'
     multiProject: true
-    mainClass: com.redis.riotx.cli.Main
-  tags:
-    - 'riotx'
-    - 'redis'
-    - 'input'
-    - 'output'
-    - 'tool'
-    - 'data'
-    - 'import'
-    - 'export'
+    mainClass: com.redis.riotx.Main
+  tags: ['riotx', 'redis', 'enterprise', 'cloud', 'input', 'output', 'tool', 'data', 'import', 'export']
 
 platform:
   replacements:
@@ -101,15 +93,10 @@ signing:
 
 deploy:
   maven:
-    nexus2:
-      maven-central:
+    github:
+      riotx:
         active: ALWAYS
-        url: https://s01.oss.sonatype.org/service/local
-        snapshotUrl: https://s01.oss.sonatype.org/content/repositories/snapshots/
-        closeRepository: true
-        releaseRepository: true
-        stagingRepositories:
-          - build/repos/local/release
+        url: https://maven.pkg.github.com/redis
 
 announce:
   slack:
@@ -165,95 +152,6 @@ assemble:
       jars:
         - pattern: 'plugins/riotx/build/dependencies/flat/*.jar'
 
-distributions:
-  riotx:
-    brew:
-      active: ALWAYS
-      continueOnError: true
-      formulaName: riotx
-      multiPlatform: true
-      repository:
-        active: RELEASE
-        commitMessage: 'riotx {{tagName}}'  
-    docker:
-      active: ALWAYS
-      continueOnError: true
-      repository:
-        active: ALWAYS
-        commitMessage: 'riotx {{tagName}}'
-      registries:
-        - serverName: DEFAULT
-          username: jrdx
-          repositoryName: fieldengineering
-      labels:
-        'org.opencontainers.image.title': 'riotx'
-      imageNames:
-        - 'fieldengineering/{{distributionName}}:{{tagName}}'
-        - 'fieldengineering/{{distributionName}}:latest'
-      buildx:
-        enabled: true
-        platforms:
-          - 'linux/amd64'
-          - 'linux/arm64'
-    jbang:
-      active: ALWAYS
-      continueOnError: true
-      alias: riotx
-    macports:
-      active: ALWAYS
-      continueOnError: true
-      categories:
-        - redis
-        - tool
-      maintainers:
-        - '@jruaux'
-      repository:
-        active: RELEASE
-        name: riotx-macports
-    scoop:
-      active: ALWAYS
-      continueOnError: true
-      repository:
-        active: RELEASE
-        commitMessage: 'riotx {{tagName}}'
-    snap:
-      active: RELEASE
-      continueOnError: true
-      remoteBuild: true
-      base: core18
-      architectures:
-        - buildOn: [ amd64, arm64 ]
-      plugs:
-        - name: dot-config-files
-          attributes:
-            interface: personal-files
-          writes:
-            - $HOME/.riotx
-      localPlugs:
-        - network
-        - home
-    artifacts:
-      - path: plugins/{{distributionName}}/build/distributions/{{distributionName}}-{{projectVersion}}.zip
-        transform: '{{distributionName}}/{{distributionName}}-{{projectEffectiveVersion}}.zip'
-        extraProperties:
-          skipSpec: 'true'
-      - path: plugins/{{distributionName}}/build/distributions/{{distributionName}}-{{projectVersion}}.tar
-        transform: '{{distributionName}}/{{distributionName}}-{{projectEffectiveVersion}}.tar'
-        extraProperties:
-          skipFlatpak: 'true'
-
-  riotx-standalone:
-    appImage:
-      active: NEVER
-      componentId: com.redis.riotx.cli
-      developerName: Redis
-      categories:
-        - Development
-      repository:
-        active: RELEASE
-        name: riotx-appimage
-        commitMessage: 'riotx {{tagName}}'
-
 files:
   artifacts:
     - path: VERSION
@@ -261,5 +159,3 @@ files:
         skipChecksum: 'true'
         skipSigning: 'true'
         skipSbom: 'true'
-    - path: docs/guide/build/guide/{{projectName}}-{{projectVersion}}.pdf
-      transform: '{{projectName}}-{{projectEffectiveVersion}}.pdf'
