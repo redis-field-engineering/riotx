@@ -5,13 +5,13 @@ plugins {
 
 application {
     applicationName = 'riotx'
-    mainClass       = 'com.redis.riotx.cli.Main'
+    mainClass       = 'com.redis.riotx.Main'
 }
 
 jar {
     manifest {
         attributes([
-            'Main-Class': 'com.redis.riotx.cli.Main',
+            'Main-Class': 'com.redis.riotx.Main',
             'Automatic-Module-Name': project.findProperty('automatic.module.name')
         ])
     }
@@ -22,22 +22,18 @@ startScripts {
 }
 
 dependencies {
-    api project(':riotx-core')
+    implementation group: 'com.redis', name: 'riot', version: riotVersion
+    implementation group: 'com.redis', name: 'riot-core', version: riotVersion
+    implementation group: 'com.redis', name: 'spring-batch-memcached', version: springBatchRedisVersion
     api group: 'info.picocli', name: 'picocli', version: picocliVersion
     annotationProcessor group: 'info.picocli', name: 'picocli-codegen', version: picocliVersion
-    implementation group: 'me.tongfei', name: 'progressbar', version: progressbarVersion
-    implementation 'org.slf4j:slf4j-simple'
-    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml'
-    implementation 'com.mysql:mysql-connector-j'
-    implementation 'org.postgresql:postgresql'
-    implementation 'org.springframework:spring-oxm'
-    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc'
-    testImplementation group: 'com.redis', name: 'spring-batch-redis', version: springBatchRedisVersion, classifier: 'tests'
     testImplementation 'org.awaitility:awaitility'
-    testImplementation 'org.testcontainers:postgresql'
-    testImplementation 'org.testcontainers:oracle-xe'
+    testImplementation 'io.micrometer:micrometer-core'
     testImplementation 'org.springframework.boot:spring-boot-autoconfigure'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.batch:spring-batch-test'
     testImplementation 'org.hsqldb:hsqldb'
+    testImplementation group: 'com.redis', name: 'testcontainers-memcached', version: testcontainersRedisVersion
 }
 
 distributions {
@@ -105,13 +101,7 @@ afterEvaluate {
     }
 }
 
-mainClassName = "com.redis.riotx.cli.Main"
-
-eclipse {
-    project {
-        name = 'riotx-cli'
-    }
-}
+mainClassName = "com.redis.riotx.Main"
 
 task copyRuntimeDependencies(type: Copy) {
     into "$buildDir/dependencies/flat"
