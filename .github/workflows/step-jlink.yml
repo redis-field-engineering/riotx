@@ -7,6 +7,8 @@ on:
         required: true
         type: string
     secrets:
+      codecov-token:
+        required: false
       gpg-passphrase:
         required: true
 
@@ -38,7 +40,7 @@ jobs:
           echo ${{ inputs.project-version }} > VERSION
 
       - name: Build
-        run: ./gradlew -Prelease=true -PreproducibleBuild=true build aggregateTestReports aggregateJacocoReport publish :guide:createGuide -S
+        run: ./gradlew -Prelease=true -PreproducibleBuild=true build aggregateTestReports aggregateJacocoReport publish -S
         
       - name: Upload test reports
         if: failure()
@@ -50,10 +52,8 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
         env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          CODECOV_TOKEN: ${{ secrets.codecov-token }}
 
       - name: Jlink
         uses: jreleaser/release-action@v2
@@ -94,14 +94,6 @@ jobs:
             plugins/riotx/build/libs/
             plugins/riotx/build/dependencies/
             plugins/riotx/build/distributions/
-            
-      - name: Upload docs
-        uses: actions/upload-artifact@v4
-        with:
-          retention-days: 1
-          name: docs
-          path: |
-            docs/guide/build/guide/
 
       - name: Stop Gradle daemon
         shell: bash

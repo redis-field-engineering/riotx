@@ -23,6 +23,7 @@ jobs:
     with:
       project-version: ${{ needs.precheck.outputs.version }}
     secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
       gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
   release:
@@ -47,12 +48,6 @@ jobs:
           name: repos
           path: build/repos/local/release
 
-      - name: Download docs
-        uses: actions/download-artifact@v4
-        with:
-          name: docs
-          path: docs/guide/build/guide
-
       - name: Download jlink
         uses: actions/download-artifact@v4
         with:
@@ -76,6 +71,7 @@ jobs:
           JRELEASER_NEXUS2_MAVEN_CENTRAL_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           JRELEASER_NEXUS2_MAVEN_CENTRAL_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           JRELEASER_SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          JRELEASER_GITHUB_PASSWORD: ${{ secrets.GIT_ACCESS_TOKEN }}
 
       - name: JReleaser release output
         if: always()
