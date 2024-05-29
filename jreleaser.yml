@@ -92,7 +92,9 @@ signing:
   armored: true
 
 deploy:
+  active: ALWAYS
   maven:
+    active: ALWAYS
     github:
       packages:
         active: ALWAYS
