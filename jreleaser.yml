@@ -92,9 +92,7 @@ signing:
   armored: true
 
 deploy:
-  active: ALWAYS
   maven:
-    active: ALWAYS
     github:
       packages:
         active: ALWAYS
@@ -153,6 +151,30 @@ assemble:
         path: 'plugins/riotx/build/libs/riotx-{{projectVersion}}.jar'
       jars:
         - pattern: 'plugins/riotx/build/dependencies/flat/*.jar'
+        
+distributions:
+  riotx:
+    artifacts:
+      - path: plugins/{{distributionName}}/build/distributions/{{distributionName}}-{{projectVersion}}.zip
+        transform: '{{distributionName}}/{{distributionName}}-{{projectEffectiveVersion}}.zip'
+        extraProperties:
+          skipSpec: 'true'
+      - path: plugins/{{distributionName}}/build/distributions/{{distributionName}}-{{projectVersion}}.tar
+        transform: '{{distributionName}}/{{distributionName}}-{{projectEffectiveVersion}}.tar'
+        extraProperties:
+          skipFlatpak: 'true'
+
+  riotx-standalone:
+    appImage:
+      active: NEVER
+      componentId: com.redis.riotx
+      developerName: Redis
+      categories:
+        - Development
+      repository:
+        active: RELEASE
+        name: riotx-appimage
+        commitMessage: 'riotx {{tagName}}'
 
 files:
   artifacts:
