@@ -94,7 +94,7 @@ signing:
 deploy:
   maven:
     github:
-      github-packages:
+      packages:
         active: ALWAYS
         url: https://maven.pkg.github.com/redis
 
