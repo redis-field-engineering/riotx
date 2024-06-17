@@ -38,6 +38,7 @@ release:
     sign: true
     issues:
       enabled: true
+    name: riotx-dist
     changelog:
       formatted: ALWAYS
       preset: conventional-commits
@@ -91,18 +92,11 @@ signing:
   active: ALWAYS
   armored: true
 
-deploy:
-  maven:
-    github:
-      packages:
-        active: ALWAYS
-        url: https://maven.pkg.github.com/redis
-
 announce:
   slack:
     active: RELEASE
     channel: '#field-engineering-announcements'
-    message: '🧨 RIOTX {{projectVersion}} has been released! {{releaseNotesUrl}}'
+    message: '🚀 RIOTX {{projectVersion}} has been released! {{releaseNotesUrl}}'
 
 assemble:
   jlink:
@@ -151,7 +145,7 @@ assemble:
         path: 'plugins/riotx/build/libs/riotx-{{projectVersion}}.jar'
       jars:
         - pattern: 'plugins/riotx/build/dependencies/flat/*.jar'
-        
+
 distributions:
   riotx:
     artifacts:
