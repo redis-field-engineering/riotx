@@ -1,7 +1,6 @@
 package com.redis.riotx;
 
 import java.io.PrintWriter;
-import java.net.InetSocketAddress;
 
 import com.redis.riot.Compare;
 import com.redis.riot.DatabaseExport;
@@ -12,7 +11,6 @@ import com.redis.riot.FileImport;
 import com.redis.riot.Generate;
 import com.redis.riot.Ping;
 import com.redis.riot.Replicate;
-import com.redis.riot.Versions;
 import com.redis.riot.core.BaseCommand;
 import com.redis.riot.core.IO;
 
@@ -20,10 +18,10 @@ import picocli.AutoComplete.GenerateCompletion;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
-@Command(name = "riotx", versionProvider = Versions.class, headerHeading = "RIOTX is a data import/export tool for Redis Enterprise and Redis Cloud.%n%n", mixinStandardHelpOptions = true, subcommands = {
-		DatabaseImport.class, DatabaseExport.class, FileImport.class, FileExport.class, FakerImport.class,
-		Generate.class, Replicate.class, Compare.class, Ping.class, MemcachedReplicate.class,
-		GenerateCompletion.class, })
+@Command(name = "riotx", versionProvider = Versions.class, headerHeading = "RIOTX is a data import/export tool for Redis Enterprise and Redis Cloud.%n%n", subcommands = {
+		DatabaseExport.class, DatabaseImport.class, FakerImport.class, FileExport.class, FileImport.class,
+		Generate.class, Ping.class, Replicate.class, Compare.class, StreamExport.class, MemcachedReplicate.class,
+		GenerateCompletion.class })
 public class Main extends BaseCommand implements Runnable, IO {
 
 	private PrintWriter out;
@@ -56,7 +54,7 @@ public class Main extends BaseCommand implements Runnable, IO {
 
 	public static void main(String[] args) {
 		CommandLine commandLine = com.redis.riot.Main.commandLine(new Main());
-		commandLine.registerConverter(InetSocketAddress.class, new InetSocketAddressConverter());
+		commandLine.registerConverter(InetSocketAddressList.class, InetSocketAddressList::parse);
 		commandLine.setExecutionStrategy(com.redis.riot.Main::executionStrategy);
 		System.exit(com.redis.riot.Main.run(commandLine, args));
 	}

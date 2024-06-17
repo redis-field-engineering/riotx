@@ -11,40 +11,41 @@ import java.util.function.Supplier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
-import org.springframework.batch.core.step.builder.FaultTolerantStepBuilder;
-import org.springframework.batch.core.step.builder.SimpleStepBuilder;
+import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
 
 import com.redis.riot.core.AbstractJobCommand;
+import com.redis.riot.core.Step;
 import com.redis.spring.batch.memcached.MemcachedException;
-import com.redis.spring.batch.memcached.MemcachedWriteException;
 
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.MemcachedClient;
-import picocli.CommandLine.ArgGroup;
 
-public abstract class AbstractMemcachedCommand extends AbstractJobCommand<Main> {
-
-	@ArgGroup(exclusive = false)
-	private MemcachedArgs memcachedArgs = new MemcachedArgs();
+public abstract class AbstractMemcachedCommand extends AbstractJobCommand {
 
 	protected Supplier<MemcachedClient> clientSupplier;
 
 	@Override
-	protected void setup() {
-		super.setup();
+	public void afterPropertiesSet() throws Exception {
+		System.setProperty("net.spy.log.LoggerImpl", "net.spy.memcached.compat.log.SLF4JLogger");
+		super.afterPropertiesSet();
 		if (clientSupplier == null) {
 			clientSupplier = this::memcachedClient;
 		}
 	}
 
-	private MemcachedClient memcachedClient() {
-		return memcachedClient(memcachedArgs.getAddresses(), memcachedArgs.isTls());
+	protected <I, O> Step<I, O> memcachedStep(String name, ItemReader<I> reader, ItemWriter<O> writer) {
+		Step<I, O> step = new Step<>(name, reader, writer);
+		step.skip(MemcachedException.class);
+		step.noRetry(MemcachedException.class);
+		step.noSkip(TimeoutException.class);
+		step.retry(TimeoutException.class);
+		return step;
 	}
 
 	@Override
-	protected void execute() throws Exception {
-		super.execute();
+	protected void shutdown() {
 		clientSupplier = null;
 	}
 
@@ -71,22 +72,6 @@ public abstract class AbstractMemcachedCommand extends AbstractJobCommand<Main> 
 		}
 	}
 
-	@Override
-	protected <I, O> FaultTolerantStepBuilder<I, O> faultTolerant(SimpleStepBuilder<I, O> step) {
-		FaultTolerantStepBuilder<I, O> ftStep = super.faultTolerant(step);
-		ftStep.skip(MemcachedWriteException.class);
-		ftStep.noRetry(MemcachedWriteException.class);
-		ftStep.noSkip(TimeoutException.class);
-		ftStep.retry(TimeoutException.class);
-		return ftStep;
-	}
-
-	public MemcachedArgs getMemcachedArgs() {
-		return memcachedArgs;
-	}
-
-	public void setMemcachedArgs(MemcachedArgs memcachedArgs) {
-		this.memcachedArgs = memcachedArgs;
-	}
+	protected abstract MemcachedClient memcachedClient();
 
 }

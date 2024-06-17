@@ -23,10 +23,11 @@ startScripts {
 
 dependencies {
     implementation group: 'com.redis', name: 'riot', version: riotVersion
-    implementation group: 'com.redis', name: 'riot-core', version: riotVersion
     implementation group: 'com.redis', name: 'spring-batch-memcached', version: springBatchRedisVersion
     api group: 'info.picocli', name: 'picocli', version: picocliVersion
     annotationProcessor group: 'info.picocli', name: 'picocli-codegen', version: picocliVersion
+    implementation group: 'net.snowflake', name: 'snowflake-jdbc', version: snowflakeVersion
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'org.awaitility:awaitility'
     testImplementation 'io.micrometer:micrometer-core'
     testImplementation 'org.springframework.boot:spring-boot-autoconfigure'
@@ -109,3 +110,22 @@ task copyRuntimeDependencies(type: Copy) {
 }
 
 assemble.dependsOn(copyRuntimeDependencies)
+
+project.rootProject.gradle.addBuildListener(new BuildAdapter() {
+    @Override
+    void projectsEvaluated(Gradle gradle) {
+        gradle.rootProject.subprojects
+            .find { p -> p.name == 'riotx' }
+            .processResources {
+                inputs.property('build_date', gradle.rootProject.config.buildInfo.buildDate + ':' + gradle.rootProject.config.buildInfo.buildTime)
+                filesMatching(['**/RiotxVersion.properties']) {
+                    expand(
+                        'riotx_version': gradle.rootProject.version,
+                        'build_date': gradle.rootProject.config.buildInfo.buildDate,
+                        'build_time': gradle.rootProject.config.buildInfo.buildTime,
+                        'build_revision': gradle.rootProject.config.buildInfo.buildRevision
+                    )
+                }
+            }
+    }
+})

@@ -3,7 +3,6 @@ package com.redis.riotx;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -168,15 +167,15 @@ public class MemcachedTests {
 	}
 
 	@Test
-	void replication(TestInfo info) throws Exception {
+	void replicate(TestInfo info) throws Exception {
 		int count = 123;
 		write(entries(count));
 		MemcachedReplicate replication = new MemcachedReplicate();
 		replication.getJobArgs().getProgressArgs().setStyle(ProgressStyle.NONE);
-		replication.getJobArgs().setName(name(info));
+		replication.setJobName(name(info));
 		replication.setJobRepository(jobRepository);
-		replication.getMemcachedArgs().setAddresses(Arrays.asList(inetSocketAddress(source)));
-		replication.getTargetMemcachedArgs().setAddresses(Arrays.asList(inetSocketAddress(target)));
+		replication.setSourceAddressList(new InetSocketAddressList(inetSocketAddress(source)));
+		replication.setTargetAddressList(new InetSocketAddressList(inetSocketAddress(target)));
 		replication.call();
 		List<MemcachedEntry> sourceEntries = readAll(clientSupplier);
 		List<MemcachedEntry> targetEntries = readAll(targetClientSupplier);
