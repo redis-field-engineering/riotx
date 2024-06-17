@@ -5,13 +5,15 @@
 :project-version: 0.1.0-SNAPSHOT
 :project-title:   RIOTX
 
-image::docs/guide/images/riotx.svg[RIOTX]
+image::docs/guide/src/resources/images/riotx.svg[RIOTX]
 
 ---
 
-{project-title} is a RIOT extension designed to help enterprises get data in and out of Redis.
+{project-title} is a https://github.com/redis/riot[RIOT] extension designed to help enterprises get data in and out of Redis.
 
 == Documentation
+
+link:http://redis-field-engineering.github.io/riotx/[http://redis-field-engineering.github.io/riotx]
 
 == Support
 

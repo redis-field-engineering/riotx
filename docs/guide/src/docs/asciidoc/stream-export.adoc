@@ -1,0 +1,39 @@
+[[_stream_export]]
+= Stream Export
+
+The `stream-export` command enables Redis CDC to a Redis stream.
+
+[source,console]
+----
+riotx stream-export SOURCE TARGET [OPTIONS]
+----
+
+For the full usage, run:
+[source,console]
+----
+riotx stream-export --help
+----
+
+.Example
+[source,console]
+----
+riotx stream-export redis://localhost:6379 redis://localhost:6380 --mode live
+
+redis-cli -p 6380 xread COUNT 3 STREAMS stream:export 0-0
+1) 1) "stream:export"
+   2) 1) 1) "1718645537588-0"
+         2)  1) "key"
+             2) "order:4"
+             3) "time"
+             4) "1718645537000"
+             5) "type"
+             6) "hash"
+             7) "ttl"
+             8) "-1"
+             9) "mem"
+            10) "136"
+            11) "value"
+            12) "{\"order_date\":\"2024-06-13 22:19:35.143797\",\"order_id\":\"4\"}"
+----
+
+
