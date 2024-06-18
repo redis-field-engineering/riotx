@@ -11,6 +11,12 @@ image::docs/guide/src/docs/resources/images/riotx.svg[RIOTX]
 
 {project-title} is a https://github.com/redis/riot[RIOT] extension designed to help enterprises get data in and out of Redis.
 
+== Releases
+
+{project-title} https://github.com/redis-field-engineering/riotx-dist/releases/[releases] are available here: https://github.com/redis-field-engineering/riotx-dist/releases/
+
+https://github.com/redis-field-engineering/riotx-dist/releases/latest[latest release] is available here: https://github.com/redis-field-engineering/riotx-dist/releases/latest
+
 == Documentation
 
 link:https://redis-field-engineering.github.io/riotx/[http://redis-field-engineering.github.io/riotx]
@@ -22,7 +28,6 @@ Documentation for RIOT is available here: https://redis.github.io/riot
 {project-title} is supported by Redis, Inc.
 
 == Badges
-image:https://img.shields.io/github/release/{project-owner}/riotx-dist.svg["Latest", link="https://github.com/{project-owner}/riotx-dist/releases/latest"]
 image:https://codecov.io/gh/{project-owner}/{project-name}/branch/master/graph/badge.svg?token=7Ma1m9VVSq["Coverage", link="https://codecov.io/gh/{project-owner}/{project-name}"]
 
 == License
