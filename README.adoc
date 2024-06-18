@@ -13,9 +13,8 @@ image::docs/guide/src/docs/resources/images/riotx.svg[RIOTX]
 
 == Releases
 
-{project-title} https://github.com/redis-field-engineering/riotx-dist/releases/[releases] are available here: https://github.com/redis-field-engineering/riotx-dist/releases/
-
-https://github.com/redis-field-engineering/riotx-dist/releases/latest[latest release] is available here: https://github.com/redis-field-engineering/riotx-dist/releases/latest
+* https://github.com/redis-field-engineering/riotx-dist/releases/[Releases]
+* https://github.com/redis-field-engineering/riotx-dist/releases/latest[Latest Release]
 
 == Documentation
 
