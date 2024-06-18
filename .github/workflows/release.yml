@@ -6,6 +6,11 @@ on:
       version:
         description: 'Release version'
         required: true
+      build-tasks:
+        description: 'Build tasks'
+        default: 'build aggregateTestReports aggregateJacocoReport publish'
+        required: false
+        type: string
 
 permissions:
   actions: write
@@ -41,8 +46,9 @@ jobs:
     uses: redis-field-engineering/riotx/.github/workflows/step-jlink.yml@main
     with:
       project-version: ${{ needs.precheck.outputs.version }}
+      tasks: ${{ github.event.inputs.build-tasks }}
     secrets:
-      gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   release:
     name: Release
@@ -66,12 +72,6 @@ jobs:
         with:
           name: repos
           path: build/repos/local/release
-
-      - name: Download docs
-        uses: actions/download-artifact@v4
-        with:
-          name: docs
-          path: docs/guide/build/guide
 
       - name: Download jlink
         uses: actions/download-artifact@v4
@@ -104,26 +104,26 @@ jobs:
       - name: Release
         uses: jreleaser/release-action@v2
         with:
-          version: early-access
           arguments: full-release
         env:
-          JRELEASER_PROJECT_VERSION: ${{ needs.precheck.outputs.version }}
+          JRELEASER_DOCKER_DEFAULT_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          JRELEASER_DOCKER_DEFAULT_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          JRELEASER_GITHUB_PASSWORD: ${{ secrets.GIT_ACCESS_TOKEN }}
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GIT_ACCESS_TOKEN }}
+          JRELEASER_GITHUB_USERNAME: ${{ secrets.GIT_USER }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
-          JRELEASER_DOCKER_DEFAULT_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          JRELEASER_SDKMAN_CONSUMER_KEY: ${{ secrets.SDKMAN_CONSUMER_KEY }}
-          JRELEASER_SDKMAN_CONSUMER_TOKEN: ${{ secrets.SDKMAN_CONSUMER_TOKEN }}
-          JRELEASER_NEXUS2_MAVEN_CENTRAL_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          JRELEASER_NEXUS2_MAVEN_CENTRAL_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          JRELEASER_NEXUS2_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          JRELEASER_NEXUS2_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          JRELEASER_PROJECT_VERSION: ${{ needs.precheck.outputs.version }}
           JRELEASER_SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
       - name: JReleaser release output
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jreleaser-release
+          name: riotx-release
           path: |
             out/jreleaser/trace.log
             out/jreleaser/output.properties

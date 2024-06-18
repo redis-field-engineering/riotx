@@ -6,11 +6,13 @@ on:
       project-version:
         required: true
         type: string
+      tasks:
+        default: 'build aggregateTestReports aggregateJacocoReport publish'
+        required: false
+        type: string
     secrets:
       codecov-token:
         required: false
-      gpg-passphrase:
-        required: true
 
 permissions:
   contents: read
@@ -40,7 +42,7 @@ jobs:
           echo ${{ inputs.project-version }} > VERSION
 
       - name: Build
-        run: ./gradlew -Prelease=true -PreproducibleBuild=true build aggregateTestReports aggregateJacocoReport publish -S
+        run: ./gradlew -Prelease=true -PreproducibleBuild=true ${{ inputs.tasks }} -S
         
       - name: Upload test reports
         if: failure()
@@ -58,7 +60,6 @@ jobs:
       - name: Jlink
         uses: jreleaser/release-action@v2
         with:
-          version: early-access
           arguments: assemble --assembler jlink
           setup-java: false
         env:
