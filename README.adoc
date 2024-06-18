@@ -28,8 +28,3 @@ Documentation for RIOT is available here: https://redis.github.io/riot
 
 == Badges
 image:https://codecov.io/gh/{project-owner}/{project-name}/branch/master/graph/badge.svg?token=7Ma1m9VVSq["Coverage", link="https://codecov.io/gh/{project-owner}/{project-name}"]
-
-== License
-
-{project-title} is licensed under the Apache 2.0 License.
-Copyright (C) 2023 Redis, Inc.
