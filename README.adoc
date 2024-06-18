@@ -22,7 +22,7 @@ Documentation for RIOT is available here: https://redis.github.io/riot
 {project-title} is supported by Redis, Inc.
 
 == Badges
-image:https://img.shields.io/github/release/{project-owner}/{project-name}.svg["Latest", link="https://github.com/{project-owner}/{project-name}/releases/latest"]
+image:https://img.shields.io/github/release/{project-owner}/riotx-dist.svg["Latest", link="https://github.com/{project-owner}/riotx-dist/releases/latest"]
 image:https://codecov.io/gh/{project-owner}/{project-name}/branch/master/graph/badge.svg?token=7Ma1m9VVSq["Coverage", link="https://codecov.io/gh/{project-owner}/{project-name}"]
 
 == License
