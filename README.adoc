@@ -5,7 +5,7 @@
 :project-version: 0.1.0
 :project-title:   RIOTX
 
-image::docs/guide/src/resources/images/riotx.svg[RIOTX]
+image::docs/guide/src/docs/resources/images/riotx.svg[RIOTX]
 
 ---
 
@@ -13,7 +13,9 @@ image::docs/guide/src/resources/images/riotx.svg[RIOTX]
 
 == Documentation
 
-link:http://redis-field-engineering.github.io/riotx/[http://redis-field-engineering.github.io/riotx]
+link:https://redis-field-engineering.github.io/riotx/[http://redis-field-engineering.github.io/riotx]
+
+Documentation for RIOT is available here: https://redis.github.io/riot
 
 == Support
 
