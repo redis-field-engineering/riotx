@@ -9,18 +9,20 @@ import org.springframework.batch.core.Job;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.redis.riot.AbstractExportCommand;
 import com.redis.riot.AbstractTargetCommand;
-import com.redis.riot.RedisScanSizeEstimator;
 import com.redis.riot.RedisWriterArgs;
+import com.redis.riot.TargetRedisExecutionContext;
 import com.redis.riot.core.Step;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemReader.ReaderMode;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.DataType;
 import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.reader.KeyEventStatus;
 import com.redis.spring.batch.item.redis.reader.KeyNotificationItemReader;
-import com.redis.spring.batch.item.redis.reader.KeyNotificationStatus;
-import com.redis.spring.batch.item.redis.writer.operation.Xadd;
+import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
+import com.redis.spring.batch.item.redis.writer.impl.Xadd;
 
 import io.lettuce.core.StreamMessage;
 import picocli.CommandLine.ArgGroup;
@@ -51,34 +53,30 @@ public class StreamExport extends AbstractTargetCommand {
 	}
 
 	@Override
-	protected Job job() {
-		return job(step());
+	protected Job job(TargetRedisExecutionContext context) {
+		return job(context, step(context));
 	}
 
-	@Override
-	protected <T extends RedisItemWriter<?, ?, ?>> T configure(T writer) {
+	protected void configureTargetWriter(TargetRedisExecutionContext context, RedisItemWriter<?, ?, ?> writer) {
 		log.info("Configuring target Redis writer with {}", targetRedisWriterArgs);
 		targetRedisWriterArgs.configure(writer);
-		return super.configure(writer);
+		context.configureTargetWriter(writer);
 	}
 
-	private Step<KeyValue<String, Object>, StreamMessage<String, String>> step() {
-		RedisItemReader<String, String, Object> reader = configure(reader());
-		RedisItemWriter<String, String, StreamMessage<String, String>> writer = configure(writer());
+	private Step<KeyValue<String, Object>, StreamMessage<String, String>> step(TargetRedisExecutionContext context) {
+		RedisItemReader<String, String, Object> reader = RedisItemReader.struct();
+		configureSourceReader(context, reader);
+		RedisItemWriter<String, String, StreamMessage<String, String>> writer = writer();
+		configureTargetWriter(context, writer);
 		Step<KeyValue<String, Object>, StreamMessage<String, String>> step = new Step<>(STEP_NAME, reader, writer);
 		step.processor(this::process);
 		step.taskName(TASK_NAME);
-		configureExportStep(step);
+		AbstractExportCommand.configure(step);
 		if (reader.getMode() != ReaderMode.SCAN) {
 			step.statusMessageSupplier(() -> liveExtraMessage(reader));
 		}
 		step.maxItemCountSupplier(RedisScanSizeEstimator.from(reader));
 		return step;
-	}
-
-	private RedisItemReader<String, String, Object> reader() {
-		log.info("Creating Redis struct reader");
-		return RedisItemReader.struct();
 	}
 
 	private RedisItemWriter<String, String, StreamMessage<String, String>> writer() {
@@ -88,7 +86,7 @@ public class StreamExport extends AbstractTargetCommand {
 	private StreamMessage<String, String> process(KeyValue<String, Object> struct) throws JsonProcessingException {
 		Map<String, String> body = new LinkedHashMap<>();
 		body.put("key", struct.getKey());
-		body.put("time", String.valueOf(struct.getTime()));
+		body.put("time", String.valueOf(struct.getTimestamp()));
 		body.put("type", struct.getType());
 		body.put("ttl", String.valueOf(struct.getTtl()));
 		body.put("mem", String.valueOf(struct.getMemoryUsage()));
@@ -110,13 +108,14 @@ public class StreamExport extends AbstractTargetCommand {
 		}
 	}
 
+	@SuppressWarnings("rawtypes")
 	private String liveExtraMessage(RedisItemReader<?, ?, ?> reader) {
-		KeyNotificationItemReader<?, ?> keyReader = (KeyNotificationItemReader<?, ?>) reader.getReader();
+		KeyNotificationItemReader keyReader = (KeyNotificationItemReader) reader.getReader();
 		if (keyReader == null || keyReader.getQueue() == null) {
 			return "";
 		}
 		return String.format(QUEUE_MESSAGE, keyReader.getQueue().remainingCapacity(),
-				keyReader.count(KeyNotificationStatus.DROPPED));
+				keyReader.count(KeyEventStatus.DROPPED));
 	}
 
 	public RedisWriterArgs getTargetRedisWriterArgs() {
