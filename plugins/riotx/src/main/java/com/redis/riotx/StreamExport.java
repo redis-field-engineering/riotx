@@ -9,10 +9,9 @@ import org.springframework.batch.core.Job;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.redis.riot.AbstractExportCommand;
-import com.redis.riot.AbstractTargetCommand;
+import com.redis.riot.AbstractRedisToRedisCommand;
+import com.redis.riot.RedisExportStep;
 import com.redis.riot.RedisWriterArgs;
-import com.redis.riot.TargetRedisExecutionContext;
 import com.redis.riot.core.Step;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemReader.ReaderMode;
@@ -30,7 +29,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @Command(name = "stream-export", description = "Export Redis data to a Redis stream.")
-public class StreamExport extends AbstractTargetCommand {
+public class StreamExport extends AbstractRedisToRedisCommand {
 
 	public static final String STEP_NAME = "stream-export";
 	public static final String DEFAULT_STREAM = "stream:export";
@@ -53,25 +52,25 @@ public class StreamExport extends AbstractTargetCommand {
 	}
 
 	@Override
-	protected Job job(TargetRedisExecutionContext context) {
-		return job(context, step(context));
+	protected Job job() {
+		return job(step());
 	}
 
-	protected void configureTargetWriter(TargetRedisExecutionContext context, RedisItemWriter<?, ?, ?> writer) {
+	protected void configureTargetWriter(RedisItemWriter<?, ?, ?> writer) {
+		targetRedisContext.configure(writer);
 		log.info("Configuring target Redis writer with {}", targetRedisWriterArgs);
 		targetRedisWriterArgs.configure(writer);
-		context.configureTargetWriter(writer);
 	}
 
-	private Step<KeyValue<String, Object>, StreamMessage<String, String>> step(TargetRedisExecutionContext context) {
+	private Step<KeyValue<String, Object>, StreamMessage<String, String>> step() {
 		RedisItemReader<String, String, Object> reader = RedisItemReader.struct();
-		configureSourceReader(context, reader);
+		configureSourceReader(reader);
 		RedisItemWriter<String, String, StreamMessage<String, String>> writer = writer();
-		configureTargetWriter(context, writer);
-		Step<KeyValue<String, Object>, StreamMessage<String, String>> step = new Step<>(STEP_NAME, reader, writer);
+		configureTargetWriter(writer);
+		RedisExportStep<String, String, Object, StreamMessage<String, String>> step = new RedisExportStep<>(STEP_NAME,
+				reader, writer);
 		step.processor(this::process);
 		step.taskName(TASK_NAME);
-		AbstractExportCommand.configure(step);
 		if (reader.getMode() != ReaderMode.SCAN) {
 			step.statusMessageSupplier(() -> liveExtraMessage(reader));
 		}
