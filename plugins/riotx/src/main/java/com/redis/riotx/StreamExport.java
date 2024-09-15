@@ -9,8 +9,7 @@ import org.springframework.batch.core.Job;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.redis.riot.AbstractRedisToRedisCommand;
-import com.redis.riot.RedisExportStep;
+import com.redis.riot.AbstractReplicateCommand;
 import com.redis.riot.RedisWriterArgs;
 import com.redis.riot.core.Step;
 import com.redis.spring.batch.item.redis.RedisItemReader;
@@ -29,7 +28,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @Command(name = "stream-export", description = "Export Redis data to a Redis stream.")
-public class StreamExport extends AbstractRedisToRedisCommand {
+public class StreamExport extends AbstractReplicateCommand {
 
 	public static final String STEP_NAME = "stream-export";
 	public static final String DEFAULT_STREAM = "stream:export";
@@ -56,19 +55,19 @@ public class StreamExport extends AbstractRedisToRedisCommand {
 		return job(step());
 	}
 
-	protected void configureTargetWriter(RedisItemWriter<?, ?, ?> writer) {
-		targetRedisContext.configure(writer);
+	@Override
+	protected void configureTargetRedisWriter(RedisItemWriter<?, ?, ?> writer) {
+		super.configureTargetRedisWriter(writer);
 		log.info("Configuring target Redis writer with {}", targetRedisWriterArgs);
 		targetRedisWriterArgs.configure(writer);
 	}
 
 	private Step<KeyValue<String, Object>, StreamMessage<String, String>> step() {
 		RedisItemReader<String, String, Object> reader = RedisItemReader.struct();
-		configureSourceReader(reader);
+		configureSourceRedisReader(reader);
 		RedisItemWriter<String, String, StreamMessage<String, String>> writer = writer();
-		configureTargetWriter(writer);
-		RedisExportStep<String, String, Object, StreamMessage<String, String>> step = new RedisExportStep<>(STEP_NAME,
-				reader, writer);
+		configureTargetRedisWriter(writer);
+		Step<KeyValue<String, Object>, StreamMessage<String, String>> step = step(STEP_NAME, reader, writer);
 		step.processor(this::process);
 		step.taskName(TASK_NAME);
 		if (reader.getMode() != ReaderMode.SCAN) {
