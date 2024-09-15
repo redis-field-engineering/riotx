@@ -25,7 +25,7 @@ project:
     groupId: com.redis
     version: '21'
     multiProject: true
-    mainClass: com.redis.riotx.Main
+    mainClass: com.redis.riotx.Riotx
   tags: ['riotx', 'redis', 'enterprise', 'cloud', 'input', 'output', 'tool', 'data', 'import', 'export']
 
 platform:
