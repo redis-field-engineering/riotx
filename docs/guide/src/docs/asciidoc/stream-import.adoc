@@ -1,0 +1,24 @@
+[[_stream_import]]
+= Stream Import
+
+The `stream-import` command reads data from a stream and writes it to Redis.
+
+The basic usage is:
+
+[source,console]
+----
+riotx stream-import STREAM...
+----
+
+For the full usage, run:
+[source,console]
+----
+riotx stream-import --help
+----
+
+.Example: Import stream into hashes
+[source,console]
+----
+include::{testdir}/stream-import-hset[]
+----
+

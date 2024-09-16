@@ -3,6 +3,8 @@
 
 {project-title} is an extension to {link_riot} which provides the following additional Enterprise features:
 
-* <<_memcached_replication,Memcached replication>>
-* <<_stream_export,Export to Redis Stream>>
+* <<_memcached_replication,Memcached replication>>: Memcached -> Memcached
+* <<_stream_export,Stream Export>>: Redis -> Redis Stream
+* <<_stream_import,Stream Import>>: Redis Stream -> Redis
+
 
