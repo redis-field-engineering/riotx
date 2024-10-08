@@ -8,11 +8,11 @@ import com.redis.riot.AbstractRedisCommand;
 import com.redis.riot.AbstractRedisExportCommand;
 import com.redis.riot.AbstractRedisImportCommand;
 import com.redis.riot.AbstractReplicateCommand;
+import com.redis.riot.RedisArgs;
 import com.redis.riot.RedisReaderArgs;
 import com.redis.riot.Replicate;
 import com.redis.riot.Replicate.CompareMode;
 import com.redis.riot.ReplicateWriteLogger;
-import com.redis.riot.SimpleRedisArgs;
 import com.redis.riot.TargetRedisArgs;
 import com.redis.riot.core.AbstractJobCommand;
 import com.redis.riot.core.MainCommand;
@@ -20,7 +20,6 @@ import com.redis.riot.core.ProgressStyle;
 import com.redis.riot.operation.OperationCommand;
 import com.redis.riot.test.AbstractRiotTestBase;
 
-import io.lettuce.core.RedisURI;
 import picocli.CommandLine.IExecutionStrategy;
 import picocli.CommandLine.ParseResult;
 
@@ -52,7 +51,7 @@ abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestBase {
 			this.configs = configs;
 		}
 
-		private void configure(SimpleRedisArgs redisArgs) {
+		private void configure(RedisArgs redisArgs) {
 			redisArgs.setUri(redisURI);
 			redisArgs.setCluster(getRedisServer().isRedisCluster());
 		}
