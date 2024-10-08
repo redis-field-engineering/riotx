@@ -17,7 +17,6 @@ import com.redis.spring.batch.item.redis.RedisItemReader.ReaderMode;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.DataType;
 import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.reader.KeyEventStatus;
 import com.redis.spring.batch.item.redis.reader.KeyNotificationItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
 import com.redis.spring.batch.item.redis.writer.impl.Xadd;
@@ -33,7 +32,7 @@ public class StreamExport extends AbstractReplicateCommand {
 	public static final String STEP_NAME = "stream-export";
 	public static final String DEFAULT_STREAM = "stream:export";
 
-	private static final String QUEUE_MESSAGE = " | capacity: %,d | dropped: %,d";
+	private static final String QUEUE_MESSAGE = " | capacity: %,d";
 	private static final String TASK_NAME = "Streaming";
 	private static final ObjectMapper jsonMapper = jsonMapper();
 
@@ -112,8 +111,7 @@ public class StreamExport extends AbstractReplicateCommand {
 		if (keyReader == null || keyReader.getQueue() == null) {
 			return "";
 		}
-		return String.format(QUEUE_MESSAGE, keyReader.getQueue().remainingCapacity(),
-				keyReader.count(KeyEventStatus.DROPPED));
+		return String.format(QUEUE_MESSAGE, keyReader.getQueue().remainingCapacity());
 	}
 
 	public RedisWriterArgs getTargetRedisWriterArgs() {

@@ -8,8 +8,8 @@ import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.util.Assert;
 
 import com.redis.riot.AbstractImportCommand;
+import com.redis.riot.RedisArgs;
 import com.redis.riot.RedisContext;
-import com.redis.riot.SimpleRedisArgs;
 import com.redis.riot.TargetRedisArgs;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.Step;
@@ -35,7 +35,7 @@ public class StreamImport extends AbstractImportCommand {
 	private Map<String, String> streams;
 
 	@ArgGroup(exclusive = false)
-	private SimpleRedisArgs sourceRedisArgs = new SimpleRedisArgs();
+	private RedisArgs sourceRedisArgs = new RedisArgs();
 
 	@Option(names = "--target-uri", description = "Target server URI or endpoint in the form host:port. Source endpoint is used if not specified.", paramLabel = "<uri>")
 	private RedisURI targetRedisUri;
@@ -71,7 +71,8 @@ public class StreamImport extends AbstractImportCommand {
 		}
 		log.info("Creating target Redis context with {} {} {}", targetRedisUri, targetRedisArgs,
 				sourceRedisArgs.getSslArgs());
-		return targetRedisArgs.redisContext(targetRedisUri, sourceRedisArgs.getSslArgs());
+		return RedisContext.create(targetRedisArgs.redisURI(targetRedisUri), targetRedisArgs.isCluster(),
+				targetRedisArgs.getProtocolVersion(), sourceRedisArgs.getSslArgs());
 	}
 
 	@Override
@@ -127,11 +128,11 @@ public class StreamImport extends AbstractImportCommand {
 		this.streams = streams;
 	}
 
-	public SimpleRedisArgs getSourceRedisArgs() {
+	public RedisArgs getSourceRedisArgs() {
 		return sourceRedisArgs;
 	}
 
-	public void setSourceRedisArgs(SimpleRedisArgs sourceRedisArgs) {
+	public void setSourceRedisArgs(RedisArgs sourceRedisArgs) {
 		this.sourceRedisArgs = sourceRedisArgs;
 	}
 
