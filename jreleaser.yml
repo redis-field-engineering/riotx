@@ -189,6 +189,7 @@ distributions:
       multiPlatform: true
       repository:
         active: RELEASE
+        owner: redis
         commitMessage: 'riotx {{tagName}}'
 files:
   artifacts:
