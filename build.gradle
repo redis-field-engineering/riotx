@@ -1,6 +1,6 @@
 config {
     info {
-        description = 'RIOTX'
+        description = 'RIOT-X'
         inceptionYear = '2024'
         vendor = 'Redis'
         tags = ['redis', 'tool', 'import', 'export', 'replication', 'enterprise']
@@ -26,6 +26,7 @@ config {
         }
         
         people {
+            clearDomainSet()
             person {
                 id    = 'jruaux'
                 name  = 'Julien Ruaux'
