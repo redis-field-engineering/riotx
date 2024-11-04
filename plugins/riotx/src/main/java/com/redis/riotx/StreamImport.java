@@ -50,6 +50,7 @@ public class StreamImport extends AbstractImportCommand {
 	@Override
 	protected void execute() throws Exception {
 		sourceRedisContext = sourceRedisContext();
+		sourceRedisContext.afterPropertiesSet();
 		try {
 			super.execute();
 		} finally {
