@@ -1,32 +1,28 @@
 environment:
   properties:
     jdkPathPrefix: 'plugins/riotx/build/jdks'
-    jdkFilePrefix: 'zulu17.50.19-ca-jdk17.0.11'
+    jdkFilePrefix: 'zulu17.52.17-ca-jdk17.0.12'
 
 project:
   name: riotx
-  description: Get data in and out of Redis Enterprise with RIOTX
+  description: Get data in and out of Redis with RIOT-X
   longDescription: |
-    RIOTX is a RIOT extension designed to help enterprises get data in and out of Redis.
+    RIOT-X is a RIOT extension for the enterprise.
   links:
-    homepage: https://github.com/redis-field-engineering/riotx
-    documentation: https://redis.com/riotx
+    homepage: https://github.com/redis-field-engineering/riotx-dist
+    documentation: https://redis-field-engineering.github.io/riotx/
   authors:
     - Julien Ruaux
   license: Apache-2.0
   inceptionYear: '2024'
   stereotype: CLI
   vendor: Redis
-  icons:
-    - url: https://raw.githubusercontent.com/redis-field-engineering/riotx/main/src/media/icon_256x256.png
-      width: 256
-      height: 256
   java:
     groupId: com.redis
     version: '21'
     multiProject: true
     mainClass: com.redis.riotx.Riotx
-  tags: ['riotx', 'redis', 'enterprise', 'cloud', 'input', 'output', 'tool', 'data', 'import', 'export']
+  tags: ['riot-x', 'riotx', 'redis', 'enterprise', 'cloud', 'input', 'output', 'tool', 'data', 'import', 'export']
 
 platform:
   replacements:
@@ -97,7 +93,7 @@ announce:
   slack:
     active: RELEASE
     channel: '#field-engineering-announcements'
-    message: '🚀 RIOTX {{projectVersion}} has been released! {{releaseNotesUrl}}'
+    message: '🧯️ RIOT-X {{projectVersion}} has been released! {{releaseNotesUrl}}'
 
 assemble:
   jlink:
@@ -149,6 +145,32 @@ assemble:
 
 distributions:
   riotx:
+    docker:
+      active: ALWAYS
+      continueOnError: true
+      repository:
+        active: ALWAYS
+        commitMessage: 'riotx {{tagName}}'
+      registries:
+        - serverName: DEFAULT
+          repositoryName: riotx
+      labels:
+        'org.opencontainers.image.title': 'riotx'
+      imageNames:
+        - 'riotx/{{distributionName}}:{{tagName}}'
+        - 'riotx/{{distributionName}}:latest'
+      buildx:
+        enabled: true
+        platforms:
+          - 'linux/amd64'
+          - 'linux/arm64'
+    scoop:
+      active: ALWAYS
+      continueOnError: true
+      repository:
+        active: RELEASE
+        name: 'scoop'
+        commitMessage: 'riotx {{tagName}}'
     artifacts:
       - path: plugins/{{distributionName}}/build/distributions/{{distributionName}}-{{projectVersion}}.zip
         transform: '{{distributionName}}/{{distributionName}}-{{projectEffectiveVersion}}.zip'
@@ -160,17 +182,14 @@ distributions:
           skipFlatpak: 'true'
 
   riotx-standalone:
-    appImage:
-      active: NEVER
-      componentId: com.redis.riotx
-      developerName: Redis
-      categories:
-        - Development
+    brew:
+      active: ALWAYS
+      continueOnError: true
+      formulaName: riotx
+      multiPlatform: true
       repository:
         active: RELEASE
-        name: riotx-appimage
         commitMessage: 'riotx {{tagName}}'
-
 files:
   artifacts:
     - path: VERSION
