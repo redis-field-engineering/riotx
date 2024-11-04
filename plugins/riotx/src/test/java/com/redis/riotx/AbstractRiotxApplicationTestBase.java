@@ -1,5 +1,8 @@
 package com.redis.riotx;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.simple.SimpleLogger;
 
@@ -8,10 +11,10 @@ import com.redis.riot.AbstractRedisCommand;
 import com.redis.riot.AbstractRedisExportCommand;
 import com.redis.riot.AbstractRedisImportCommand;
 import com.redis.riot.AbstractReplicateCommand;
+import com.redis.riot.CompareMode;
 import com.redis.riot.RedisArgs;
 import com.redis.riot.RedisReaderArgs;
 import com.redis.riot.Replicate;
-import com.redis.riot.Replicate.CompareMode;
 import com.redis.riot.ReplicateWriteLogger;
 import com.redis.riot.TargetRedisArgs;
 import com.redis.riot.core.AbstractJobCommand;
@@ -44,11 +47,11 @@ abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestBase {
 	private class TestRiot extends Riotx {
 
 		private final TestInfo info;
-		private final IExecutionStrategy[] configs;
+		private final List<IExecutionStrategy> configs;
 
 		public TestRiot(TestInfo info, IExecutionStrategy... configs) {
 			this.info = info;
-			this.configs = configs;
+			this.configs = Arrays.asList(configs);
 		}
 
 		private void configure(RedisArgs redisArgs) {
@@ -58,26 +61,11 @@ abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestBase {
 
 		private void configure(RedisReaderArgs redisReaderArgs) {
 			redisReaderArgs.setIdleTimeout(DEFAULT_IDLE_TIMEOUT_SECONDS);
-			redisReaderArgs.setNotificationQueueCapacity(DEFAULT_NOTIFICATION_QUEUE_CAPACITY);
+			redisReaderArgs.setEventQueueCapacity(DEFAULT_EVENT_QUEUE_CAPACITY);
 		}
 
 		@Override
-		protected IExecutionStrategy executionStrategy() {
-			IExecutionStrategy strategy = super.executionStrategy();
-			return r -> {
-				execute(r);
-				for (IExecutionStrategy config : configs) {
-					config.execute(r);
-				}
-				return strategy.execute(r);
-			};
-		}
-
-		private void configure(TargetRedisArgs args) {
-			args.setCluster(getTargetRedisServer().isRedisCluster());
-		}
-
-		private int execute(ParseResult parseResult) {
+		protected int execute(ParseResult parseResult, IExecutionStrategy defaultStrategy) {
 			for (ParseResult subParseResult : parseResult.subcommands()) {
 				Object command = subParseResult.commandSpec().commandLine().getCommand();
 				if (command instanceof OperationCommand) {
@@ -121,8 +109,14 @@ abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestBase {
 					replicateCommand.setCompareMode(CompareMode.NONE);
 				}
 			}
-			return 0;
+			configs.forEach(c -> c.execute(parseResult));
+			return super.execute(parseResult, defaultStrategy);
 		}
+
+		private void configure(TargetRedisArgs args) {
+			args.setCluster(getTargetRedisServer().isRedisCluster());
+		}
+
 	}
 
 }

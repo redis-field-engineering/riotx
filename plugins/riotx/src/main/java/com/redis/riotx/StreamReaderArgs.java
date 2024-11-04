@@ -2,8 +2,6 @@ package com.redis.riotx;
 
 import java.time.Duration;
 
-import com.redis.riot.ReadFrom;
-import com.redis.riot.core.RiotVersion;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader.AckPolicy;
 
@@ -13,7 +11,7 @@ import picocli.CommandLine.Option;
 public class StreamReaderArgs {
 
 	public static final String DEFAULT_OFFSET = StreamItemReader.DEFAULT_OFFSET;
-	public static final String DEFAULT_CONSUMER_GROUP = RiotVersion.riotVersion();
+	public static final String DEFAULT_CONSUMER_GROUP = "riotx-" + RiotxVersion.getVersion();
 	public static final AckPolicy DEFAULT_ACK_POLICY = StreamItemReader.DEFAULT_ACK_POLICY;
 	public static final Duration DEFAULT_BLOCK = StreamItemReader.DEFAULT_BLOCK;
 	public static final long DEFAULT_COUNT = StreamItemReader.DEFAULT_COUNT;
@@ -33,9 +31,6 @@ public class StreamReaderArgs {
 	@Option(names = "--max", description = "Max number of messages to import.", paramLabel = "<count>")
 	private int maxItemCount;
 
-	@Option(names = "--read-from", description = "Which Redis cluster nodes to read from: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<name>")
-	private ReadFrom readFrom = ReadFrom.UPSTREAM;
-
 	@Option(names = "--consumer-group", description = "Stream consumer group (default: ${DEFAULT-VALUE}).", paramLabel = "<id>")
 	private String consumerGroup = DEFAULT_CONSUMER_GROUP;
 
@@ -43,7 +38,6 @@ public class StreamReaderArgs {
 	private String consumerName;
 
 	public void configure(StreamItemReader<String, String> reader) {
-		reader.setReadFrom(readFrom.getReadFrom());
 		reader.setAckPolicy(ackPolicy);
 		if (idleTimeout > 0) {
 			reader.setPollTimeout(Duration.ofSeconds(idleTimeout));
@@ -98,14 +92,6 @@ public class StreamReaderArgs {
 		this.maxItemCount = maxItemCount;
 	}
 
-	public ReadFrom getReadFrom() {
-		return readFrom;
-	}
-
-	public void setReadFrom(ReadFrom readFrom) {
-		this.readFrom = readFrom;
-	}
-
 	public String getConsumerGroup() {
 		return consumerGroup;
 	}
@@ -125,8 +111,7 @@ public class StreamReaderArgs {
 	@Override
 	public String toString() {
 		return "StreamReaderArgs [ackPolicy=" + ackPolicy + ", block=" + block + ", count=" + count + ", maxItemCount="
-				+ maxItemCount + ", readFrom=" + readFrom + ", consumerGroup=" + consumerGroup + ", consumerName="
-				+ consumerName + "]";
+				+ maxItemCount + ", consumerGroup=" + consumerGroup + ", consumerName=" + consumerName + "]";
 	}
 
 }

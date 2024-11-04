@@ -29,7 +29,6 @@ import picocli.CommandLine.Parameters;
 public class StreamImport extends AbstractImportCommand {
 
 	private static final String TASK_NAME = "Importing";
-	private static final String STEP_NAME = "step";
 
 	@Parameters(arity = "1..*", mapFallbackValue = "0", description = "Stream(s) and corresponding offsets to import, in the form key=offset. If not specified offset defaults to ${MAP-FALLBACK-VALUE}.", paramLabel = "STREAM")
 	private Map<String, String> streams;
@@ -60,7 +59,7 @@ public class StreamImport extends AbstractImportCommand {
 
 	private RedisContext sourceRedisContext() {
 		log.info("Creating source Redis context with {}", sourceRedisArgs);
-		return sourceRedisArgs.redisContext();
+		return RedisContext.of(sourceRedisArgs);
 	}
 
 	@Override
@@ -71,8 +70,9 @@ public class StreamImport extends AbstractImportCommand {
 		}
 		log.info("Creating target Redis context with {} {} {}", targetRedisUri, targetRedisArgs,
 				sourceRedisArgs.getSslArgs());
-		return RedisContext.create(targetRedisArgs.redisURI(targetRedisUri), targetRedisArgs.isCluster(),
-				targetRedisArgs.getProtocolVersion(), sourceRedisArgs.getSslArgs());
+		RedisContext context = RedisContext.of(targetRedisUri, targetRedisArgs);
+		context.sslOptions(sourceRedisArgs.getSslArgs().sslOptions());
+		return context;
 	}
 
 	@Override
@@ -87,7 +87,7 @@ public class StreamImport extends AbstractImportCommand {
 		StreamItemReader<String, String> reader = reader();
 		RedisItemWriter<String, String, Map<String, Object>> writer = operationWriter();
 		configureTargetRedisWriter(writer);
-		Step<StreamMessage<String, String>, Map<String, Object>> step = new Step<>(STEP_NAME, reader, writer);
+		Step<StreamMessage<String, String>, Map<String, Object>> step = new Step<>(reader, writer);
 		step.processor(streamMessageProcessor());
 		step.live(true);
 		step.flushInterval(reader.getBlock());
@@ -97,9 +97,11 @@ public class StreamImport extends AbstractImportCommand {
 	}
 
 	private StreamItemReader<String, String> reader() {
-		log.info("Creating stream reader with streams {} and {}", streams, streamReaderArgs);
+		log.info("Creating stream reader with streams {} {}", streams, streamReaderArgs);
 		StreamItemReader<String, String> reader = new StreamItemReader<>(sourceRedisContext.getClient(),
 				StringCodec.UTF8, streamOffsets());
+		log.info("Configuring stream reader with read-from {}", sourceRedisContext.getReadFrom());
+		reader.setReadFrom(sourceRedisContext.getReadFrom());
 		streamReaderArgs.configure(reader);
 		return reader;
 	}

@@ -10,20 +10,14 @@ import com.redis.riot.core.RiotVersion;
 public class RiotxVersion {
 
 	private static final ResourceBundle BUNDLE = ResourceBundle.getBundle(RiotxVersion.class.getName());
-	private static final String RIOTX_VERSION = BUNDLE.getString("riotx_version");
-	private static final String RIOTX_FORMAT = "riotx %s%n";
-	private static final String RIOTX_VERSION_FORMAT = "RIOTx%s";
+	private static final String RIOT_X_VERSION = BUNDLE.getString("riotx_version");
+	private static final String RIOT_X_FORMAT = "riotx %s%n";
 
 	private RiotxVersion() {
-		// noop
 	}
 
-	public static String getPlainVersion() {
-		return RIOTX_VERSION;
-	}
-
-	public static String riotVersion() {
-		return String.format(RIOTX_VERSION_FORMAT, RIOTX_VERSION);
+	public static String getVersion() {
+		return RIOT_X_VERSION;
 	}
 
 	public static void banner(PrintStream out) {
@@ -39,7 +33,7 @@ public class RiotxVersion {
 	}
 
 	public static void banner(PrintWriter out, boolean full) {
-		RiotVersion.banner(out, full, BUNDLE, RIOTX_FORMAT, RIOTX_VERSION);
+		RiotVersion.banner(out, full, BUNDLE, RIOT_X_FORMAT, RIOT_X_VERSION);
 	}
 
 }

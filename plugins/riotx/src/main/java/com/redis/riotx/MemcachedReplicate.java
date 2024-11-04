@@ -18,7 +18,6 @@ import picocli.CommandLine.Parameters;
 @Command(name = "memcached-replicate", description = "Replicate a Memcached database into another Memcached database.")
 public class MemcachedReplicate extends AbstractJobCommand {
 
-	private static final String STEP_NAME = "memcached-replicate-step";
 	private static final String TASK_NAME = "Replicating";
 
 	@Parameters(arity = "1", index = "0", description = "Source server address(es) int the form host:port.", paramLabel = "SOURCE")
@@ -75,7 +74,7 @@ public class MemcachedReplicate extends AbstractJobCommand {
 	protected Job job() {
 		MemcachedItemReader reader = new MemcachedItemReader(sourceMemcachedContext::safeMemcachedClient);
 		MemcachedItemWriter writer = new MemcachedItemWriter(targetMemcachedContext::safeMemcachedClient);
-		Step<MemcachedEntry, MemcachedEntry> step = new Step<>(STEP_NAME, reader, writer);
+		Step<MemcachedEntry, MemcachedEntry> step = new Step<>(reader, writer);
 		step.processor(this::process);
 		step.taskName(TASK_NAME);
 		step.noSkip(TimeoutException.class);
