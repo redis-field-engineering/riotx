@@ -1,0 +1,47 @@
+[[_install]]
+= Install
+
+{project-title} can be installed on Linux, macOS, and Windows platforms and can be used as a standalone tool that connects remotely to a Redis database.
+It is not required to run locally on a Redis server.
+
+[[_install_homebrew]]
+[discrete]
+== Homebrew (macOS & Linux)
+
+[source,console]
+----
+brew install redis/tap/riotx
+----
+
+[[_install_scoop]]
+[discrete]
+== Scoop (Windows)
+
+[source,console]
+----
+scoop bucket add redis https://github.com/redis/scoop.git
+scoop install riotx
+----
+
+[[_install_manual]]
+[discrete]
+== Manual Installation (All Platforms)
+Download the pre-compiled binary from link:https://github.com/redis-field-engineering/riotx-dist/releases[RIOT-X Releases], uncompress and copy to the desired location.
+
+[NOTE]
+====
+`riotx-{project-version}.zip` requires Java 11 or greater to be installed.
+
+`riotx-standalone-{project-version}-*.zip` includes its own Java runtime and does not require a Java installation.
+====
+
+[[_install_docker]]
+[discrete]
+== Docker
+
+You can run {project-title} as a docker image:
+
+[source,console]
+----
+docker run riotx/riotx [OPTIONS] [COMMAND]
+----
