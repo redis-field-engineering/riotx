@@ -3,9 +3,9 @@
 :project-name:    riotx
 :project-group:   com.redis
 :project-version: 0.1.0
-:project-title:   RIOTX
+:project-title:   RIOT-X
 
-image::docs/guide/src/docs/resources/images/riotx.svg[RIOTX]
+image::docs/guide/src/docs/resources/images/riotx.svg[RIOT-X]
 
 ---
 
