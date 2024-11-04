@@ -10,4 +10,5 @@ include::{includedir}/_links.adoc[]
 :leveloffset: 1
 include::{includedir}/introduction.adoc[]
 include::{includedir}/usage.adoc[]
-include::{includedir}/replication-cookbook.adoc[]
+include::{includedir}/observability.adoc[]
+include::{includedir}/best-practices.adoc[]

@@ -1,0 +1,90 @@
+[[best_practices]]
+= Best Practices
+
+This section contains best practices and recipes for various {project-title} use cases.
+
+== Replication Performance Tuning 
+
+image::replication-architecture.svg[]
+
+The `replicate` command reads from a source Redis database and write to a target Redis database.
+
+=== Replication Bottleneck
+
+To optimize throughput it is necessary to understand the two main possible scenarios:
+
+* Slow Producer: In this scenario the reader does not read from source as fast as the writer can write to the target.
+This means the writer is starved and we should look into ways to speed up the reader.
+* Slow Consumer:: In this scenario the writer can not keep up with the reader and we should look into optimizing writes.
+
+There are two ways to identify which scenario we fall into:
+
+* No-op writer: With the `--dry-run` option the replication process will use a no-op writer instead of a Redis writer.
+If throughput with dry-run is similar to throughput without then the writer is not the bottleneck.
+Follow steps below to improve reader throughput.
+
+* Reader queue utilization: Using the Grafana dashboard you can monitor reader queue depth.
+A low queue utilization means the writer can keep up with the reader.
+A queue utilization close to 100% means writes are slower than reads.
+
+
+=== Reader
+
+To improve reader performance tweak the options below until you reach ooptimal throughput.
+
+`--read-threads`:: How many value reader threads to use in parallel (default: 1)
+`--read-batch`:: Number of values each reader thread should read in a single pipelined call (default: 50)
+`--read-queue`:: Capacity of the reader queue (default: 10000).
+When the queue is full the threads wait for space to become available.
+Increase this value if you have peaky traffic on the source database causing fluctuating reader throughput.
+`--source-pool`:: Number of Redis connections to the source database (default: 8).
+Keep in sync with the number of threads to have a dedicated connection per thread.  
+
+=== Writer
+
+To improve writer performance you can tweak the following options:
+`--batch`:: Number of items written in a single network round-trip to the Redis server (i.e. number of commands in the pipeline)
+`--threads`:: How many write operations can be performed concurrently (default: 1)
+`--target-pool`:: Number of Redis connections to the target database (default: 8).
+Keep in sync with the number of threads to have a dedicated connection per thread.
+
+== System Requirements
+
+=== Operating System
+
+{project-title} works on all major operating systems but has been tested at scale on Linux X86 64-bit platforms.  
+
+=== CPU
+
+CPU used by {project-title} varies greatly dependending on specific replication settings and data structures at play.
+You can monitor CPU usage with the supplied Grafana dashboard (`process_cpu_usage` metric).
+
+=== Disk
+
+{project-title} does not require any specific disk requirements since all state is kept in memory.
+
+=== Memory
+
+Memory requirements for {project-title} itself are very light.
+Being JVM-based the default initial heap size is dependent on available system memory and on the operating system.
+
+If you have very intensive replication requirements you will need to https://www.baeldung.com/jvm-parameters[increase the JVM heap size].
+To estimate the worst case scenario for memory requirements you can use this formula: `keySize * queueSize` where:
+
+`keySize`:: average key size as reported by the `MEMORY USAGE` command
+`queueSize`:: Redis reader queue capacity configured with the `--read-queue` option
+
+Conversely if you need to minimize memory used by {project-title} you can lower the reader queue size (but possibly at the expense of reader throughtput).
+
+=== Network
+
+{project-title} replication is essentially a network bridge between the source and target Redis databases so underlying network is crucial for the overall throughput and a 10 Gigabit network is the minimum recommended.
+Network latency will also have an impact on replication (and other {project-title} uses) performance.
+Make sure the host running {project-title} offers minimal latency to both the source and target databases.
+You can test the latency using the https://redis.github.io/riot/#_ping[ping command].  
+
+== CRDB
+
+Active/active Redis databases (CRDB) need special considerations.
+If your target database is a CRDB deployment you will need to use the data-structure replication type (`--struct`) as the `RESTORE` command is not supported in CRDB.
+

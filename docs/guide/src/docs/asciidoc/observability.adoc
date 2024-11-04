@@ -1,0 +1,108 @@
+[[observability]]
+= Observability
+
+{project-title} exposes several metrics over a Prometheus endpoint that can be useful for troubleshooting and performance tuning.
+
+== Getting Started
+
+The `riotx-dist` repository includes a Docker compose configuration that set ups Prometheus and Grafana.
+
+[source,console]
+-----
+git clone https://github.com/redis-field-engineering/riotx-dist.git
+cd riotx-dist
+docker compose up
+-----
+
+Prometheus is configured to scrape the host every second.
+
+You can access the Grafana dashboard at http://localhost:3000[localhost:3000].
+
+Now start {project-title} with the following command:
+
+[source,console]
+-----
+riotx replicate ... --metrics
+-----
+
+This will enable the Prometheus metrics exporter endpoint and will populate the Grafana dashboard. 
+
+
+== Configuration
+
+Use the `--metrics*` options to enable and configure metrics:
+
+`--metrics`:: Enable metrics
+`--metrics-jvm`:: Enable JVM and system metrics
+`--metrics-redis`:: Enable command latency metrics. See https://github.com/redis/lettuce/wiki/Command-Latency-Metrics#micrometer
+`--metrics-name=<name>`::  Application name tag that will be applied to all metrics
+`--metrics-port=<int>`:: Port that Prometheus HTTP server should listen on (default: `8080`)
+`--metrics-prop=<k=v>`:: Additional properties to pass to the Prometheus client. See https://prometheus.github.io/client_java/config/config/
+
+== Metrics
+
+Below you can find a list of all metrics declared by {project-title}.
+
+image::riotx-dashboard-replication.png[]
+
+=== Replication Metrics
+
+[cols="1,1,5",options="header"]
+|======
+|Name|Type|Description
+
+|`riotx_replication_bytes_total`                 | Counter | Number of bytes replicated (needs memory usage with `--mem-limit`)
+|`riotx_replication_lag_seconds`                 | Summary | Replication latency
+|`spring_batch_chunk_write_seconds`              | Timer   | Batch writing duration
+|`spring_batch_item_process_seconds`             | Timer   | Item processing duration
+|`spring_batch_item_read_seconds`                | Timer   | Item reading duration
+|`spring_batch_job_active_seconds`               | Timer   | Active jobs
+|`spring_batch_job_launch_count_total`           | Counter | Job launch count
+|`spring_batch_redis_key_event_queue_capacity`   | Gauge   | Gauge reflecting the remaining capacity of the queue
+|`spring_batch_redis_key_event_queue_size`       | Gauge   | Gauge reflecting the size (depth) of the queue
+|`spring_batch_redis_key_scan_total`             | Counter | Number of keys scanned
+|`spring_batch_redis_operation_seconds`          | Timer   | Operation execution duration
+|`spring_batch_redis_read_chunk`                 | Gauge   | Gauge reflecting the chunk size of the reader
+|`spring_batch_redis_read_queue_capacity`        | Gauge   | Gauge reflecting the remaining capacity of the queue
+|`spring_batch_redis_read_queue_size`            | Gauge   | Gauge reflecting the size (depth) of the queue
+
+|======
+
+=== JVM Metrics
+
+Use the `--metrics-jvm` option to enable the following additional metrics:
+
+image::riotx-dashboard-jvm.png[]
+
+[cols="1,1,5",options="header"]
+|=====
+|Name|Type|Description
+
+| `jvm_buffer_count_buffers`              | Gauge | An estimate of the number of buffers in the pool
+| `jvm_buffer_memory_used_bytes`          | Gauge | An estimate of the memory that the Java virtual machine is using for this buffer pool
+| `jvm_buffer_total_capacity_bytes`       | Gauge | An estimate of the total capacity of the buffers in this pool
+| `jvm_gc_concurrent_phase_time_seconds`  | Timer | Time spent in concurrent phase
+| `jvm_gc_live_data_size_bytes`           | Gauge | Size of long-lived heap memory pool after reclamation
+| `jvm_gc_max_data_size_bytes`            | Gauge | Max size of long-lived heap memory pool
+| `jvm_gc_memory_allocated_bytes_total`   | Gauge | Incremented for an increase in the size of the (young) heap memory pool after one GC to before the next
+| `jvm_gc_memory_promoted_bytes_total`    | Counter | Count of positive increases in the size of the old generation memory pool before GC to after GC
+| `jvm_gc_pause_seconds`                  | Timer | Time spent in GC pause
+| `jvm_memory_committed_bytes`            | Gauge | The amount of memory in bytes that is committed for the Java virtual machine to use
+| `jvm_memory_max_bytes`                  | Gauge | The maximum amount of memory in bytes that can be used for memory management
+| `jvm_memory_used_bytes`                 | Gauge | The amount of used memory
+| `jvm_threads_daemon_threads`            | Gauge | The current number of live daemon threads
+| `jvm_threads_live_threads`              | Gauge | The current number of live threads including both daemon and non-daemon threads
+| `jvm_threads_peak_threads`              | Gauge | The peak live thread count since the Java virtual machine started or peak was reset
+| `jvm_threads_started_threads_total`     | Counter | The total number of application threads started in the JVM
+| `jvm_threads_states_threads`            | Gauge | The current number of threads
+| `process_cpu_time_ns_total`             | Counter | The "cpu time" used by the Java Virtual Machine process
+| `process_cpu_usage`                     | Gauge | The "recent cpu usage" for the Java Virtual Machine process
+| `process_start_time_seconds`            | Gauge | Start time of the process since unix epoch.
+| `process_uptime_seconds`                | Gauge | The uptime of the Java virtual machine
+| `system_cpu_count`                      | Gauge | The number of processors available to the Java virtual machine
+| `system_cpu_usage`                      | Gauge | The "recent cpu usage" of the system the application is running in
+| `system_load_average_1m`                | Gauge | The sum of the number of runnable entities queued to available processors and the number of runnable entities running on the available processors averaged over a period of time
+
+|=====
+
+ 

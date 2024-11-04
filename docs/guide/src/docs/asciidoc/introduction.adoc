@@ -1,10 +1,13 @@
 [[_introduction]]
 = Introduction
 
-{project-title} is an extension to {link_riot} which provides the following additional Enterprise features:
+{project-title} is an extension to {link_riot} which provides the following additional features for https://redis.io/cloud/[Redis Cloud] and https://redis.io/enterprise/[Redis Software]:
 
-* <<_memcached_replication,Memcached replication>>: Memcached -> Memcached
-* <<_stream_export,Stream Export>>: Redis -> Redis Stream
-* <<_stream_import,Stream Import>>: Redis Stream -> Redis
+* Observability
+* Memcached Replication
+* Redis Stream Import/Export
 
+image::riotx-dashboard-replication.png[]
+
+image::riotx-dashboard-jvm.png[]
 
