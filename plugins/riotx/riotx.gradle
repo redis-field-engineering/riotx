@@ -24,6 +24,7 @@ startScripts {
 dependencies {
     implementation group: 'com.redis', name: 'riot', version: riotVersion
     implementation group: 'com.redis', name: 'spring-batch-memcached', version: springBatchRedisVersion
+    api project(':riotx-parquet')
     api group: 'info.picocli', name: 'picocli', version: picocliVersion
     annotationProcessor group: 'info.picocli', name: 'picocli-codegen', version: picocliVersion
     implementation group: 'net.snowflake', name: 'snowflake-jdbc', version: snowflakeVersion

@@ -6,6 +6,7 @@ import java.util.concurrent.TimeoutException;
 import org.springframework.batch.core.Job;
 
 import com.redis.riot.core.AbstractJobCommand;
+import com.redis.riot.core.RiotInitializationException;
 import com.redis.riot.core.Step;
 import com.redis.spring.batch.memcached.MemcachedEntry;
 import com.redis.spring.batch.memcached.MemcachedItemReader;
@@ -48,10 +49,18 @@ public class MemcachedReplicate extends AbstractJobCommand {
 	private MemcachedContext targetMemcachedContext;
 
 	@Override
-	protected void execute() throws Exception {
-		sourceMemcachedContext = sourceMemcachedContext();
-		targetMemcachedContext = targetMemcachedContext();
-		super.execute();
+	protected void initialize() throws RiotInitializationException {
+		super.initialize();
+		try {
+			sourceMemcachedContext = sourceMemcachedContext();
+		} catch (GeneralSecurityException e) {
+			throw new RiotInitializationException("Could not initialize source memcached client", e);
+		}
+		try {
+			targetMemcachedContext = targetMemcachedContext();
+		} catch (GeneralSecurityException e) {
+			throw new RiotInitializationException("Could not initialized target memcached client", e);
+		}
 	}
 
 	private MemcachedContext sourceMemcachedContext() throws GeneralSecurityException {

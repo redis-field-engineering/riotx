@@ -1,5 +1,6 @@
 package com.redis.riotx;
 
+import com.redis.riot.AbstractFileImport;
 import com.redis.riot.Riot;
 
 import picocli.CommandLine;
@@ -23,6 +24,11 @@ public class Riotx extends Riot {
 	@Override
 	protected ReplicateX replicate() {
 		return new ReplicateX();
+	}
+
+	@Override
+	protected AbstractFileImport fileImport() {
+		return new FileImportX();
 	}
 
 }

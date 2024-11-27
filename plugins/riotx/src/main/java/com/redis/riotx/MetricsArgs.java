@@ -40,7 +40,7 @@ public class MetricsArgs {
 	@Option(names = "--metrics-desc", negatable = true, defaultValue = "true", description = "Enable publishing descriptions as part of the scrape payload to Prometheus. Turn off to minimize the amount of data sent on each scrape.", hidden = true)
 	private boolean decriptions = DEFAULT_DESCRIPTIONS;
 
-	@Option(names = "--metrics-jvm", negatable = true, defaultValue = "true", fallbackValue = "true", description = "Enable JVM metrics.")
+	@Option(names = "--metrics-jvm", negatable = true, defaultValue = "true", fallbackValue = "true", description = "Enable/disable JVM metrics. Enabled by default.")
 	private boolean jvm;
 
 	@Option(names = "--metrics-redis", description = "Enable command latency metrics. See https://github.com/redis/lettuce/wiki/Command-Latency-Metrics#micrometer")

@@ -7,26 +7,19 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.util.Assert;
 
-import com.redis.riot.AbstractImportCommand;
-import com.redis.riot.RedisArgs;
-import com.redis.riot.RedisContext;
-import com.redis.riot.TargetRedisArgs;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.Step;
-import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader;
 
-import io.lettuce.core.RedisURI;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.XReadArgs.StreamOffset;
 import io.lettuce.core.codec.StringCodec;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @Command(name = "stream-import", description = "Import data from a Redis stream.")
-public class StreamImport extends AbstractImportCommand {
+public class StreamImport extends AbstractRedisToRedisImportCommand {
 
 	private static final String TASK_NAME = "Importing";
 
@@ -34,61 +27,13 @@ public class StreamImport extends AbstractImportCommand {
 	private Map<String, String> streams;
 
 	@ArgGroup(exclusive = false)
-	private RedisArgs sourceRedisArgs = new RedisArgs();
-
-	@Option(names = "--target-uri", description = "Target server URI or endpoint in the form host:port. Source endpoint is used if not specified.", paramLabel = "<uri>")
-	private RedisURI targetRedisUri;
-
-	@ArgGroup(exclusive = false)
-	private TargetRedisArgs targetRedisArgs = new TargetRedisArgs();
-
-	@ArgGroup(exclusive = false)
 	private StreamReaderArgs streamReaderArgs = new StreamReaderArgs();
 
-	protected RedisContext sourceRedisContext;
-
 	@Override
-	protected void execute() throws Exception {
-		sourceRedisContext = sourceRedisContext();
-		sourceRedisContext.afterPropertiesSet();
-		try {
-			super.execute();
-		} finally {
-			sourceRedisContext.close();
-		}
-	}
-
-	private RedisContext sourceRedisContext() {
-		log.info("Creating source Redis context with {}", sourceRedisArgs);
-		return RedisContext.of(sourceRedisArgs);
-	}
-
-	@Override
-	protected RedisContext targetRedisContext() {
-		if (targetRedisUri == null) {
-			log.info("No target URI specified, using source Redis context for target");
-			return sourceRedisContext();
-		}
-		log.info("Creating target Redis context with {} {} {}", targetRedisUri, targetRedisArgs,
-				sourceRedisArgs.getSslArgs());
-		RedisContext context = RedisContext.of(targetRedisUri, targetRedisArgs);
-		context.sslOptions(sourceRedisArgs.getSslArgs().sslOptions());
-		return context;
-	}
-
-	@Override
-	protected void configureTargetRedisWriter(RedisItemWriter<?, ?, ?> writer) {
-		super.configureTargetRedisWriter(writer);
-		writer.setPoolSize(targetRedisArgs.getPoolSize());
-	}
-
-	@Override
-	protected Job job() throws Exception {
+	protected Job job() {
 		Assert.isTrue(hasOperations(), "No Redis command specified");
 		StreamItemReader<String, String> reader = reader();
-		RedisItemWriter<String, String, Map<String, Object>> writer = operationWriter();
-		configureTargetRedisWriter(writer);
-		Step<StreamMessage<String, String>, Map<String, Object>> step = new Step<>(reader, writer);
+		Step<StreamMessage<String, String>, Map<String, Object>> step = new Step<>(reader, operationWriter());
 		step.processor(streamMessageProcessor());
 		step.live(true);
 		step.flushInterval(reader.getBlock());
@@ -129,30 +74,6 @@ public class StreamImport extends AbstractImportCommand {
 
 	public void setStreams(Map<String, String> streams) {
 		this.streams = streams;
-	}
-
-	public RedisArgs getSourceRedisArgs() {
-		return sourceRedisArgs;
-	}
-
-	public void setSourceRedisArgs(RedisArgs sourceRedisArgs) {
-		this.sourceRedisArgs = sourceRedisArgs;
-	}
-
-	public RedisURI getTargetRedisUri() {
-		return targetRedisUri;
-	}
-
-	public void setTargetRedisUri(RedisURI targetRedisUri) {
-		this.targetRedisUri = targetRedisUri;
-	}
-
-	public TargetRedisArgs getTargetRedisArgs() {
-		return targetRedisArgs;
-	}
-
-	public void setTargetRedisArgs(TargetRedisArgs targetRedisArgs) {
-		this.targetRedisArgs = targetRedisArgs;
 	}
 
 	public StreamReaderArgs getStreamReaderArgs() {

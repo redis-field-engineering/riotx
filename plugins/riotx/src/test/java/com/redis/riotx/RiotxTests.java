@@ -44,6 +44,13 @@ abstract class RiotxTests extends AbstractRiotxApplicationTestBase {
 		execute(info, filename);
 		assertStreamImport(targetRedisCommands);
 	}
+	
+	@Test
+	void parquetFileImport(TestInfo info) throws Exception {
+		String filename = "file-import-parquet";
+		execute(info, filename);
+		
+	}
 
 	private static void assertStreamImport(RedisCommands<String, String> commands) throws IOException {
 		List<String> keys = commands.keys("beer:*");

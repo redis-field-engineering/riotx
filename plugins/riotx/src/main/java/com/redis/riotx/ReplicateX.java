@@ -1,7 +1,10 @@
 package com.redis.riotx;
 
+import java.io.IOException;
+
 import com.redis.riot.RedisContext;
 import com.redis.riot.Replicate;
+import com.redis.riot.core.RiotInitializationException;
 import com.redis.riot.core.Step;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
@@ -14,9 +17,13 @@ public class ReplicateX extends Replicate {
 	private MetricsArgs metricsArgs = new MetricsArgs();
 
 	@Override
-	protected void execute() throws Exception {
-		metricsArgs.configureMetrics();
-		super.execute();
+	protected void initialize() throws RiotInitializationException {
+		super.initialize();
+		try {
+			metricsArgs.configureMetrics();
+		} catch (IOException e) {
+			throw new RiotInitializationException("Could not initialize metrics", e);
+		}
 	}
 
 	@Override
