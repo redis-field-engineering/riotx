@@ -49,7 +49,7 @@ abstract class RiotxTests extends AbstractRiotxApplicationTestBase {
 	void parquetFileImport(TestInfo info) throws Exception {
 		String filename = "file-import-parquet";
 		execute(info, filename);
-		
+		Assertions.assertEquals(1000, redisCommands.dbsize());
 	}
 
 	private static void assertStreamImport(RedisCommands<String, String> commands) throws IOException {

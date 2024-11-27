@@ -4,6 +4,7 @@
 {project-title} is an extension to {link_riot} which provides the following additional features for https://redis.io/cloud/[Redis Cloud] and https://redis.io/enterprise/[Redis Software]:
 
 * Observability
+* https://parquet.apache.org/docs/overview/[Parquet] file import
 * Memcached Replication
 * Redis Stream Import/Export
 

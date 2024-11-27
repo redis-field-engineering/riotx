@@ -1,0 +1,10 @@
+= Parquet File Import
+
+{project-title} adds support for https://parquet.apache.org/docs/overview/[Parquet] files to the `file-import` command.
+
+
+.Parquet file import example
+[source,console]
+-----
+riotx file-import s3://riotx/userdata1.parquet --s3-region us-west-1 hset --keyspace user --key id
+-----
