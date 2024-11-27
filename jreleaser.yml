@@ -191,6 +191,7 @@ distributions:
         active: RELEASE
         owner: redis
         commitMessage: 'riotx {{tagName}}'
+
 files:
   artifacts:
     - path: VERSION
