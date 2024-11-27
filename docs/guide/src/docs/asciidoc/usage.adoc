@@ -34,6 +34,8 @@ $ source <(riotx generate-completion)
 
 :leveloffset: +1
 include::{includedir}/memcached.adoc[]
+include::{includedir}/parquet.adoc[]
+include::{includedir}/redis-import.adoc[]
 include::{includedir}/stream-export.adoc[]
 include::{includedir}/stream-import.adoc[]
 :leveloffset: -1

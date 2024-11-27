@@ -7,7 +7,7 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 @Command(name = "riotx", versionProvider = Versions.class, footerHeading = "%nRun 'riotx COMMAND --help' for more information on a command.%n%nFor more help on how to use RIOT-X, head to https://redis-field-engineering.github.io/riotx%n", subcommands = {
-		StreamImport.class, StreamExport.class, MemcachedReplicate.class })
+		RedisExportImportCommand.class, StreamImport.class, StreamExport.class, MemcachedReplicate.class })
 public class Riotx extends Riot {
 
 	public static void main(String[] args) {

@@ -11,8 +11,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MappingIterator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redis.lettucemod.Beers;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
+import com.redis.spring.batch.item.redis.gen.ItemType;
 
 import io.lettuce.core.LettuceFutures;
 import io.lettuce.core.RedisFuture;
@@ -25,6 +30,24 @@ abstract class RiotxTests extends AbstractRiotxApplicationTestBase {
 	@BeforeAll
 	void setDefaults() {
 		setIdleTimeout(Duration.ofSeconds(1));
+	}
+
+	@Test
+	void redisImportJson(TestInfo info) throws Exception {
+		int count = 1000;
+		GeneratorItemReader generator = generator(count, ItemType.HASH);
+		generator.setKeyspace("hash");
+		generate(info, generator);
+		String filename = "redis-import-json";
+		execute(info, filename);
+		List<String> keys = targetRedisCommands.keys("doc:*");
+		Assertions.assertEquals(count, keys.size());
+		Assertions.assertEquals(KeyValue.TYPE_JSON, targetRedisCommands.type(keys.get(0)));
+		String json = targetRedisCommands.jsonGet(keys.get(1));
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode node = mapper.readTree(json);
+		Assertions.assertNull(node.get("id"));
+		Assertions.assertNotNull(node.get("field1"));
 	}
 
 	@Test
@@ -44,7 +67,7 @@ abstract class RiotxTests extends AbstractRiotxApplicationTestBase {
 		execute(info, filename);
 		assertStreamImport(targetRedisCommands);
 	}
-	
+
 	@Test
 	void parquetFileImport(TestInfo info) throws Exception {
 		String filename = "file-import-parquet";
