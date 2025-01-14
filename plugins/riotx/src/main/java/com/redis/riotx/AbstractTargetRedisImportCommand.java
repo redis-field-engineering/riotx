@@ -13,7 +13,7 @@ import io.lettuce.core.RedisURI;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
-public abstract class AbstractRedisToRedisImportCommand extends AbstractImportCommand {
+public abstract class AbstractTargetRedisImportCommand extends AbstractImportCommand {
 
 	@ArgGroup(exclusive = false)
 	private RedisArgs sourceRedisArgs = new RedisArgs();

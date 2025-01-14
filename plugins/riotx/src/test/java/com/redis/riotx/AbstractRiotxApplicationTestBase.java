@@ -96,8 +96,8 @@ abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestBase {
 					targetCommand.setTargetRedisUri(targetRedisURI);
 					configure(targetCommand.getTargetRedisArgs());
 				}
-				if (command instanceof AbstractRedisToRedisImportCommand) {
-					AbstractRedisToRedisImportCommand redisImport = (AbstractRedisToRedisImportCommand) command;
+				if (command instanceof AbstractTargetRedisImportCommand) {
+					AbstractTargetRedisImportCommand redisImport = (AbstractTargetRedisImportCommand) command;
 					configure(redisImport.getSourceRedisArgs());
 					if (redisImport.getTargetRedisUri() != null) {
 						redisImport.setTargetRedisUri(targetRedisURI);

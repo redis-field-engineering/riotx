@@ -23,7 +23,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @Command(name = "redis-import", description = "Import data from a Redis database.")
-public class RedisExportImportCommand extends AbstractRedisToRedisImportCommand {
+public class RedisImportCommand extends AbstractTargetRedisImportCommand {
 
 	private static final String TASK_NAME = "Migrating";
 

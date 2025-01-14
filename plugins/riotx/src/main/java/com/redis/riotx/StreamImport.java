@@ -19,7 +19,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
 @Command(name = "stream-import", description = "Import data from a Redis stream.")
-public class StreamImport extends AbstractRedisToRedisImportCommand {
+public class StreamImport extends AbstractTargetRedisImportCommand {
 
 	private static final String TASK_NAME = "Importing";
 
