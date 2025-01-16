@@ -19,6 +19,7 @@ jar {
 
 startScripts {
     classpath = files('$APP_HOME/lib/*')
+    defaultJvmOpts = ["--add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED"]
 }
 
 dependencies {
@@ -31,6 +32,8 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'io.prometheus:prometheus-metrics-exporter-httpserver'
+    implementation 'net.snowflake:snowflake-jdbc:3.21.0'
+
     testImplementation group: 'com.redis', name: 'riot-test', version: riotVersion 
     testImplementation 'org.awaitility:awaitility'
     testImplementation 'io.micrometer:micrometer-core'
