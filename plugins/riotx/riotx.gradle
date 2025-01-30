@@ -28,11 +28,12 @@ dependencies {
     api project(':riotx-parquet')
     api group: 'info.picocli', name: 'picocli', version: picocliVersion
     annotationProcessor group: 'info.picocli', name: 'picocli-codegen', version: picocliVersion
-    implementation group: 'net.snowflake', name: 'snowflake-jdbc', version: snowflakeVersion
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'io.prometheus:prometheus-metrics-exporter-httpserver'
-    implementation 'net.snowflake:snowflake-jdbc:3.21.0'
+    implementation 'org.xerial:sqlite-jdbc'
+//    implementation 'com.ibm.db2:jcc'
+    implementation group: 'net.snowflake', name: 'snowflake-jdbc', version: snowflakeVersion
 
     testImplementation group: 'com.redis', name: 'riot-test', version: riotVersion 
     testImplementation 'org.awaitility:awaitility'

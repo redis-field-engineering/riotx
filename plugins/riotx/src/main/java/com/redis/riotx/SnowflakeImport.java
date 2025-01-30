@@ -1,20 +1,26 @@
 package com.redis.riotx;
 
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.riot.DatabaseImport;
-import com.redis.riot.RedisContext;
-import com.redis.riot.core.RiotInitializationException;
-import io.lettuce.core.api.sync.RedisCommands;
-import org.springframework.batch.item.database.JdbcCursorItemReader;
-import org.springframework.util.Assert;
-import picocli.CommandLine;
-import picocli.CommandLine.Option;
-
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.MessageFormat;
 import java.util.Map;
+
+import javax.sql.DataSource;
+
+import org.springframework.batch.item.database.JdbcCursorItemReader;
+import org.springframework.util.Assert;
+
+import com.redis.lettucemod.api.StatefulRedisModulesConnection;
+import com.redis.riot.DatabaseImport;
+import com.redis.riot.RedisContext;
+import com.redis.riot.core.RiotExecutionException;
+import com.redis.riot.core.RiotInitializationException;
+
+import io.lettuce.core.api.sync.RedisCommands;
+import picocli.CommandLine;
+import picocli.CommandLine.Option;
 
 @CommandLine.Command(name = "snowflake-import", description = "Import from a snowflake table (uses Snowflake Streams to track changes).")
 public class SnowflakeImport extends DatabaseImport {
@@ -125,44 +131,46 @@ public class SnowflakeImport extends DatabaseImport {
 	}
 
 	@Override
-	protected JdbcCursorItemReader<Map<String, Object>> reader() {
+	protected JdbcCursorItemReader<Map<String, Object>> reader() throws RiotExecutionException {
 		JdbcCursorItemReader<Map<String, Object>> itemReader = super.reader();
-		itemReader.setPreparedStatementSetter(ps -> {
-			try {
-				Connection dbConnection = getDataSourceArgs().dataSource().getConnection();
-
-				StatefulRedisModulesConnection<String, String> connection = redisContext.getConnection();
-				RedisCommands<String, String> syncCommands = connection.sync();
-				String currentOffset = syncCommands.get(offsetKey);
-
-				// get current offset of stream and save to target redis
-				String newOffset = getCurrentOffset(dbConnection, fullStreamName);
-				if (null != newOffset) {
-					syncCommands.set(offsetKey, newOffset);
-					log.debug("in snowflake reader setup: stored offset {}={}", offsetKey, newOffset);
-				}
-
-				String initStatement = initStatement(currentOffset, fullStreamName);
-
-				// TODO figure out why we cant use temp table here - could be multiple
-				// different connection/sessions use it
-				String initTempTable = MessageFormat.format("CREATE OR REPLACE TABLE {0} AS SELECT * FROM {1}",
-						tempTable, fullStreamName);
-
-				// set success callback
-				this.onJobSuccessCallback = afterSuccess(dbConnection, redisContext, fullStreamName, offsetKey,
-						tempTable);
-
-				// initialize stream and copy data to temp table
-				dbConnection.prepareStatement(initStatement).execute();
-				log.debug("initialized stream: {}", initStatement);
-
-				dbConnection.prepareStatement(initTempTable).execute();
-				log.debug("initialized temp table: {}", initTempTable);
-			} catch (SQLException e) {
-				throw new RuntimeException("Unable to execute pre sql for snowflake-import", e);
-			}
-		});
+		DataSource dataSource;
+		try {
+			dataSource = getDataSourceArgs().dataSource();
+		} catch (Exception e) {
+			throw new RiotExecutionException("Could not initialize data source", e);
+		}
+		itemReader.setPreparedStatementSetter(ps -> setValues(dataSource, ps));
 		return itemReader;
+	}
+
+	private void setValues(DataSource dataSource, PreparedStatement ps) throws SQLException {
+		Connection dbConnection = dataSource.getConnection();
+		StatefulRedisModulesConnection<String, String> connection = redisContext.getConnection();
+		RedisCommands<String, String> syncCommands = connection.sync();
+		String currentOffset = syncCommands.get(offsetKey);
+
+		// get current offset of stream and save to target redis
+		String newOffset = getCurrentOffset(dbConnection, fullStreamName);
+		if (null != newOffset) {
+			syncCommands.set(offsetKey, newOffset);
+			log.debug("in snowflake reader setup: stored offset {}={}", offsetKey, newOffset);
+		}
+
+		String initStatement = initStatement(currentOffset, fullStreamName);
+
+		// TODO figure out why we cant use temp table here - could be multiple
+		// different connection/sessions use it
+		String initTempTable = MessageFormat.format("CREATE OR REPLACE TABLE {0} AS SELECT * FROM {1}", tempTable,
+				fullStreamName);
+
+		// set success callback
+		this.onJobSuccessCallback = afterSuccess(dbConnection, redisContext, fullStreamName, offsetKey, tempTable);
+
+		// initialize stream and copy data to temp table
+		dbConnection.prepareStatement(initStatement).execute();
+		log.debug("initialized stream: {}", initStatement);
+
+		dbConnection.prepareStatement(initTempTable).execute();
+		log.debug("initialized temp table: {}", initTempTable);
 	}
 }

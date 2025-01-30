@@ -43,7 +43,7 @@ abstract class RiotxTests extends AbstractRiotxApplicationTestBase {
 		List<String> keys = targetRedisCommands.keys("doc:*");
 		Assertions.assertEquals(count, keys.size());
 		Assertions.assertEquals(KeyValue.TYPE_JSON, targetRedisCommands.type(keys.get(0)));
-		String json = targetRedisCommands.jsonGet(keys.get(1));
+		String json = targetRedisCommands.jsonGet(keys.get(1)).get(0).toString();
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode node = mapper.readTree(json);
 		Assertions.assertNull(node.get("id"));
