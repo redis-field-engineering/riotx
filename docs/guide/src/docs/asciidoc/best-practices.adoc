@@ -13,17 +13,17 @@ The `replicate` command reads from a source Redis database and write to a target
 
 To optimize throughput it is necessary to understand the two main possible scenarios:
 
-* Slow Producer: In this scenario the reader does not read from source as fast as the writer can write to the target.
+Slow Producer:: In this scenario the reader does not read from source as fast as the writer can write to the target.
 This means the writer is starved and we should look into ways to speed up the reader.
-* Slow Consumer: In this scenario the writer can not keep up with the reader and we should look into optimizing writes.
+Slow Consumer:: In this scenario the writer can not keep up with the reader and we should look into optimizing writes.
 
 There are two ways to identify which scenario we fall into:
 
-* No-op writer: With the `--dry-run` option the replication process will use a no-op writer instead of a Redis writer.
+No-op writer:: With the `--dry-run` option the replication process will use a no-op writer instead of a Redis writer.
 If throughput with dry-run is similar to throughput without then the writer is not the bottleneck.
 Follow steps below to improve reader throughput.
 
-* Reader queue utilization: Using the Grafana dashboard you can monitor reader queue depth.
+Reader queue utilization:: Using the Grafana dashboard you can monitor reader queue depth.
 A low queue utilization means the writer can keep up with the reader.
 A queue utilization close to 100% means writes are slower than reads.
 
