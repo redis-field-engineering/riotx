@@ -38,4 +38,7 @@ include::{includedir}/parquet.adoc[]
 include::{includedir}/redis-import.adoc[]
 include::{includedir}/stream-export.adoc[]
 include::{includedir}/stream-import.adoc[]
+include::{includedir}/databases.adoc[]
 :leveloffset: -1
+
+

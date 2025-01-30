@@ -1,0 +1,12 @@
+[[_db]]
+= Databases
+
+{project-title} includes JDBC drivers for the following databases in addition to the ones provided by https://redis.github.io/riot/#_db_drivers[RIOT].
+
+https://docs.snowflake.com/en/developer-guide/jdbc/jdbc-configure[Snowflake]:: `jdbc:snowflake://<account_identifier>.snowflakecomputing.com/?<connection_params>`
+
+https://www.sqlitetutorial.net/sqlite-java/sqlite-jdbc-driver/[SQLite]:: `jdbc:sqlite:path_to_sqlite_file`
+
+// https://www.ibm.com/docs/en/db2/12.1?topic=cdsudidsdjs-url-format-data-server-driver-jdbc-sqlj-type-4-connectivity[Db2]:: `jdbc:db2://host:port/database`
+
+
