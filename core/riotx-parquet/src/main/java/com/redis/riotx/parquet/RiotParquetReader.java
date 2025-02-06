@@ -11,7 +11,6 @@ import org.apache.parquet.io.InputFile;
 /**
  * Read Avro records from a Parquet file.
  *
- * @param <T> the Java type of records created by this reader
  */
 public class RiotParquetReader extends ParquetReader<Map<String, Object>> {
 
