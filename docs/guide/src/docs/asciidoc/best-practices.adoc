@@ -32,19 +32,25 @@ A queue utilization close to 100% means writes are slower than reads.
 
 To improve reader performance tweak the options below until you reach ooptimal throughput.
 
-`--read-threads`:: How many value reader threads to use in parallel (default: 1)
-`--read-batch`:: Number of values each reader thread should read in a single pipelined call (default: 50)
+`--read-threads`:: How many value reader threads to use in parallel (default: 1).
+
+`--read-batch`:: Number of values each reader thread should read in a single pipelined call (default: 50).
+
 `--read-queue`:: Capacity of the reader queue (default: 10000).
 When the queue is full the threads wait for space to become available.
 Increase this value if you have peaky traffic on the source database causing fluctuating reader throughput.
+
 `--source-pool`:: Number of Redis connections to the source database (default: 8).
-Keep in sync with the number of threads to have a dedicated connection per thread.  
+Keep in sync with the number of read threads to have a dedicated connection per thread.  
 
 === Writer
 
 To improve writer performance you can tweak the following options:
-`--batch`:: Number of items written in a single network round-trip to the Redis server (i.e. number of commands in the pipeline)
-`--threads`:: How many write operations can be performed concurrently (default: 1)
+
+`--batch`:: Number of items written in a single network round-trip to the Redis server (i.e. number of commands in the pipeline).
+
+`--threads`:: How many write operations can be performed concurrently (default: 1).
+
 `--target-pool`:: Number of Redis connections to the target database (default: 8).
 Keep in sync with the number of threads to have a dedicated connection per thread.
 
