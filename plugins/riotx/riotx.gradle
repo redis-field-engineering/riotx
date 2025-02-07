@@ -164,6 +164,10 @@ gitPublish {
            into 'manpage'
         }
     }
+    
+    preserve {
+        include '*/**'
+    }
 
     commitMessage = 'Publishing man page'
 }
