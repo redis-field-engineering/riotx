@@ -32,6 +32,10 @@ $ source <(riotx generate-completion)
 ----
 ====
 
+== Man Page
+
+https://redis-field-engineering.github.io/riotx/manpage/riotx[{project-title} man page].
+
 :leveloffset: +1
 include::{includedir}/memcached.adoc[]
 include::{includedir}/parquet.adoc[]
