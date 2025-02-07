@@ -1,6 +1,7 @@
 plugins {
     id 'application'
     id 'org.jreleaser.jdks'
+    id 'org.ajoberstar.git-publish'
 }
 
 application {
@@ -15,11 +16,6 @@ jar {
             'Automatic-Module-Name': project.findProperty('automatic.module.name')
         ])
     }
-}
-
-startScripts {
-    classpath = files('$APP_HOME/lib/*')
-    defaultJvmOpts = []
 }
 
 dependencies {
@@ -138,3 +134,39 @@ project.rootProject.gradle.addBuildListener(new BuildAdapter() {
             }
     }
 })
+
+task generateManpageAsciiDoc(type: JavaExec) {
+    dependsOn(classes)
+    group = "Documentation"
+    description = "Generate AsciiDoc manpage"
+    classpath(configurations.compileClasspath, configurations.annotationProcessor, sourceSets.main.runtimeClasspath)
+    main 'picocli.codegen.docgen.manpage.ManPageGenerator'
+    args "com.redis.riotx.Riotx", "--outdir=${project.buildDir}/generated-riotx-docs", "-v"
+}
+
+apply plugin: 'org.asciidoctor.jvm.convert'
+asciidoctor {
+    dependsOn(generateManpageAsciiDoc)
+    sourceDir = file("${project.buildDir}/generated-riotx-docs")
+    outputDir = file("${project.buildDir}/docs")
+    logDocuments = true
+    outputOptions {
+        backends = ['manpage', 'html5']
+    }
+}
+
+gitPublish {
+    repoUri = config.info.resolveScmLink()
+    branch = config.docs.guide.publish.branch
+
+    // what to publish, this is a standard CopySpec
+    contents {
+        from 'build/docs/html5/' {
+           into 'manpage'
+        }
+    }
+
+    commitMessage = 'Publishing man page'
+}
+
+gitPublishCommit.dependsOn(asciidoctor)
