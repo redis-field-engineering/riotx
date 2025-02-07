@@ -156,8 +156,8 @@ asciidoctor {
 }
 
 gitPublish {
-    repoUri = config.info.resolveScmLink()
-    branch = config.docs.guide.publish.branch
+    repoUri = 'https://github.com/redis-field-engineering/riotx'
+    branch = 'gh-pages'
 
     contents {
         from ('build/docs/html5/') {
