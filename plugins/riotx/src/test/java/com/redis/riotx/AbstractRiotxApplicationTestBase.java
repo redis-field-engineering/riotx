@@ -110,7 +110,7 @@ abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestBase {
 				}
 			}
 			configs.forEach(c -> c.execute(parseResult));
-			return 0;
+			return super.executionStrategy(parseResult);
 		}
 
 		private void configure(TargetRedisArgs args) {
