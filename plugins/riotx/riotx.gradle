@@ -168,4 +168,5 @@ gitPublish {
     commitMessage = 'Publishing man page'
 }
 
+gitPublishCopy.dependsOn(asciidoctor)
 gitPublishCommit.dependsOn(asciidoctor)
