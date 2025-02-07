@@ -4,25 +4,27 @@ import java.io.IOException;
 
 import com.redis.riot.RedisContext;
 import com.redis.riot.Replicate;
-import com.redis.riot.core.RiotInitializationException;
+import com.redis.riot.core.RiotException;
 import com.redis.riot.core.Step;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 
 import picocli.CommandLine.ArgGroup;
+import picocli.CommandLine.Command;
 
+@Command(name = "replicate", aliases = "sync", description = "Replicate a Redis database into another Redis database.")
 public class ReplicateX extends Replicate {
 
 	@ArgGroup(exclusive = false, heading = "Metrics options%n")
 	private MetricsArgs metricsArgs = new MetricsArgs();
 
 	@Override
-	protected void initialize() throws RiotInitializationException {
+	protected void initialize() {
 		super.initialize();
 		try {
 			metricsArgs.configureMetrics();
 		} catch (IOException e) {
-			throw new RiotInitializationException("Could not initialize metrics", e);
+			throw new RiotException("Could not initialize metrics", e);
 		}
 	}
 

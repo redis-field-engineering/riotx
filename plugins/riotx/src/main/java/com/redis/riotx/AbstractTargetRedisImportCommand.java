@@ -6,7 +6,6 @@ import com.redis.riot.AbstractImportCommand;
 import com.redis.riot.RedisArgs;
 import com.redis.riot.RedisContext;
 import com.redis.riot.TargetRedisArgs;
-import com.redis.riot.core.RiotInitializationException;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 
 import io.lettuce.core.RedisURI;
@@ -27,7 +26,7 @@ public abstract class AbstractTargetRedisImportCommand extends AbstractImportCom
 	protected RedisContext sourceRedisContext;
 
 	@Override
-	protected void initialize() throws RiotInitializationException {
+	protected void initialize() {
 		super.initialize();
 		sourceRedisContext = sourceRedisContext();
 		sourceRedisContext.afterPropertiesSet();

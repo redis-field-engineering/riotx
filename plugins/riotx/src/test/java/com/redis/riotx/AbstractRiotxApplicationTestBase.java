@@ -65,7 +65,7 @@ abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestBase {
 		}
 
 		@Override
-		protected int execute(ParseResult parseResult, IExecutionStrategy defaultStrategy) {
+		protected int executionStrategy(ParseResult parseResult) {
 			for (ParseResult subParseResult : parseResult.subcommands()) {
 				Object command = subParseResult.commandSpec().commandLine().getCommand();
 				if (command instanceof OperationCommand) {
@@ -110,7 +110,7 @@ abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestBase {
 				}
 			}
 			configs.forEach(c -> c.execute(parseResult));
-			return super.execute(parseResult, defaultStrategy);
+			return 0;
 		}
 
 		private void configure(TargetRedisArgs args) {

@@ -15,8 +15,7 @@ import org.springframework.util.Assert;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.riot.DatabaseImport;
 import com.redis.riot.RedisContext;
-import com.redis.riot.core.RiotExecutionException;
-import com.redis.riot.core.RiotInitializationException;
+import com.redis.riot.core.RiotException;
 
 import io.lettuce.core.api.sync.RedisCommands;
 import picocli.CommandLine;
@@ -107,7 +106,7 @@ public class SnowflakeImport extends DatabaseImport {
 	}
 
 	@Override
-	protected void initialize() throws RiotInitializationException {
+	protected void initialize() {
 		super.initialize();
 
 		this.table = sql;
@@ -131,13 +130,13 @@ public class SnowflakeImport extends DatabaseImport {
 	}
 
 	@Override
-	protected JdbcCursorItemReader<Map<String, Object>> reader() throws RiotExecutionException {
+	protected JdbcCursorItemReader<Map<String, Object>> reader() {
 		JdbcCursorItemReader<Map<String, Object>> itemReader = super.reader();
 		DataSource dataSource;
 		try {
 			dataSource = getDataSourceArgs().dataSource();
 		} catch (Exception e) {
-			throw new RiotExecutionException("Could not initialize data source", e);
+			throw new RiotException("Could not initialize data source", e);
 		}
 		itemReader.setPreparedStatementSetter(ps -> setValues(dataSource, ps));
 		return itemReader;

@@ -10,7 +10,9 @@ import com.redis.riot.file.RiotResourceMap;
 import com.redis.riotx.parquet.ParquetFileItemReader;
 
 import picocli.CommandLine.ArgGroup;
+import picocli.CommandLine.Command;
 
+@Command(name = "file-import", description = "Import data from files.")
 public class FileImportX extends AbstractFileImport {
 
 	public static final MimeType MIME_TYPE_PARQUET = new MimeType("application", "x-parquet");
