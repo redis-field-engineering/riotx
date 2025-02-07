@@ -159,9 +159,8 @@ gitPublish {
     repoUri = config.info.resolveScmLink()
     branch = config.docs.guide.publish.branch
 
-    // what to publish, this is a standard CopySpec
     contents {
-        from 'build/docs/html5/' {
+        from ('build/docs/html5/') {
            into 'manpage'
         }
     }
