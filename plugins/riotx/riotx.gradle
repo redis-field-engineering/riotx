@@ -18,6 +18,11 @@ jar {
     }
 }
 
+startScripts {
+    classpath = files('$APP_HOME/lib/*')
+    defaultJvmOpts = ["--add-opens=java.base/java.nio=ALL-UNNAMED"]
+}
+
 dependencies {
     implementation group: 'com.redis', name: 'riot', version: riotVersion
     implementation group: 'com.redis', name: 'spring-batch-memcached', version: springBatchRedisVersion
