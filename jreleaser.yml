@@ -35,7 +35,6 @@ release:
     sign: true
     issues:
       enabled: true
-    name: riotx-dist
     changelog:
       formatted: ALWAYS
       preset: conventional-commits
