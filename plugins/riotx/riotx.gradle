@@ -19,7 +19,6 @@ jar {
 }
 
 startScripts {
-    classpath = files('$APP_HOME/lib/*')
     defaultJvmOpts = ["--add-opens=java.base/java.nio=ALL-UNNAMED"]
 }
 
