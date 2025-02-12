@@ -2,9 +2,8 @@ package com.redis.riotx;
 
 import java.util.concurrent.TimeUnit;
 
-import org.springframework.batch.core.ItemWriteListener;
+import org.springframework.batch.core.ItemReadListener;
 import org.springframework.batch.core.observability.BatchMetrics;
-import org.springframework.batch.item.Chunk;
 
 import com.redis.spring.batch.item.redis.common.KeyValue;
 
@@ -15,34 +14,19 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 
-public class ReplicateMetricsWriteListener<K> implements ItemWriteListener<KeyValue<K>> {
+public class ReplicateMetricsReadListener<K> implements ItemReadListener<KeyValue<K>> {
 
-	public static final String METRICS_PREFIX = "riotx.replication.";
-	public static final String LAG_TIMER_NAME = METRICS_PREFIX + "lag";
-	public static final String LAG_TIMER_DESCRIPTION = "End-to-end replication latency";
+	public static final String METRICS_PREFIX = "riotx.replication.read.";
+	public static final String LAG_TIMER_NAME = METRICS_PREFIX + "latency";
+	public static final String LAG_TIMER_DESCRIPTION = "Replication read latency";
 	public static final String BYTES_COUNTER_NAME = METRICS_PREFIX + "bytes";
-	public static final String BYTES_COUNTER_DESCRIPTION = "Number of bytes replicated from source to target";
+	public static final String BYTES_COUNTER_DESCRIPTION = "Number of bytes read from source";
 
 	private MeterRegistry meterRegistry = Metrics.globalRegistry;
 
 	@Override
-	public void afterWrite(Chunk<? extends KeyValue<K>> items) {
-		onItems(items, BatchMetrics.STATUS_SUCCESS);
-	}
-
-	@Override
-	public void onWriteError(Exception exception, Chunk<? extends KeyValue<K>> items) {
-		onItems(items, BatchMetrics.STATUS_FAILURE);
-	}
-
-	private void onItems(Chunk<? extends KeyValue<K>> items, String status) {
-		for (KeyValue<K> item : items) {
-			onItem(item, status);
-		}
-	}
-
-	private void onItem(KeyValue<K> item, String status) {
-		Iterable<Tag> tags = tags(item, status);
+	public void afterRead(KeyValue<K> item) {
+		Iterable<Tag> tags = tags(item, BatchMetrics.STATUS_SUCCESS);
 		Timer lag = Timer.builder(LAG_TIMER_NAME).description(LAG_TIMER_DESCRIPTION).tags(tags).register(meterRegistry);
 		lag.record(System.currentTimeMillis() - item.getTimestamp(), TimeUnit.MILLISECONDS);
 		if (item.getMemoryUsage() > 0) {

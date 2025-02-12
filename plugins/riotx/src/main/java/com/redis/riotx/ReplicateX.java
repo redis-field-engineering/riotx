@@ -2,12 +2,16 @@ package com.redis.riotx;
 
 import java.io.IOException;
 
+import org.springframework.util.StringUtils;
+
 import com.redis.riot.RedisContext;
 import com.redis.riot.Replicate;
 import com.redis.riot.core.RiotException;
 import com.redis.riot.core.Step;
+import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.common.RedisInfo;
 
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -29,16 +33,33 @@ public class ReplicateX extends Replicate {
 	}
 
 	@Override
+	protected RedisItemReader<byte[], byte[]> reader() {
+		RedisItemReader<byte[], byte[]> reader = super.reader();
+		reader.addItemReadListener(new ReplicateMetricsReadListener<>());
+		return reader;
+	}
+
+	@Override
 	protected void configureTargetRedisWriter(RedisItemWriter<?, ?, ?> writer) {
-		writer.setSupportStrategy(new ProtectedRedisSupportStrategy());
+		writer.getRedisSupportCheck().getConsumers().add(this::unsupportedRedis);
 		super.configureTargetRedisWriter(writer);
+	}
+
+	private void unsupportedRedis(RedisInfo info) {
+		throw new UnsupportedOperationException(message(info));
+	}
+
+	private String message(RedisInfo info) {
+		if (StringUtils.hasLength(info.getOS())) {
+			return info.getOS();
+		}
+		return info.getServerName();
 	}
 
 	@Override
 	protected Step<KeyValue<byte[]>, KeyValue<byte[]>> step() {
 		Step<KeyValue<byte[]>, KeyValue<byte[]>> step = super.step();
-		ReplicateMetricsWriteListener<byte[]> readWriteListener = new ReplicateMetricsWriteListener<>();
-		step.writeListener(readWriteListener);
+		step.writeListener(new ReplicateMetricsWriteListener<>());
 		return step;
 	}
 
