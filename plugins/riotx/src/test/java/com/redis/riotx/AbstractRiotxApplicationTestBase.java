@@ -6,11 +6,11 @@ import java.util.List;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.simple.SimpleLogger;
 
+import com.redis.riot.AbstractCompareCommand;
 import com.redis.riot.AbstractExportCommand;
 import com.redis.riot.AbstractRedisCommand;
 import com.redis.riot.AbstractRedisExportCommand;
 import com.redis.riot.AbstractRedisImportCommand;
-import com.redis.riot.AbstractReplicateCommand;
 import com.redis.riot.CompareMode;
 import com.redis.riot.RedisArgs;
 import com.redis.riot.RedisReaderArgs;
@@ -88,8 +88,8 @@ abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestBase {
 				if (command instanceof AbstractExportCommand) {
 					configure(((AbstractExportCommand) command).getSourceRedisReaderArgs());
 				}
-				if (command instanceof AbstractReplicateCommand) {
-					AbstractReplicateCommand targetCommand = (AbstractReplicateCommand) command;
+				if (command instanceof AbstractCompareCommand) {
+					AbstractCompareCommand targetCommand = (AbstractCompareCommand) command;
 					configure(targetCommand.getSourceRedisReaderArgs());
 					targetCommand.setSourceRedisUri(redisURI);
 					targetCommand.getSourceRedisArgs().setCluster(getRedisServer().isRedisCluster());
