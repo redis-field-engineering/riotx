@@ -1,25 +1,19 @@
 package com.redis.riotx;
 
-import java.util.concurrent.TimeUnit;
-
 import org.springframework.batch.core.ItemWriteListener;
 import org.springframework.batch.core.observability.BatchMetrics;
 import org.springframework.batch.item.Chunk;
 
 import com.redis.spring.batch.item.redis.common.KeyValue;
 
-import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Timer;
 
 public class ReplicateMetricsWriteListener<K> implements ItemWriteListener<KeyValue<K>> {
 
 	public static final String METRICS_PREFIX = "riotx.replication.";
 	public static final String LAG_TIMER_NAME = METRICS_PREFIX + "lag";
-	public static final String LAG_TIMER_DESCRIPTION = "End-to-end replication latency";
+	public static final String LAG_TIMER_DESCRIPTION = "Replication end-to-end latency";
 	public static final String BYTES_COUNTER_NAME = METRICS_PREFIX + "bytes";
 	public static final String BYTES_COUNTER_DESCRIPTION = "Number of bytes replicated from source to target";
 
@@ -42,22 +36,8 @@ public class ReplicateMetricsWriteListener<K> implements ItemWriteListener<KeyVa
 	}
 
 	private void onItem(KeyValue<K> item, String status) {
-		Iterable<Tag> tags = tags(item, status);
-		Timer lag = Timer.builder(LAG_TIMER_NAME).description(LAG_TIMER_DESCRIPTION).tags(tags).register(meterRegistry);
-		lag.record(System.currentTimeMillis() - item.getTimestamp(), TimeUnit.MILLISECONDS);
-		if (item.getMemoryUsage() > 0) {
-			Counter bytes = Counter.builder(BYTES_COUNTER_NAME).description(BYTES_COUNTER_DESCRIPTION).tags(tags)
-					.register(meterRegistry);
-			bytes.increment(item.getMemoryUsage());
-		}
-	}
-
-	private Iterable<Tag> tags(KeyValue<K> item, String status) {
-		Tags tags = Tags.of("event", item.getEvent(), "status", status);
-		if (item.getType() == null) {
-			return tags;
-		}
-		return tags.and("type", item.getType());
+		RiotxMetrics.replication(meterRegistry, LAG_TIMER_NAME, LAG_TIMER_DESCRIPTION, BYTES_COUNTER_NAME,
+				BYTES_COUNTER_DESCRIPTION, item, status);
 	}
 
 	public void setMeterRegistry(MeterRegistry registry) {

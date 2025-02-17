@@ -1,18 +1,12 @@
 package com.redis.riotx;
 
-import java.util.concurrent.TimeUnit;
-
 import org.springframework.batch.core.ItemReadListener;
 import org.springframework.batch.core.observability.BatchMetrics;
 
 import com.redis.spring.batch.item.redis.common.KeyValue;
 
-import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Timer;
 
 public class ReplicateMetricsReadListener<K> implements ItemReadListener<KeyValue<K>> {
 
@@ -26,22 +20,8 @@ public class ReplicateMetricsReadListener<K> implements ItemReadListener<KeyValu
 
 	@Override
 	public void afterRead(KeyValue<K> item) {
-		Iterable<Tag> tags = tags(item, BatchMetrics.STATUS_SUCCESS);
-		Timer lag = Timer.builder(LAG_TIMER_NAME).description(LAG_TIMER_DESCRIPTION).tags(tags).register(meterRegistry);
-		lag.record(System.currentTimeMillis() - item.getTimestamp(), TimeUnit.MILLISECONDS);
-		if (item.getMemoryUsage() > 0) {
-			Counter bytes = Counter.builder(BYTES_COUNTER_NAME).description(BYTES_COUNTER_DESCRIPTION).tags(tags)
-					.register(meterRegistry);
-			bytes.increment(item.getMemoryUsage());
-		}
-	}
-
-	private Iterable<Tag> tags(KeyValue<K> item, String status) {
-		Tags tags = Tags.of("event", item.getEvent(), "status", status);
-		if (item.getType() == null) {
-			return tags;
-		}
-		return tags.and("type", item.getType());
+		RiotxMetrics.replication(meterRegistry, LAG_TIMER_NAME, LAG_TIMER_DESCRIPTION, BYTES_COUNTER_NAME,
+				BYTES_COUNTER_DESCRIPTION, item, BatchMetrics.STATUS_SUCCESS);
 	}
 
 	public void setMeterRegistry(MeterRegistry registry) {

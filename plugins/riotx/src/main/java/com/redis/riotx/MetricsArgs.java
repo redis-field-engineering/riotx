@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import com.redis.riot.RedisContext;
+import com.redis.riot.core.RiotDuration;
 
 import io.lettuce.core.metrics.MicrometerCommandLatencyRecorder;
 import io.lettuce.core.metrics.MicrometerOptions;
@@ -27,7 +28,7 @@ import picocli.CommandLine.Option;
 public class MetricsArgs {
 
 	public static final int DEFAULT_PORT = 8080;
-	public static final long DEFAULT_STEP = 1;
+	public static final RiotDuration DEFAULT_STEP = RiotDuration.ofSeconds(1);
 	public static final boolean DEFAULT_DESCRIPTIONS = true;
 	public static final String DEFAULT_NAME = "RIOTX-" + RiotxVersion.getVersion();
 
@@ -46,8 +47,8 @@ public class MetricsArgs {
 	@Option(names = "--metrics-redis", description = "Enable command latency metrics. See https://github.com/redis/lettuce/wiki/Command-Latency-Metrics#micrometer")
 	private boolean redis;
 
-	@Option(names = "--metrics-step", description = "Metrics reporting interval in seconds (default: ${DEFAULT-VALUE}).", paramLabel = "<sec>", hidden = true)
-	private long step = DEFAULT_STEP;
+	@Option(names = "--metrics-step", description = "Metrics reporting interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>", hidden = true)
+	private RiotDuration step = DEFAULT_STEP;
 
 	@Option(names = "--metrics-port", description = "Port that Prometheus HTTP server should listen on (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
 	private int port = DEFAULT_PORT;
@@ -78,7 +79,7 @@ public class MetricsArgs {
 
 			@Override
 			public Duration step() {
-				return Duration.ofSeconds(step);
+				return step.getValue();
 			}
 		};
 	}
@@ -107,11 +108,11 @@ public class MetricsArgs {
 		return enabled;
 	}
 
-	public long getStep() {
+	public RiotDuration getStep() {
 		return step;
 	}
 
-	public void setStep(long step) {
+	public void setStep(RiotDuration step) {
 		this.step = step;
 	}
 
