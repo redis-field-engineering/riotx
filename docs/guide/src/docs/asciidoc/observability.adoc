@@ -52,7 +52,8 @@ image::riotx-dashboard-replication.png[]
 |Name|Type|Description
 
 |`riotx_replication_bytes_total`                 | Counter | Number of bytes replicated (needs memory usage with `--mem-limit`)
-|`riotx_replication_lag_seconds`                 | Summary | Replication latency
+|`riotx_replication_lag_seconds`                 | Summary | Replication end-to-end latency
+|`riotx_replication_read_latency_seconds`        | Summary | Replication read latency
 |`spring_batch_chunk_write_seconds`              | Timer   | Batch writing duration
 |`spring_batch_item_process_seconds`             | Timer   | Item processing duration
 |`spring_batch_item_read_seconds`                | Timer   | Item reading duration
