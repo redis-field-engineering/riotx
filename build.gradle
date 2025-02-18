@@ -37,9 +37,7 @@ config {
 
     docs {
         javadoc {
-            autoLinks {
-                enabled = false
-            }
+            enabled = false
         }
     }
     
