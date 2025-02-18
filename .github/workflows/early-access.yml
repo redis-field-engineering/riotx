@@ -79,3 +79,11 @@ jobs:
           path: |
             out/jreleaser/trace.log
             out/jreleaser/output.properties
+            
+      - name: Clone release
+        uses: andrewthetechie/gha-clone-releases@v1
+        with:
+          token: ${{ secrets.GIT_ACCESS_TOKEN }}
+          src_repo: redis-field-engineering/riotx
+          dest_repo: redis-field-engineering/riotx-dist
+          copy_assets: true
