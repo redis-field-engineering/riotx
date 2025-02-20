@@ -24,6 +24,8 @@ project:
       multiProject: true
       mainClass: com.redis.riotx.Riotx
   tags: ['riot-x', 'riotx', 'redis', 'enterprise', 'cloud', 'input', 'output', 'tool', 'data', 'import', 'export']
+  extraProperties:
+    linkDownload: '{{projectLinkHomepage}}/releases/download'
 
 platform:
   replacements:
@@ -166,7 +168,7 @@ distributions:
     scoop:
       active: ALWAYS
       continueOnError: true
-      downloadUrl: https://github.com/redis-field-engineering/riotx-dist/releases/download/{{tagName}}/{{artifactFile}}
+      downloadUrl: '{{projectLinkDownload}}/{{tagName}}/{{artifactFile}}'
       repository:
         active: RELEASE
         name: 'scoop'
@@ -185,7 +187,7 @@ distributions:
     brew:
       active: ALWAYS
       continueOnError: true
-      downloadUrl: https://github.com/redis-field-engineering/riotx-dist/releases/download/{{tagName}}/{{artifactFile}}
+      downloadUrl: '{{projectLinkDownload}}/{{tagName}}/{{artifactFile}}'
       formulaName: riotx
       multiPlatform: true
       repository:
