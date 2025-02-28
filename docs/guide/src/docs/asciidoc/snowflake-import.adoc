@@ -9,7 +9,7 @@ name.
 .Side effects and limitations
 * `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` will be created or replaced
 * `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_temp` table will be created or replaced by selecting from the stream.
-      RIOT-X reads data out of this table and into imports into Redis.
+      RIOT-X reads data out of this table and imports into Redis.
 * `riotx:offset:SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` - this key will be stored in the destination
       Redis database and is used to track the stream offset. If RIOT-X fails in the middle of copying data from the stream
       when restarted it will resume copying data from this offset. Removing this offset key from Redis will result in
@@ -31,7 +31,7 @@ For the full usage, run:
 riotx snowflake-import --help
 ----
 
-.Example: CDC data from the Snowflake table `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE`  into a redis `hash` object
+.Example: CDC to Hashes
 [source,console]
 ----
 riotx snowflake-import \
@@ -47,11 +47,13 @@ riotx snowflake-import \
       --key data_id # column name to use as id
 ----
 
-If you only need to do a one time import of data from Snowflake you can use the `db-import` command.
-This command will read all of the rows output from your SQL query and will write them to Redis. For
-more information see the link:https://redis.github.io/riot/#_db_import[db-import] command.
+The command above imports CDC data from the Snowflake table `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE` into Redis hashes in the keyspace `datatable`.
 
-.Example: One time import from Snowflake using `db-import` command
+If you only need to do a one time import of data from Snowflake you can use the `db-import` command.
+This command will read all of the rows output from your SQL query and will write them to Redis.
+For more information see the link:https://redis.github.io/riot/#_db_import[db-import] command.
+
+.Example: One-time Import
 [source,console]
 ----
 riotx db-import \
@@ -64,3 +66,5 @@ riotx db-import \
       --keyspace datatable \
       --key data_id # column name to use as id
 ----
+
+This command performs a one-time import from Snowflake using the `db-import` command.
