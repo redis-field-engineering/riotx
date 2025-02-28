@@ -30,7 +30,7 @@ A queue utilization close to 100% means writes are slower than reads.
 
 === Reader
 
-To improve reader performance tweak the options below until you reach ooptimal throughput.
+To improve reader performance tweak the options below until you reach optimal throughput.
 
 `--read-threads`:: How many value reader threads to use in parallel (default: 1).
 
