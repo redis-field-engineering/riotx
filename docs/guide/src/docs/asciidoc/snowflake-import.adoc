@@ -34,7 +34,8 @@ riotx snowflake-import --help
 .Example: CDC data from the Snowflake table `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE`  into a redis `hash` object
 [source,console]
 ----
-riotx snowflake-import SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE \
+riotx snowflake-import \
+      SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE \
       --start-from-beginning # include initial table data \
       --jdbc-url "jdbc:snowflake://abcdefg.abc12345.snowflakecomputing.com" \
       --jdbc-driver net.snowflake.client.jdbc.SnowflakeDriver \
@@ -46,3 +47,20 @@ riotx snowflake-import SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE \
       --key data_id # column name to use as id
 ----
 
+If you only need to do a one time import of data from Snowflake you can use the `db-import` command.
+This command will read all of the rows output from your SQL query and will write them to Redis. For
+more information see the link:https://redis.github.io/riot/#_db_import[db-import] command.
+
+.Example: One time import from Snowflake using `db-import` command
+[source,console]
+----
+riotx db-import \
+      "SELECT * FROM SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE" \
+      --jdbc-url "jdbc:snowflake://abcdefg.abc12345.snowflakecomputing.com" \
+      --jdbc-driver net.snowflake.client.jdbc.SnowflakeDriver \
+      --jdbc-username databaseuser \
+      --jdbc-password databasepassword \
+      hset \
+      --keyspace datatable \
+      --key data_id # column name to use as id
+----
