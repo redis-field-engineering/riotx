@@ -1,0 +1,48 @@
+[[_snowflake_import]]
+= Snowflake Import
+
+The `snowflake-import` command uses a Snowflake `STREAM` object to track changes (CDC) to a table and read them into
+a Redis data structure like `hash` or `json`. The Snowflake `STREAM` is created and managed by RIOTX. The user credentials
+you provide must have the ability to create a stream in the database and schema specified by the fully qualified object
+name.
+
+.Side effects and limitations
+* `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` will be created or replaced
+* `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_temp` table will be created or replaced by selecting from the stream.
+      RIOT-X reads data out of this table and into imports into Redis.
+* `riotx:offset:SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` - this key will be stored in the destination
+      Redis database and is used to track the stream offset. If RIOT-X fails in the middle of copying data from the stream
+      when restarted it will resume copying data from this offset. Removing this offset key from Redis will result in
+      RIOT-X creating recreating the stream at time "NOW". If `--start-from-beginning` option is specified the stream
+      will also include the initial table data plus changes going forward.
+* snowflake-import currently only works on tables
+
+
+The basic usage is:
+
+[source,console]
+----
+riotx snowflake-import [OPTIONS] [REDIS COMMAND...]
+----
+
+For the full usage, run:
+[source,console]
+----
+riotx snowflake-import --help
+----
+
+.Example: CDC data from the Snowflake table `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE`  into a redis `hash` object
+[source,console]
+----
+riotx snowflake-import SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE \
+      --start-from-beginning # include initial table data \
+      --jdbc-url "jdbc:snowflake://abcdefg.abc12345.snowflakecomputing.com" \
+      --jdbc-driver net.snowflake.client.jdbc.SnowflakeDriver \
+      --jdbc-username databaseuser \
+      --jdbc-password databasepassword \
+      --repeat-every 60s # sleep 60s after each cdc batch import and then repeat \
+      hset \
+      --keyspace datatable \
+      --key data_id # column name to use as id
+----
+
