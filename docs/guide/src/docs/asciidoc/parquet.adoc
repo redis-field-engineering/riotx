@@ -1,10 +1,15 @@
-= Parquet File Import
+= Parquet Files
 
-{project-title} adds support for https://parquet.apache.org/docs/overview/[Parquet] files to the `file-import` command.
-
+{project-title} adds support for https://parquet.apache.org/docs/overview/[Parquet] files to the `file-import` and `file-export` commands.
 
 .Parquet file import example
 [source,console]
 -----
 riotx file-import s3://riotx/userdata1.parquet --s3-region us-west-1 hset --keyspace user --key id
+-----
+
+.Parquet file export example
+[source,console]
+-----
+riotx file-export beers.parquet --parquet-field ounces=DOUBLE abv=DOUBLE id=INT32
 -----

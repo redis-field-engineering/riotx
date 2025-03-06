@@ -28,7 +28,8 @@ dependencies {
     api project(':riotx-parquet')
     api group: 'info.picocli', name: 'picocli', version: picocliVersion
     annotationProcessor group: 'info.picocli', name: 'picocli-codegen', version: picocliVersion
-    api group: 'de.vandermeer', name: 'asciitable', version: asciitableVersion
+    implementation group: 'com.tdunning', name: 't-digest', version: tdigestVersion
+    implementation group: 'com.github.freva', name: 'ascii-table', version: asciitableVersion
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'io.prometheus:prometheus-metrics-exporter-httpserver'

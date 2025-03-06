@@ -7,7 +7,6 @@ import com.redis.riot.AbstractFileImport;
 import com.redis.riot.file.FileReaderRegistry;
 import com.redis.riot.file.ReadOptions;
 import com.redis.riot.file.RiotResourceMap;
-import com.redis.riotx.parquet.ParquetFileItemReader;
 
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;

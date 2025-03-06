@@ -20,7 +20,7 @@ class MapGroupConverter extends GroupConverter {
 			final String field = schema.getFieldName(i);
 			final Type type = schema.getType(i);
 			if (type.isPrimitive()) {
-				converters[i] = new MapPrimitiveConverter(this, field);
+				converters[i] = new MapPrimitiveConverter(this, field, type);
 			} else {
 				converters[i] = new MapGroupConverter(this, type.asGroupType());
 			}

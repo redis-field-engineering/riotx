@@ -1,4 +1,4 @@
-package com.redis.riotx.parquet;
+package com.redis.riotx;
 
 import java.util.Map;
 
@@ -8,6 +8,9 @@ import org.springframework.batch.item.support.AbstractItemCountingItemStreamItem
 import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+
+import com.redis.riotx.parquet.InputStreamInputFile;
+import com.redis.riotx.parquet.ParquetReaderBuilder;
 
 public class ParquetFileItemReader extends AbstractItemCountingItemStreamItemReader<Map<String, Object>>
 		implements ResourceAwareItemReaderItemStream<Map<String, Object>> {
@@ -27,8 +30,7 @@ public class ParquetFileItemReader extends AbstractItemCountingItemStreamItemRea
 	@Override
 	protected void doOpen() throws Exception {
 		Assert.notNull(resource, "Input resource must be set");
-		ParquetInputFile inputFile = new ParquetInputFile(resource.getInputStream());
-		reader = RiotParquetReader.builder(inputFile).build();
+		reader = new ParquetReaderBuilder(new InputStreamInputFile(resource.getInputStream())).build();
 	}
 
 	@Override
