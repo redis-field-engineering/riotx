@@ -113,12 +113,6 @@ public class FileExportX extends AbstractFileExport {
 		this.parquetFields = parquetFields;
 	}
 
-	/**
-	 * Convert Avro schema to Parquet MessageType
-	 * 
-	 * @param avroSchema Avro Schema
-	 * @return Parquet MessageType
-	 */
 	public static MessageType schema(String name, Map<String, ParquetFieldType> fieldMap) {
 		MessageTypeBuilder schema = Types.buildMessage();
 		fieldMap.forEach((k, v) -> {
