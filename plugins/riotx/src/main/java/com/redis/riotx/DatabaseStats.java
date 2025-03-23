@@ -40,11 +40,11 @@ public class DatabaseStats {
 		}
 	}
 
-	public void keyValue(KeyValue<String> kv) {
+	public synchronized void keyValue(KeyValue<String> kv) {
 		InternalKeyspace keyspace = keyspace(kv);
-		keyspace.add(kv);
+		keyspace.addKeyValue(kv);
 		if (bigKeyPredicate.test(kv)) {
-			keyspace.add(bigKey(kv));
+			keyspace.addBigKey(bigKey(kv));
 		}
 
 	}
@@ -87,7 +87,7 @@ public class DatabaseStats {
 		return keyspace;
 	}
 
-	public List<BigKey> bigKeys() {
+	public synchronized List<BigKey> bigKeys() {
 		return keyspaces.values().stream().flatMap(s -> s.getBigKeys().values().stream()).map(this::bigKey)
 				.collect(Collectors.toList());
 	}
@@ -187,14 +187,14 @@ public class DatabaseStats {
 			this.prefix = prefix;
 		}
 
-		public void add(KeyValue<String> item) {
+		public void addKeyValue(KeyValue<String> item) {
 			types.computeIfAbsent(item.getType(), t -> new AtomicInteger()).incrementAndGet();
 			if (item.getMemoryUsage() > 0) {
 				memoryUsage.add(item.getMemoryUsage());
 			}
 		}
 
-		public void add(InternalBigKey key) {
+		public void addBigKey(InternalBigKey key) {
 			bigKeys.put(key.getKey(), key);
 		}
 
@@ -258,7 +258,7 @@ public class DatabaseStats {
 		private DataSize memoryUsage;
 		private final Throughput writeThroughput = new Throughput();
 
-		public long throughput() {
+		public synchronized long throughput() {
 			return writeThroughput.calculateThroughput();
 		}
 

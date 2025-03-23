@@ -59,9 +59,8 @@ public class StatsPrinter {
 		}
 
 		Printer printer = new Printer();
-		// Create table with builder API
-		printer.append(AsciiTable.builder().border(tableBorder.getBorder()).data(stats.keyspaces(), statsColumns())
-				.toString());
+		List<Keyspace> keyspaces = stats.keyspaces();
+		printer.append(AsciiTable.builder().border(tableBorder.getBorder()).data(keyspaces, statsColumns()).toString());
 
 		printer.append(" ");
 

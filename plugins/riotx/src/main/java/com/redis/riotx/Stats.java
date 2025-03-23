@@ -1,8 +1,8 @@
 package com.redis.riotx;
 
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -111,14 +111,7 @@ public class Stats extends AbstractRedisCommand {
 
 	}
 
-	private static class ExecutionListener implements StepExecutionListener {
-
-		static ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, runnable -> {
-			Thread thread = Executors.defaultThreadFactory().newThread(runnable);
-			thread.setName("StatsTable");
-			thread.setDaemon(true);
-			return thread;
-		});
+	private class ExecutionListener implements StepExecutionListener {
 
 		private final StatsPrinter printer;
 
@@ -130,11 +123,16 @@ public class Stats extends AbstractRedisCommand {
 
 		@Override
 		public void beforeStep(StepExecution stepExecution) {
+			ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 			scheduledTask = executor.scheduleAtFixedRate(this::refresh, 0, 1, TimeUnit.SECONDS);
 		}
 
 		private void refresh() {
-			printer.display();
+			try {
+				printer.display();
+			} catch (Exception e) {
+				log.error("Could not print stats", e);
+			}
 		}
 
 		@Override
