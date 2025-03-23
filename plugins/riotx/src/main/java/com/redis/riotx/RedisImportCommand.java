@@ -8,7 +8,7 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.util.Assert;
 
-import com.redis.riot.AbstractExportCommand;
+import com.redis.riot.ExportStepHelper;
 import com.redis.riot.RedisReaderArgs;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.Step;
@@ -34,7 +34,7 @@ public class RedisImportCommand extends AbstractTargetRedisImportCommand {
 	private Pattern keyRegex;
 
 	protected void configureSourceRedisReader(RedisItemReader<?, ?> reader) {
-		configureAsyncReader(reader);
+		configureAsyncStreamSupport(reader);
 		sourceRedisContext.configure(reader);
 		log.info("Configuring {} with {}", reader.getName(), sourceRedisReaderArgs);
 		sourceRedisReaderArgs.configure(reader);
@@ -50,7 +50,7 @@ public class RedisImportCommand extends AbstractTargetRedisImportCommand {
 		if (reader.getMode() == ReaderMode.SCAN) {
 			step.maxItemCountSupplier(reader.scanSizeEstimator());
 		} else {
-			AbstractExportCommand.checkNotifyConfig(reader.getClient(), log);
+			ExportStepHelper.checkNotifyConfig(reader.getClient(), log);
 			log.info("Configuring export step with live true, flushInterval {}, idleTimeout {}",
 					reader.getFlushInterval(), reader.getIdleTimeout());
 			step.live(true);

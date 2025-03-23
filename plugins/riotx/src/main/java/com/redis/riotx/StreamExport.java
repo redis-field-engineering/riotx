@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redis.riot.AbstractRedisTargetExportCommand;
+import com.redis.riot.ExportStepHelper;
 import com.redis.riot.RedisWriterArgs;
 import com.redis.riot.core.Step;
 import com.redis.spring.batch.item.redis.RedisItemReader;
@@ -64,7 +65,7 @@ public class StreamExport extends AbstractRedisTargetExportCommand {
 		configureSourceRedisReader(reader);
 		RedisItemWriter<String, String, StreamMessage<String, String>> writer = writer();
 		configureTargetRedisWriter(writer);
-		Step<KeyValue<String>, StreamMessage<String, String>> step = step(reader, writer);
+		Step<KeyValue<String>, StreamMessage<String, String>> step = new ExportStepHelper(log).step(reader, writer);
 		step.processor(this::process);
 		step.taskName(TASK_NAME);
 		if (reader.getMode() != ReaderMode.SCAN) {
