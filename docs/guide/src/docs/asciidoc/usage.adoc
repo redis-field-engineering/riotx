@@ -40,6 +40,7 @@ https://redis-field-engineering.github.io/riotx/manpage/riotx[{project-title} ma
 include::{includedir}/memcached.adoc[]
 include::{includedir}/parquet.adoc[]
 include::{includedir}/redis-import.adoc[]
+include::{includedir}/stats.adoc[]
 include::{includedir}/stream-export.adoc[]
 include::{includedir}/stream-import.adoc[]
 include::{includedir}/snowflake-import.adoc[]
