@@ -37,7 +37,7 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 	@ArgGroup(exclusive = false)
 	private DataSourceArgs dataSourceArgs = new DataSourceArgs();
 
-	@Parameters(arity = "1", description = "Fully qualified Snowflake Table or View, eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
+	@Parameters(arity = "1", description = "Fully qualified Snowflake Table or Materialized View, eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
 	private String tableOrView;
 
 	@ArgGroup(exclusive = false)
@@ -50,19 +50,11 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 	private RedisContext redisContext;
 	private String sql;
 	private String createViewStatement;
+	private String viewName;
 
 	@Option(names = "--snapshot-mode", description = "Snapshot mode: ${COMPLETION-CANDIDATES} . INITIAL is the default and will set the Snowflake Stream SHOW_INITIAL_ROWS=TRUE option",
 			defaultValue = "INITIAL")
 	private SnapshotMode snapshotMode;
-
-	@Option(names = "--stream-select-statement", description = "A SQL statement to define a subset of the data to be imported and tracked. This will define a view in Snowflake. A stream will then be created ontop of this view.")
-	private String streamSql;
-
-	@Option(names = "--temp-table-database", description = "The database to create the temp table that holds a snapshot of the stream in. By default it will be created in the same database as the source object")
-	private String tempTableDatabase;
-
-	@Option(names = "--temp-table-schema", description = "The schema to create the temp table that holds a snapshot of the stream in. By default it will be created in the same schema as the source object")
-	private String tempTableSchema;
 
 	private String getCurrentOffset(Connection sqlConnection, String fullStreamName) throws SQLException {
 		String offsetSql = "SELECT SYSTEM$STREAM_GET_TABLE_TIMESTAMP(?)";
@@ -87,52 +79,6 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 		}
 	}
 
-	private String getObjectType(Connection sqlConnection, String fullyQualifiedObject) {
-		if (streamSql != null) {
-			return "VIEW";
-		}
-
-		String[] objectParts = fullyQualifiedObject.split("\\.");
-		String database = objectParts[0].toUpperCase();
-		String schema = objectParts[1].toUpperCase();
-		String objectName = objectParts[2].toUpperCase();
-
-		String sql = """
-                SELECT TABLE_TYPE
-                FROM %s.INFORMATION_SCHEMA.TABLES
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
-            """.formatted(database);
-
-		try (PreparedStatement stmt = sqlConnection.prepareStatement(sql)) {
-			stmt.setString(1, schema);
-			stmt.setString(2, objectName);
-
-			log.info("getObjectType SQL: {}, schema: {}, objectName: {}", stmt, schema, objectName);
-			try (ResultSet rs = stmt.executeQuery()) {
-				if (rs.next()) {
-					String tableType = rs.getString("TABLE_TYPE");
-					if ("BASE TABLE".equals(tableType)) {
-						return "TABLE";
-					} else if ("VIEW".equals(tableType)) {
-						return "VIEW";
-					} else {
-						throw new RiotException("Only tables and views are supported. %s.%s.%s is a %s".formatted(
-								database,
-								schema,
-								objectName,
-								tableType));
-					}
-				} else {
-					throw new RiotException("Was unable to determine the Snowflake object type for %s.%s.%s, check that it exists"
-							.formatted(database, schema, objectName));
-				}
-			}
-		} catch (Exception e) {
-			throw new RiotException("Was unable to determine the Snowflake object type for %s.%s.%s"
-					.formatted(database, schema, objectName), e);
-		}
-	}
-
 	private Runnable afterSuccess(Connection sqlConnection, RedisContext redisContext, String fullStreamName,
 			String offsetKey, String tempTable, String newOffset) {
 		RedisCommands<String, String> syncCommands = redisContext.getConnection().sync();
@@ -147,17 +93,15 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 		};
 	}
 
-	private String initStatement(String currentOffset, String fullStreamName, String objectType) {
+	private String initStatement(String currentOffset, String fullStreamName) {
 		String initStatement = null;
 		if (currentOffset != null && !currentOffset.equals("0")) {
-			initStatement ="CREATE OR REPLACE STREAM %s ON %s %s AT (TIMESTAMP => TO_TIMESTAMP(?))".formatted(
+			initStatement ="CREATE OR REPLACE STREAM %s ON TABLE %s AT (TIMESTAMP => TO_TIMESTAMP(?))".formatted(
 					fullStreamName,
-					objectType,
 					cdcObject);
 		} else {
-			initStatement = "CREATE OR REPLACE STREAM %s ON %s %s".formatted(
+			initStatement = "CREATE OR REPLACE STREAM %s ON TABLE %s".formatted(
 					fullStreamName,
-					objectType,
 					cdcObject);
 
 			if (snapshotMode == SnapshotMode.INITIAL) {
@@ -191,15 +135,8 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 			redisContext = this.targetRedisContext();
 			redisContext.afterPropertiesSet();
 
-			if (streamSql != null){
-				String viewName = "%s.%s.%s_view".formatted(database, schema, simpleTable);
-				createViewStatement = "CREATE OR REPLACE VIEW %s AS %s".formatted(viewName, streamSql);
-				sql = "SELECT * FROM %s".formatted(viewName);
-				cdcObject = viewName;
-			} else {
-				sql = "SELECT * FROM %s".formatted(tempTable);
-				cdcObject = tableOrView;
-			}
+			cdcObject = tableOrView;
+			sql = "SELECT * FROM %s".formatted(tempTable);
 		} else {
 			throw new RiotException("Must provide table or view in format: DATABASE.SCHEMA.TABLE, found %s".formatted(tableOrView));
 		}
@@ -230,16 +167,8 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 			RedisCommands<String, String> syncCommands = connection.sync();
 			String currentOffset = syncCommands.get(offsetKey);
 
-			// get current offset of stream and save to target redis
-			String objectType = getObjectType(dbConnection, cdcObject);
-			if (createViewStatement != null){
-				// see if we need to create the view, should only do this once
-				if (objectType == null){
-					dbConnection.prepareStatement(createViewStatement).execute();
-				}
-			}
 
-			String initStatement = initStatement(currentOffset, fullStreamName, objectType);
+			String initStatement = initStatement(currentOffset, fullStreamName);
 
 			// TODO figure out why we cant use a temp table here - could be multiple different connection/sessions use it
 			String initTempTable = "CREATE OR REPLACE TABLE %s AS SELECT * FROM %s".formatted(tempTable, fullStreamName);

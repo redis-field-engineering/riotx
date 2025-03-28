@@ -16,7 +16,7 @@ name.
       RIOT-X creating recreating the stream at time "NOW". If `--snapshot-mode INITIAL` option is specified the stream
       will also include the initial table data plus changes going forward. If you do not want initial table data to
       be included specify `--snapshot-mode NEVER`
-* snowflake-import currently works on tables and views
+* snowflake-import currently works on tables and materialized views
 
 
 The basic usage is:
