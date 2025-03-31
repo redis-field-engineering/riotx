@@ -52,11 +52,6 @@ public class ParquetFileItemWriter extends AbstractItemStreamItemWriter<Map<Stri
 		this.resource = resource;
 	}
 
-	/**
-	 * Setter for a writable resource. Represents a file that can be written.
-	 * 
-	 * @param resource the resource to be written to
-	 */
 	public void setSchema(MessageType schema) {
 		this.schema = schema;
 	}

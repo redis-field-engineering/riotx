@@ -1,13 +1,18 @@
 package com.redis.riotx;
 
+import java.time.Duration;
+
 import org.springframework.batch.core.ItemWriteListener;
 import org.springframework.batch.core.observability.BatchMetrics;
 import org.springframework.batch.item.Chunk;
 
+import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Tags;
 
 public class ReplicateMetricsWriteListener<K> implements ItemWriteListener<KeyValue<K>> {
 
@@ -36,8 +41,14 @@ public class ReplicateMetricsWriteListener<K> implements ItemWriteListener<KeyVa
 	}
 
 	private void onItem(KeyValue<K> item, String status) {
-		RiotxMetrics.replication(meterRegistry, LAG_TIMER_NAME, LAG_TIMER_DESCRIPTION, BYTES_COUNTER_NAME,
-				BYTES_COUNTER_DESCRIPTION, item, status);
+		Duration lag = Duration.ofMillis(System.currentTimeMillis() - item.getTimestamp());
+		Tags tags = BatchUtils.tags(item, status);
+		RiotxMetrics.latency(meterRegistry, LAG_TIMER_NAME, LAG_TIMER_DESCRIPTION, lag, tags);
+		if (item.getMemoryUsage() > 0) {
+			Counter bytes = Counter.builder(BYTES_COUNTER_NAME).description(BYTES_COUNTER_DESCRIPTION).tags(tags)
+					.register(meterRegistry);
+			bytes.increment(item.getMemoryUsage());
+		}
 	}
 
 	public void setMeterRegistry(MeterRegistry registry) {

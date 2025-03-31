@@ -1,0 +1,29 @@
+[[_stats]]
+= Stats
+
+The `stats` command analyzes the Redis database and displays keyspace statistics as well as keys that could be **problematic** during a live replication.
+
+The basic usage is:
+
+[source,console]
+----
+riotx stats [OPTIONS]
+----
+
+For the full usage, run:
+[source,console]
+----
+riotx stats --help
+----
+
+`--mem <size>`:: Memory usage threshold above which a key is considered big
+
+`--rate <size>`:: Write bandwidth above which a key is considered problematic.
+
+
+.Example: Keys over 3MB in memory usage and 10MB in write rate
+[source,console]
+----
+riotx stats --mem 3mb --rate 10mb
+----
+

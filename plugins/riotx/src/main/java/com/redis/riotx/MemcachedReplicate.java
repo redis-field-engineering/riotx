@@ -82,7 +82,7 @@ public class MemcachedReplicate extends AbstractJobCommand {
 	@Override
 	protected Job job() {
 		MemcachedItemReader reader = new MemcachedItemReader(sourceMemcachedContext::safeMemcachedClient);
-		configureAsyncReader(reader);
+		configureAsyncStreamSupport(reader);
 		MemcachedItemWriter writer = new MemcachedItemWriter(targetMemcachedContext::safeMemcachedClient);
 		Step<MemcachedEntry, MemcachedEntry> step = new Step<>(reader, writer);
 		step.processor(this::process);

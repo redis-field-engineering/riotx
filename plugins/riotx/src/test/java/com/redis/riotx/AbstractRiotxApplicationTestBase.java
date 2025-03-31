@@ -13,7 +13,7 @@ import com.redis.riot.AbstractRedisExportCommand;
 import com.redis.riot.AbstractRedisImportCommand;
 import com.redis.riot.CompareMode;
 import com.redis.riot.RedisArgs;
-import com.redis.riot.RedisReaderArgs;
+import com.redis.riot.RedisReaderLiveArgs;
 import com.redis.riot.Replicate;
 import com.redis.riot.ReplicateWriteLogger;
 import com.redis.riot.TargetRedisArgs;
@@ -59,9 +59,9 @@ abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestBase {
 			redisArgs.setCluster(getRedisServer().isRedisCluster());
 		}
 
-		private void configure(RedisReaderArgs redisReaderArgs) {
-			redisReaderArgs.setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
-			redisReaderArgs.setEventQueueCapacity(DEFAULT_EVENT_QUEUE_CAPACITY);
+		private void configure(RedisReaderLiveArgs args) {
+			args.setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
+			args.setEventQueueCapacity(DEFAULT_EVENT_QUEUE_CAPACITY);
 		}
 
 		@Override
@@ -86,11 +86,11 @@ abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestBase {
 					configure(((AbstractRedisImportCommand) command).getRedisArgs());
 				}
 				if (command instanceof AbstractExportCommand) {
-					configure(((AbstractExportCommand) command).getSourceRedisReaderArgs());
+					configure(((AbstractExportCommand) command).getReaderLiveArgs());
 				}
 				if (command instanceof AbstractCompareCommand) {
 					AbstractCompareCommand targetCommand = (AbstractCompareCommand) command;
-					configure(targetCommand.getSourceRedisReaderArgs());
+					configure(targetCommand.getReaderLiveArgs());
 					targetCommand.setSourceRedisUri(redisURI);
 					targetCommand.getSourceRedisArgs().setCluster(getRedisServer().isRedisCluster());
 					targetCommand.setTargetRedisUri(targetRedisURI);
