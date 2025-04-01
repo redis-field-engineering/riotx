@@ -2,6 +2,7 @@ package com.redis.riot;
 
 import java.util.Map;
 
+import com.redis.riot.core.RiotException;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 
@@ -28,8 +29,16 @@ public class DatabaseImport extends AbstractRedisImportCommand {
 
 	protected JdbcCursorItemReader<Map<String, Object>> reader() {
 		log.info("Creating JDBC reader with sql=\"{}\" {} {}", sql, dataSourceArgs, readerArgs);
-		return JdbcCursorItemReaderFactory.create(sql, dataSourceArgs, readerArgs).build();
-	}
+        try {
+            return JdbcCursorItemReaderFactory.create(readerArgs)
+                    .sql(sql)
+                    .name(sql)
+                    .dataSource(dataSourceArgs.dataSource())
+                    .build();
+        } catch (Exception e) {
+            throw new RiotException("Unable to create JdbcCursorItemReader", e);
+        }
+    }
 
 	public String getSql() {
 		return sql;

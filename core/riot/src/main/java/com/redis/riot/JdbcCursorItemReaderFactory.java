@@ -12,19 +12,8 @@ import com.redis.riot.core.RiotException;
 
 public class JdbcCursorItemReaderFactory {
 
-	public static JdbcCursorItemReaderBuilder<Map<String, Object>> create(String sql, DataSourceArgs dataSourceArgs,
-			DatabaseReaderArgs readerArgs) {
-		Assert.hasLength(sql, "No SQL statement specified");
-		DataSource dataSource;
-		try {
-			dataSource = dataSourceArgs.dataSource();
-		} catch (Exception e) {
-			throw new RiotException(e);
-		}
-
+	public static JdbcCursorItemReaderBuilder<Map<String, Object>> create(DatabaseReaderArgs readerArgs) {
 		JdbcCursorItemReaderBuilder<Map<String, Object>> reader = new JdbcCursorItemReaderBuilder<>();
-		reader.dataSource(dataSource);
-		reader.sql(sql);
 		reader.saveState(false);
 		reader.rowMapper(new ColumnMapRowMapper());
 		reader.fetchSize(readerArgs.getFetchSize());
@@ -35,7 +24,6 @@ public class JdbcCursorItemReaderFactory {
 		if (readerArgs.getMaxItemCount() > 0) {
 			reader.maxItemCount(readerArgs.getMaxItemCount());
 		}
-		reader.name(sql);
 		return reader;
 	}
 
