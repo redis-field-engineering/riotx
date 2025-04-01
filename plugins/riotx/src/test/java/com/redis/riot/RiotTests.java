@@ -15,9 +15,6 @@ import org.testcontainers.shaded.org.bouncycastle.util.encoders.Hex;
 
 import com.redis.lettucemod.RedisModulesUtils;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.riot.CompareMode;
-import com.redis.riot.Replicate;
-import com.redis.riot.ReplicateWriteLogger;
 import com.redis.riot.core.ProgressStyle;
 import com.redis.spring.batch.item.redis.RedisItemReader.ReaderMode;
 import com.redis.spring.batch.item.redis.common.Range;

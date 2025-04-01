@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.springframework.core.io.Resource;
 import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
 
 public class RiotResourceMap implements ResourceMap {
 
@@ -28,7 +29,7 @@ public class RiotResourceMap implements ResourceMap {
 				// ignore
 			}
 		}
-		if (type == null) {
+		if (type == null || MimeTypeUtils.TEXT_PLAIN_VALUE.equalsIgnoreCase(type)) {
 			return getContentTypeFor(resource.getFilename());
 		}
 		return MimeType.valueOf(type);

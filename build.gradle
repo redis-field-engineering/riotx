@@ -87,6 +87,12 @@ subprojects { subproj ->
 	    license {
 	        exclude('build/**')
 	    }
+	    
+	    dependencyManagement {
+		    imports {
+		       mavenBom "com.google.cloud:spring-cloud-gcp-dependencies:$gcpVersion"
+		    }
+		}
 
 	    dependencies {
             compileOnly 'org.projectlombok:lombok'
