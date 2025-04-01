@@ -11,13 +11,14 @@ import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
 
+import org.springframework.batch.core.Job;
+import org.springframework.batch.item.database.JdbcCursorItemReader;
+import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
+
+import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.riot.DataSourceArgs;
 import com.redis.riot.DatabaseReaderArgs;
 import com.redis.riot.JdbcCursorItemReaderFactory;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.item.database.JdbcCursorItemReader;
-
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.riot.RedisContext;
 import com.redis.riot.core.RiotException;
 
@@ -30,8 +31,7 @@ import picocli.CommandLine.Parameters;
 @CommandLine.Command(name = "snowflake-import", description = "Import from a snowflake table (uses Snowflake Streams to track changes).")
 public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 	public enum SnapshotMode {
-		INITIAL,
-		NEVER
+		INITIAL, NEVER
 	}
 
 	@ArgGroup(exclusive = false)
@@ -49,11 +49,8 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 	private String offsetKey;
 	private RedisContext redisContext;
 	private String sql;
-	private String createViewStatement;
-	private String viewName;
 
-	@Option(names = "--snapshot-mode", description = "Snapshot mode: ${COMPLETION-CANDIDATES} . INITIAL is the default and will set the Snowflake Stream SHOW_INITIAL_ROWS=TRUE option",
-			defaultValue = "INITIAL")
+	@Option(names = "--snapshot-mode", description = "Snapshot mode: ${COMPLETION-CANDIDATES} . INITIAL is the default and will set the Snowflake Stream SHOW_INITIAL_ROWS=TRUE option", defaultValue = "INITIAL")
 	private SnapshotMode snapshotMode;
 
 	private String getCurrentOffset(Connection sqlConnection, String fullStreamName) throws SQLException {
@@ -96,13 +93,10 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 	private String initStatement(String currentOffset, String fullStreamName) {
 		String initStatement = null;
 		if (currentOffset != null && !currentOffset.equals("0")) {
-			initStatement ="CREATE OR REPLACE STREAM %s ON TABLE %s AT (TIMESTAMP => TO_TIMESTAMP(?))".formatted(
-					fullStreamName,
-					cdcObject);
+			initStatement = "CREATE OR REPLACE STREAM %s ON TABLE %s AT (TIMESTAMP => TO_TIMESTAMP(?))"
+					.formatted(fullStreamName, cdcObject);
 		} else {
-			initStatement = "CREATE OR REPLACE STREAM %s ON TABLE %s".formatted(
-					fullStreamName,
-					cdcObject);
+			initStatement = "CREATE OR REPLACE STREAM %s ON TABLE %s".formatted(fullStreamName, cdcObject);
 
 			if (snapshotMode == SnapshotMode.INITIAL) {
 				initStatement += " SHOW_INITIAL_ROWS=TRUE";
@@ -115,20 +109,19 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 	protected void initialize() {
 		super.initialize();
 
-		String objectRegex = "^(?<database>[a-zA-Z0-9_$]+)\\." +
-		                      "(?<schema>[a-zA-Z0-9_$]+)\\." +
-				              "(?<table>[a-zA-Z0-9_$]+)$";
+		String objectRegex = "^(?<database>[a-zA-Z0-9_$]+)\\." + "(?<schema>[a-zA-Z0-9_$]+)\\."
+				+ "(?<table>[a-zA-Z0-9_$]+)$";
 		Pattern objectPattern = Pattern.compile(objectRegex);
 		Matcher objectMatcher = objectPattern.matcher(tableOrView);
 
-		if (objectMatcher.matches()){
+		if (objectMatcher.matches()) {
 			String database = objectMatcher.group("database");
 			String schema = objectMatcher.group("schema");
 			String simpleTable = objectMatcher.group("table");
 
 			String streamName = "%s_changestream".formatted(simpleTable);
-			fullStreamName ="%s.%s.%s".formatted(database, schema, streamName);
-			tempTable =  "%s_temp".formatted(fullStreamName);
+			fullStreamName = "%s.%s.%s".formatted(database, schema, streamName);
+			tempTable = "%s_temp".formatted(fullStreamName);
 
 			offsetKey = MessageFormat.format("riotx:offset:{0}", fullStreamName);
 
@@ -138,7 +131,8 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 			cdcObject = tableOrView;
 			sql = "SELECT * FROM %s".formatted(tempTable);
 		} else {
-			throw new RiotException("Must provide table or view in format: DATABASE.SCHEMA.TABLE, found %s".formatted(tableOrView));
+			throw new RiotException(
+					"Must provide table or view in format: DATABASE.SCHEMA.TABLE, found %s".formatted(tableOrView));
 		}
 	}
 
@@ -154,24 +148,24 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 		} catch (Exception e) {
 			throw new RiotException("Could not initialize data source", e);
 		}
-		JdbcCursorItemReader<Map<String, Object>> itemReader = JdbcCursorItemReaderFactory.createReader(sql,
-				dataSourceArgs,
-				readerArgs);
-		itemReader.setPreparedStatementSetter(ps -> setValues(dataSource, ps));
-		return itemReader;
+		JdbcCursorItemReaderBuilder<Map<String, Object>> reader = JdbcCursorItemReaderFactory.create(sql,
+				dataSourceArgs, readerArgs);
+		reader.preparedStatementSetter(ps -> setValues(dataSource, ps));
+		return reader.build();
 	}
 
 	private void setValues(DataSource dataSource, PreparedStatement ps) throws SQLException {
-		try(Connection dbConnection = dataSource.getConnection()){
+		try (Connection dbConnection = dataSource.getConnection()) {
 			StatefulRedisModulesConnection<String, String> connection = redisContext.getConnection();
 			RedisCommands<String, String> syncCommands = connection.sync();
 			String currentOffset = syncCommands.get(offsetKey);
 
-
 			String initStatement = initStatement(currentOffset, fullStreamName);
 
-			// TODO figure out why we cant use a temp table here - could be multiple different connection/sessions use it
-			String initTempTable = "CREATE OR REPLACE TABLE %s AS SELECT * FROM %s".formatted(tempTable, fullStreamName);
+			// TODO figure out why we cant use a temp table here - could be multiple
+			// different connection/sessions use it
+			String initTempTable = "CREATE OR REPLACE TABLE %s AS SELECT * FROM %s".formatted(tempTable,
+					fullStreamName);
 
 			// initialize stream and copy data to temp table
 			log.info("initStatement: {}", initStatement);
@@ -190,7 +184,8 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
 			// now that data has been copied from temp table get the new current offset
 			// don't commit it to redis until the job is successful
 			String newOffset = getCurrentOffset(dbConnection, fullStreamName);
-			onJobSuccessCallback = afterSuccess(dbConnection, redisContext, fullStreamName, offsetKey, tempTable, newOffset);
+			onJobSuccessCallback = afterSuccess(dbConnection, redisContext, fullStreamName, offsetKey, tempTable,
+					newOffset);
 		}
 	}
 }
