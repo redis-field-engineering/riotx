@@ -1,0 +1,1 @@
+riotx faker category="Number.random_digit" xadd --keyspace teststream --key category

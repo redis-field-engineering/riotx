@@ -1,0 +1,1 @@
+riotx replicate --batch 10 redis://source redis://target

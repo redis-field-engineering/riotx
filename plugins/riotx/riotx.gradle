@@ -23,8 +23,8 @@ startScripts {
 }
 
 dependencies {
-    implementation group: 'com.redis', name: 'riot', version: riotVersion
-    implementation group: 'com.redis', name: 'spring-batch-memcached', version: springBatchRedisVersion
+    implementation project(':riot')
+    implementation project(':spring-batch-memcached')
     api project(':riotx-parquet')
     api group: 'info.picocli', name: 'picocli', version: picocliVersion
     annotationProcessor group: 'info.picocli', name: 'picocli-codegen', version: picocliVersion
@@ -34,18 +34,24 @@ dependencies {
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'io.prometheus:prometheus-metrics-exporter-httpserver'
     implementation 'org.xerial:sqlite-jdbc'
-//    implementation 'com.ibm.db2:jcc'
+    implementation 'com.ibm.db2:jcc'
     implementation group: 'net.snowflake', name: 'snowflake-jdbc', version: snowflakeVersion
 
-    testImplementation group: 'com.redis', name: 'riot-test', version: riotVersion 
-    testImplementation 'org.awaitility:awaitility'
+    testImplementation project(':riot-test') 
+    testImplementation project(':spring-batch-redis-test')
     testImplementation 'io.micrometer:micrometer-core'
+    testImplementation 'org.awaitility:awaitility'
+    testImplementation 'org.hsqldb:hsqldb'
     testImplementation 'org.springframework.boot:spring-boot-autoconfigure'
+    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.batch:spring-batch-test'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:oracle-xe'
     testImplementation 'org.hsqldb:hsqldb'
     testImplementation group: 'com.redis', name: 'testcontainers-memcached', version: testcontainersRedisVersion
     testImplementation group: 'com.redis', name: 'lettucemod', version: lettucemodVersion, classifier: 'tests'
+    
 }
 
 distributions {

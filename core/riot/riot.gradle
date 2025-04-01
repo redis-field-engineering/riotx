@@ -1,0 +1,17 @@
+dependencies {
+    api(project(':riot-core')) {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+    api project(':riot-file')
+    api project(':riot-faker')
+    api project(':spring-batch-redis-core')
+    implementation group: 'org.latencyutils', name: 'LatencyUtils', version: latencyUtilsVersion
+    implementation 'org.springframework.batch:spring-batch-infrastructure'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.springframework:spring-jdbc'
+    implementation 'com.zaxxer:HikariCP'
+    implementation 'com.microsoft.sqlserver:mssql-jdbc'
+    implementation 'com.mysql:mysql-connector-j'
+    implementation 'com.oracle.database.jdbc:ojdbc11'
+    implementation 'org.postgresql:postgresql'
+}

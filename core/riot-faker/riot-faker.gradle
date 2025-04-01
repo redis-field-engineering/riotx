@@ -1,0 +1,4 @@
+dependencies {
+    implementation 'org.springframework.batch:spring-batch-infrastructure'
+    api group: 'net.datafaker', name: 'datafaker', version: datafakerVersion
+}

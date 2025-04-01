@@ -1,0 +1,1 @@
+riotx db-import "SELECT * FROM orders" --jdbc-url "jdbc:postgresql://host:port/database" --jdbc-user appuser --jdbc-pass passwd set --keyspace order --key order_id

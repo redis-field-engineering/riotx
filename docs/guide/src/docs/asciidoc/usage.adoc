@@ -28,7 +28,7 @@ Run the following command to give `riotx` TAB completion in the current shell:
 
 [source,console]
 ----
-$ source <(riotx generate-completion)
+source <(riotx generate-completion)
 ----
 ====
 
@@ -37,14 +37,12 @@ $ source <(riotx generate-completion)
 https://redis-field-engineering.github.io/riotx/manpage/riotx[{project-title} man page].
 
 :leveloffset: +1
-include::{includedir}/memcached.adoc[]
-include::{includedir}/parquet.adoc[]
-include::{includedir}/redis-import.adoc[]
-include::{includedir}/stats.adoc[]
-include::{includedir}/stream-export.adoc[]
-include::{includedir}/stream-import.adoc[]
-include::{includedir}/snowflake-import.adoc[]
+include::{includedir}/datagen.adoc[]
 include::{includedir}/databases.adoc[]
+include::{includedir}/files.adoc[]
+include::{includedir}/memcached.adoc[]
+include::{includedir}/redis-import.adoc[]
+include::{includedir}/replication.adoc[]
+include::{includedir}/stats.adoc[]
+include::{includedir}/stream.adoc[]
 :leveloffset: -1
-
-

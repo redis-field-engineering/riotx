@@ -1,0 +1,1 @@
+riotx file-import http://storage.googleapis.com/jrx/beers.csv --header --proc ibu="ibu?:10" hset --keyspace beer --key id

@@ -1,0 +1,1 @@
+riotx file-import http://storage.googleapis.com/jrx/beers.csv --header --skip-lines 11 --header-line 0 hset --keyspace beer --key id

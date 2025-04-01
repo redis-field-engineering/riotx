@@ -1,0 +1,1 @@
+riotx replicate redis://source redis://target --key-exclude "bad*"

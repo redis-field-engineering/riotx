@@ -1,14 +1,22 @@
 [[_introduction]]
 = Introduction
 
-{project-title} is an extension to {link_riot} which provides the following additional features for https://redis.io/cloud/[Redis Cloud] and https://redis.io/enterprise/[Redis Software]:
+{project-title} is a command-line utility to get data in and out of Redis.
+It supports https://redis.io/cloud/[Redis Cloud] and https://redis.io/enterprise/[Redis Software] and includes the following features:
 
-* Observability
-* https://parquet.apache.org/docs/overview/[Parquet] file import
-* Memcached Replication
-* Redis Stream Import/Export
+Files (CSV, JSON, XML, Parquet)::
+* <<_file_import,Import>>: File -> Redis
+* <<_file_export,Export>>: Redis -> File
 
-image::riotx-dashboard-replication.png[]
+Databases::
+* <<_db_import,Import>>: Database -> Redis
+* <<_db_export,Export>>: Redis -> Database
 
-image::riotx-dashboard-jvm.png[]
+Data Generators::
+* <<_datagen_struct,Redis Data Generator>>: Data Structures -> Redis
+* <<_datagen_faker,Faker Data Generator>>: Faker -> Redis
+
+<<_replication,Replication>>:: Redis -> Redis
+
+{project-title} is supported by Redis, Inc. To report bugs, request features, or receive assistance, please https://github.com/redis-field-engineering/riotx-dist/issues[file an issue] or contact your Redis account team.
 

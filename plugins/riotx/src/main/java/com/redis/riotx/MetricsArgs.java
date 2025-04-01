@@ -142,6 +142,9 @@ public class MetricsArgs {
 
 	@SuppressWarnings("resource")
 	public void configureMetrics() throws IOException {
+		if (!enabled) {
+			return;
+		}
 		PrometheusMeterRegistry registry = new PrometheusMeterRegistry(prometheusConfig());
 		registry.config().commonTags(commonTags());
 		Metrics.globalRegistry.add(registry);
