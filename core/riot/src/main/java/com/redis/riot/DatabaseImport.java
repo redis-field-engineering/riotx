@@ -13,55 +13,52 @@ import picocli.CommandLine.Parameters;
 @Command(name = "db-import", description = "Import from a relational database.")
 public class DatabaseImport extends AbstractRedisImportCommand {
 
-	@ArgGroup(exclusive = false)
-	private DataSourceArgs dataSourceArgs = new DataSourceArgs();
+    @ArgGroup(exclusive = false)
+    private DataSourceArgs dataSourceArgs = new DataSourceArgs();
 
-	@Parameters(arity = "1", description = "SQL SELECT statement", paramLabel = "SQL")
-	protected String sql;
+    @Parameters(arity = "1", description = "SQL SELECT statement", paramLabel = "SQL")
+    protected String sql;
 
-	@ArgGroup(exclusive = false)
-	private DatabaseReaderArgs readerArgs = new DatabaseReaderArgs();
+    @ArgGroup(exclusive = false)
+    private DatabaseReaderArgs readerArgs = new DatabaseReaderArgs();
 
-	@Override
-	protected Job job() {
-		return job(step(reader()));
-	}
+    @Override
+    protected Job job() {
+        return job(step(reader()));
+    }
 
-	protected JdbcCursorItemReader<Map<String, Object>> reader() {
-		log.info("Creating JDBC reader with sql=\"{}\" {} {}", sql, dataSourceArgs, readerArgs);
+    protected JdbcCursorItemReader<Map<String, Object>> reader() {
+        log.info("Creating JDBC reader with sql=\"{}\" {} {}", sql, dataSourceArgs, readerArgs);
         try {
-            return JdbcCursorItemReaderFactory.create(readerArgs)
-                    .sql(sql)
-                    .name(sql)
-                    .dataSource(dataSourceArgs.dataSource())
+            return JdbcCursorItemReaderFactory.create(readerArgs).sql(sql).name(sql).dataSource(dataSourceArgs.dataSource())
                     .build();
         } catch (Exception e) {
             throw new RiotException("Unable to create JdbcCursorItemReader", e);
         }
     }
 
-	public String getSql() {
-		return sql;
-	}
+    public String getSql() {
+        return sql;
+    }
 
-	public void setSql(String sql) {
-		this.sql = sql;
-	}
+    public void setSql(String sql) {
+        this.sql = sql;
+    }
 
-	public DatabaseReaderArgs getReaderArgs() {
-		return readerArgs;
-	}
+    public DatabaseReaderArgs getReaderArgs() {
+        return readerArgs;
+    }
 
-	public void setReaderArgs(DatabaseReaderArgs args) {
-		this.readerArgs = args;
-	}
+    public void setReaderArgs(DatabaseReaderArgs args) {
+        this.readerArgs = args;
+    }
 
-	public DataSourceArgs getDataSourceArgs() {
-		return dataSourceArgs;
-	}
+    public DataSourceArgs getDataSourceArgs() {
+        return dataSourceArgs;
+    }
 
-	public void setDataSourceArgs(DataSourceArgs args) {
-		this.dataSourceArgs = args;
-	}
+    public void setDataSourceArgs(DataSourceArgs args) {
+        this.dataSourceArgs = args;
+    }
 
 }

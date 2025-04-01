@@ -9,9 +9,10 @@ import java.sql.Statement;
 import java.util.List;
 
 public class InitSqlDataSource extends DelegatingDataSource {
+
     private final List<String> initSqlStatements;
 
-    public InitSqlDataSource(DataSource targetDataSource, List<String> initSqlStatements){
+    public InitSqlDataSource(DataSource targetDataSource, List<String> initSqlStatements) {
         super(targetDataSource);
         this.initSqlStatements = initSqlStatements;
     }
@@ -26,4 +27,5 @@ public class InitSqlDataSource extends DelegatingDataSource {
         }
         return connection;
     }
+
 }
