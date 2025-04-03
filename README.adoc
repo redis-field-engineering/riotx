@@ -2,7 +2,7 @@
 :project-owner:   redis-field-engineering
 :project-name:    riotx
 :project-group:   com.redis
-:project-version: 0.6.0
+:project-version: 0.6.1
 :project-title:   RIOT-X
 
 image::docs/guide/src/docs/resources/images/riotx.svg[RIOT-X]
