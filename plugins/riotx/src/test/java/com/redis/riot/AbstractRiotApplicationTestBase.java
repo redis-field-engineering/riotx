@@ -16,7 +16,7 @@ import com.redis.riotx.Riotx;
 import picocli.CommandLine.IExecutionStrategy;
 import picocli.CommandLine.ParseResult;
 
-abstract class AbstractRiotApplicationTestBase extends AbstractRiotTestBase {
+public abstract class AbstractRiotApplicationTestBase extends AbstractRiotTestBase {
 
 	private static final String PREFIX = "riotx ";
 

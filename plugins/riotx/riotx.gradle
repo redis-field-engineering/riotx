@@ -22,6 +22,10 @@ startScripts {
     defaultJvmOpts = ["--add-opens=java.base/java.nio=ALL-UNNAMED"]
 }
 
+test {
+    jvmArgs += ["--add-opens=java.base/java.nio=ALL-UNNAMED"]
+}
+
 dependencies {
     implementation project(':riot')
     implementation project(':spring-batch-memcached')
