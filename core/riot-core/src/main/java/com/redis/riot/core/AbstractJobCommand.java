@@ -1,9 +1,6 @@
 package com.redis.riot.core;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
@@ -62,6 +59,7 @@ import picocli.CommandLine.Option;
 public abstract class AbstractJobCommand extends AbstractCallableCommand {
 
 	public static final String DEFAULT_JOB_REPOSITORY_NAME = "riot";
+	public static final String JOB_PARAM_RUN_ID = "run.id";
 
 	@Option(names = "--job-name", description = "Job name.", paramLabel = "<string>", hidden = true)
 	private String jobName;
@@ -77,12 +75,13 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
 	private PlatformTransactionManager transactionManager;
 	private JobLauncher jobLauncher;
 	private JobExplorer jobExplorer;
-
+	private Random random;
 	protected Runnable onJobSuccessCallback;
 
 	@Override
 	protected void initialize() {
 		super.initialize();
+		random = new Random();
 		if (jobName == null) {
 			jobName = jobName();
 		}
@@ -134,7 +133,7 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
 		Job job = job();
 		JobExecution jobExecution;
 		try {
-			jobExecution = jobLauncher.run(job, new JobParameters());
+			jobExecution = jobLauncher.run(job, jobParameters());
 		} catch (JobExecutionException e) {
 			throw new RiotException(e);
 		}
@@ -150,6 +149,12 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
 			}
 			throw wrapException(jobExecution.getFailureExceptions());
 		}
+	}
+
+	protected JobParameters jobParameters() {
+		JobParametersBuilder builder = new JobParametersBuilder();
+		builder.addLong(JOB_PARAM_RUN_ID, (long) random.nextInt());
+		return builder.toJobParameters();
 	}
 
 	private String jobName() {

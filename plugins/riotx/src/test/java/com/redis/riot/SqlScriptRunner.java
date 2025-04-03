@@ -1,13 +1,12 @@
 package com.redis.riot;
 
-import java.io.IOException;
-import java.io.LineNumberReader;
-import java.io.Reader;
+import java.io.*;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,7 +16,7 @@ import java.util.logging.Logger;
 public class SqlScriptRunner {
 
 	private static final String DEFAULT_DELIMITER = ";";
-
+	private Map<String, String> replacements;
 	private final Logger log = Logger.getLogger(SqlScriptRunner.class.getName());
 
 	private final Connection connection;
@@ -28,7 +27,12 @@ public class SqlScriptRunner {
 	private boolean fullLineDelimiter;
 
 	public SqlScriptRunner(Connection connection) {
+		this(connection, null);
+	}
+
+	public SqlScriptRunner(Connection connection, Map<String, String> replacements) {
 		this.connection = connection;
+		this.replacements = replacements;
 	}
 
 	public void setStopOnError(boolean stopOnError) {
@@ -45,6 +49,14 @@ public class SqlScriptRunner {
 
 	public void setFullLineDelimiter(boolean fullLineDelimiter) {
 		this.fullLineDelimiter = fullLineDelimiter;
+	}
+
+	public void executeScript(String file) throws IOException, SQLException {
+		InputStream inputStream = PostgresTests.class.getClassLoader().getResourceAsStream(file);
+		if (inputStream == null) {
+			throw new FileNotFoundException(file);
+		}
+		runScript(new InputStreamReader(inputStream));
 	}
 
 	/**
@@ -102,7 +114,15 @@ public class SqlScriptRunner {
 					hasResults = statement.execute(command.toString());
 				} else {
 					try {
-						statement.execute(command.toString());
+						String sql = command.toString();
+
+						if (replacements != null){
+							for (String key : replacements.keySet()) {
+								sql = sql.replace(key, replacements.get(key));
+							}
+						}
+
+						statement.execute(sql);
 					} catch (SQLException e) {
 						log.log(Level.SEVERE, "Error executing: " + command, e);
 					}

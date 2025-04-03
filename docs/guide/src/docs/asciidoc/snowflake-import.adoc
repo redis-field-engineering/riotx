@@ -7,9 +7,8 @@ you provide must have the ability to create a stream in the database and schema 
 name.
 
 .Side effects and limitations
-* `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` will be created or replaced
-* `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_temp` table will be created or replaced by selecting from the stream.
-      RIOT-X reads data out of this table and imports into Redis.
+* `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` will be created or replaced. For security, this can be created in a different schema
+than the table you are importing from by specifying `--cdc-schema`.
 * `riotx:offset:SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` - this key will be stored in the destination
       Redis database and is used to track the stream offset. If RIOT-X fails in the middle of copying data from the stream
       when restarted it will resume copying data from this offset. Removing this offset key from Redis will result in
@@ -26,6 +25,44 @@ The basic usage is:
 riotx snowflake-import [TABLE] [OPTIONS] [REDIS COMMAND...]
 ----
 
+The recommended minimal necessary permissions for a snowflake role and user to run this command are:
+
+[source,console]
+----
+CREATE OR REPLACE ROLE riotx_cdc
+COMMENT = 'minimum cdc role for riotx';
+
+-- replace compute_wh with the name of the warehouse you want to use
+GRANT USAGE, OPERATE ON WAREHOUSE compute_wh TO ROLE riotx_cdc;
+
+-- replace tb_101.raw_pos_cdc with the name of a database and schema for RIOT to create the stream in
+CREATE OR REPLACE SCHEMA tb_101.raw_pos_cdc;
+GRANT USAGE ON SCHEMA tb_101.raw_pos_cdc TO ROLE riotx_cdc;
+
+-- replace tb_101 with the name of the database RIOT needs to read out of
+GRANT USAGE ON DATABASE tb_101 TO ROLE riotx_cdc;
+
+-- replace tb_101.raw_pos with the name of the schema RIOT needs to read out of
+GRANT USAGE ON SCHEMA tb_101.raw_pos TO ROLE riotx_cdc;
+
+-- replace with the name of the table(s) you want to read from
+GRANT SELECT ON TABLE tb_101.raw_pos.incremental_order_header TO ROLE riotx_cdc;
+GRANT REFERENCE_USAGE ON TABLE tb_101.raw_pos.incremental_order_header TO ROLE riotx_cdc;
+ALTER TABLE tb_101.raw_pos.INCREMENTAL_ORDER_HEADER SET CHANGE_TRACKING = TRUE;
+
+GRANT SELECT ON FUTURE TABLES IN SCHEMA tb_101.raw_pos_cdc TO ROLE riotx_cdc;
+GRANT CREATE TABLE ON SCHEMA tb_101.raw_pos_cdc TO ROLE riotx_cdc;
+GRANT CREATE STREAM ON SCHEMA tb_101.raw_pos_cdc TO ROLE riotx_cdc;
+GRANT SELECT ON FUTURE STREAMS IN SCHEMA tb_101.raw_pos_cdc TO ROLE riotx_cdc;
+
+CREATE OR REPLACE USER riotx_cdc
+    DEFAULT_ROLE = 'riotx_cdc'
+    DEFAULT_WAREHOUSE = 'compute_wh'
+    PASSWORD = '{{PASSWORD}}';
+
+GRANT ROLE riotx_cdc TO USER riotx_cdc;
+----
+
 For the full usage, run:
 [source,console]
 ----
@@ -33,22 +70,25 @@ riotx snowflake-import --help
 ----
 
 .Example: CDC to Hashes
+This command uses the example db, schema and table names from the minimal role setup above.
 [source,console]
 ----
 riotx snowflake-import \
-      SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE \
+      tb_101.raw_pos.incremental_order_header \
       --snapshot-mode INITIAL # include initial table data  \
+      --role riotx_cdc \
+      --warehouse compute_wh \
+      --cdc-schema raw_pos_cdc \
       --jdbc-url "jdbc:snowflake://abcdefg.abc12345.snowflakecomputing.com" \
-      --jdbc-driver net.snowflake.client.jdbc.SnowflakeDriver \
       --jdbc-user databaseuser \
       --jdbc-pass databasepassword \
-      --repeat 60s # sleep 60s after each cdc batch import and then repeat \
+      --repeat 10s # sleep 10s after each cdc import and then repeat \
       hset \
-      --keyspace datatable \
-      --key data_id # column name to use as id
+      --keyspace orderheader \
+      --key order_id # column name to use as id
 ----
 
-The command above imports CDC data from the Snowflake table `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE` into Redis hashes in the keyspace `datatable`.
+The command above imports CDC data from the Snowflake table `tb_101.raw_pos.incremental_order_header` into Redis hashes in the keyspace `orderheader`.
 
 If you only need to do a one time import of data from Snowflake you can use the `db-import` command.
 This command will read all of the rows output from your SQL query and will write them to Redis.
