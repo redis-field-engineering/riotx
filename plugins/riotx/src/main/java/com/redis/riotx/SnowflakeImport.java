@@ -13,15 +13,12 @@ import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
 
+import com.redis.riot.*;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
 
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.riot.DataSourceArgs;
-import com.redis.riot.DatabaseReaderArgs;
-import com.redis.riot.JdbcCursorItemReaderFactory;
-import com.redis.riot.RedisContext;
 import com.redis.riot.core.RiotException;
 
 import io.lettuce.core.api.sync.RedisCommands;
@@ -31,7 +28,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @CommandLine.Command(name = "snowflake-import", description = "Import from a snowflake table (uses Snowflake Streams to track changes).")
-public class SnowflakeImport extends AbstractTargetRedisImportCommand {
+public class SnowflakeImport extends AbstractRedisImportCommand {
 
     public enum SnapshotMode {
         INITIAL, NEVER
@@ -46,7 +43,7 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
     @ArgGroup(exclusive = false)
     private DatabaseReaderArgs readerArgs = new DatabaseReaderArgs();
 
-    private static final String JDBC_DRIVER = "net.snowflake.client.jdbc.SnowflakeDriver";
+    public static final String JDBC_DRIVER = "net.snowflake.client.jdbc.SnowflakeDriver";
 
     private String cdcObject;
 
@@ -225,5 +222,12 @@ public class SnowflakeImport extends AbstractTargetRedisImportCommand {
             onJobSuccessCallback = afterSuccess(dataSource, redisContext, fullStreamName, offsetKey, tempTable, newOffset);
         }
     }
+    public DataSourceArgs getDataSourceArgs() {
+        return dataSourceArgs;
+    }
 
+    public void setDataSourceArgs(DataSourceArgs args) {
+        this.dataSourceArgs = args;
+    }
 }
+
