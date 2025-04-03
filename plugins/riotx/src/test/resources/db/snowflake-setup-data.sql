@@ -35,7 +35,10 @@ COPY INTO tb_101.raw_pos.order_header
     SIZE_LIMIT = 2000000;
 
 CREATE OR REPLACE TABLE tb_101.raw_pos.incremental_order_header LIKE tb_101.raw_pos.order_header;
+
 ALTER TABLE tb_101.raw_pos.INCREMENTAL_ORDER_HEADER SET CHANGE_TRACKING = TRUE;
+GRANT SELECT ON TABLE tb_101.raw_pos.order_header TO ROLE riotx_cdc;
+GRANT SELECT ON TABLE tb_101.raw_pos.incremental_order_header TO ROLE riotx_cdc;
 
 INSERT INTO tb_101.raw_pos.incremental_order_header
  select * from tb_101.raw_pos.order_header

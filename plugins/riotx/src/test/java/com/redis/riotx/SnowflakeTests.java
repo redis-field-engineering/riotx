@@ -111,6 +111,24 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
 			Assertions.assertEquals("16", order.get("TRUCK_ID"));
 			Assertions.assertEquals("21202", order.get("SHIFT_ID"));
 		}
+
+		sqlRunner.executeScript("db/snowflake-insert-more-data.sql");
+		execute(info, "snowflake-import", this::executeSnowflakeImport);
+
+		try (Statement statement = dbConnection.createStatement()) {
+			statement.execute("SELECT COUNT(*) AS count FROM tb_101.raw_pos.incremental_order_header");
+			ResultSet resultSet = statement.getResultSet();
+			resultSet.next();
+
+			long count = resultSet.getLong(1);
+
+			Assertions.assertEquals(1100, count);
+			Assertions.assertEquals(count, keyCount("orderheader:*"));
+
+			Map<String, String> order = redisCommands.hgetall("orderheader:4064758");
+			Assertions.assertEquals("18", order.get("TRUCK_ID"));
+			Assertions.assertEquals("21207", order.get("SHIFT_ID"));
+		}
 	}
 
 	protected int executeSnowflakeImport(CommandLine.ParseResult parseResult) {

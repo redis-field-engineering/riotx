@@ -11,14 +11,6 @@ GRANT USAGE ON DATABASE tb_101 TO ROLE riotx_cdc;
 GRANT USAGE ON SCHEMA tb_101.raw_pos TO ROLE riotx_cdc;
 GRANT USAGE ON SCHEMA tb_101.raw_pos_cdc TO ROLE riotx_cdc;
 
-GRANT SELECT ON TABLE tb_101.raw_pos.order_header TO ROLE riotx_cdc;
-GRANT SELECT ON TABLE tb_101.raw_pos.incremental_order_header TO ROLE riotx_cdc;
-GRANT REFERENCE_USAGE ON TABLE tb_101.raw_pos.incremental_order_header TO ROLE riotx_cdc;
-
-
--- needed in order for a stream to be created ontop of this table by a user that doesn't own it
-ALTER TABLE tb_101.raw_pos.INCREMENTAL_ORDER_HEADER SET CHANGE_TRACKING = TRUE;
-
 
 GRANT SELECT ON FUTURE TABLES IN SCHEMA tb_101.raw_pos_cdc TO ROLE riotx_cdc;
 GRANT CREATE TABLE ON SCHEMA tb_101.raw_pos_cdc TO ROLE riotx_cdc;
