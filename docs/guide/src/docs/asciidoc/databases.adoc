@@ -29,10 +29,7 @@ https://www.ibm.com/docs/en/db2/12.1?topic=cdsudidsdjs-url-format-data-server-dr
 
 [TIP]
 ====
-For non-included databases you must install the corresponding JDBC driver under the `lib` directory and modify the `CLASSPATH`:
-
-*nix:: `bin/riot` -> `CLASSPATH=$APP_HOME/lib/myjdbc.jar:$APP_HOME/lib/...`
-Windows:: `bin\riot.bat` -> `set CLASSPATH=%APP_HOME%\lib\myjdbc.jar;%APP_HOME%\lib\...`
+For non-included databases, place the JDBC driver jar under the `lib` directory
 ====
 
 [[_db_import]]
