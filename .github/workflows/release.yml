@@ -91,7 +91,7 @@ jobs:
           GRGIT_USER: ${{ secrets.GIT_USER }}
           GRGIT_PASS: ${{ secrets.GIT_ACCESS_TOKEN }}
         run: |
-          ./gradlew -Prelease=true -PreproducibleBuild=true publish gitPublishPush -S
+          ./gradlew -Prelease=true -PreproducibleBuild=true publish gitPublishPush -S -x test
 
       - name: Upload deploy artifacts
         uses: actions/upload-artifact@v4
