@@ -4,9 +4,9 @@ import io.lettuce.core.AbstractRedisClient;
 
 public abstract class AbstractCompositeOperation<K, V, I, O> implements InitializingOperation<K, V, I, O> {
 
-	protected final Operation<K, V, I, O> delegate;
+	protected final RedisOperation<K, V, I, O> delegate;
 
-	protected AbstractCompositeOperation(Operation<K, V, I, O> delegate) {
+	protected AbstractCompositeOperation(RedisOperation<K, V, I, O> delegate) {
 		this.delegate = delegate;
 	}
 

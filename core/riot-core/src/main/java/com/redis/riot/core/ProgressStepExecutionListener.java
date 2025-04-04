@@ -22,69 +22,76 @@ import me.tongfei.progressbar.ProgressBarStyle;
 @SuppressWarnings("rawtypes")
 public class ProgressStepExecutionListener<I, O> implements StepExecutionListener, ItemWriteListener {
 
-	private final Step<I, O> step;
+    private final Step<I, O> step;
 
-	private ProgressArgs progressArgs = new ProgressArgs();
+    private ProgressArgs progressArgs = new ProgressArgs();
 
-	private ProgressBar progressBar;
+    private ProgressBar progressBar;
 
-	public ProgressStepExecutionListener(Step<I, O> step) {
-		this.step = step;
-	}
+    public ProgressStepExecutionListener(Step<I, O> step) {
+        this.step = step;
+    }
 
-	@Override
-	public void beforeStep(StepExecution stepExecution) {
-		ProgressBarBuilder progressBarBuilder = new ProgressBarBuilder();
-		progressBarBuilder.setTaskName(step.getTaskName());
-		progressBarBuilder.setStyle(progressBarStyle());
-		progressBarBuilder
-				.setUpdateIntervalMillis(Math.toIntExact(progressArgs.getUpdateInterval().getValue().toMillis()));
-		progressBarBuilder.showSpeed();
-		if (progressArgs.getStyle() == ProgressStyle.LOG) {
-			Logger logger = LoggerFactory.getLogger(getClass());
-			progressBarBuilder.setConsumer(new DelegatingProgressBarConsumer(logger::info));
-		}
-		progressBarBuilder.setInitialMax(step.maxItemCount());
-		this.progressBar = progressBarBuilder.build();
-	}
+    @Override
+    public void beforeStep(StepExecution stepExecution) {
+        ProgressBarBuilder progressBarBuilder = new ProgressBarBuilder();
+        progressBarBuilder.setTaskName(step.getTaskName());
+        progressBarBuilder.setStyle(progressBarStyle());
+        progressBarBuilder.setUpdateIntervalMillis(Math.toIntExact(progressArgs.getUpdateInterval().getValue().toMillis()));
+        progressBarBuilder.showSpeed();
+        if (progressArgs.getStyle() == ProgressStyle.LOG) {
+            Logger logger = LoggerFactory.getLogger(getClass());
+            progressBarBuilder.setConsumer(new DelegatingProgressBarConsumer(logger::info));
+        }
+        Long count = null;
+        try {
+            count = step.maxItemCount();
+        } catch (Exception e) {
+            // ignore
+        }
+        if (count != null) {
+            progressBarBuilder.setInitialMax(count);
+        }
+        this.progressBar = progressBarBuilder.build();
+    }
 
-	private ProgressBarStyle progressBarStyle() {
-		switch (progressArgs.getStyle()) {
-		case BAR:
-			return ProgressBarStyle.COLORFUL_UNICODE_BAR;
-		case BLOCK:
-			return ProgressBarStyle.COLORFUL_UNICODE_BLOCK;
-		default:
-			return ProgressBarStyle.ASCII;
-		}
-	}
+    private ProgressBarStyle progressBarStyle() {
+        switch (progressArgs.getStyle()) {
+            case BAR:
+                return ProgressBarStyle.COLORFUL_UNICODE_BAR;
+            case BLOCK:
+                return ProgressBarStyle.COLORFUL_UNICODE_BLOCK;
+            default:
+                return ProgressBarStyle.ASCII;
+        }
+    }
 
-	@Override
-	public void afterWrite(Chunk items) {
-		if (progressBar != null) {
-			progressBar.stepBy(items.size());
-			progressBar.setExtraMessage(step.statusMessage());
-		}
-	}
+    @Override
+    public void afterWrite(Chunk items) {
+        if (progressBar != null) {
+            progressBar.stepBy(items.size());
+            progressBar.setExtraMessage(step.statusMessage());
+        }
+    }
 
-	@Override
-	public ExitStatus afterStep(StepExecution stepExecution) {
-		if (progressBar != null) {
-			if (!stepExecution.getStatus().isUnsuccessful()) {
-				progressBar.stepTo(progressBar.getMax());
-			}
-			progressBar.close();
-			progressBar = null;
-		}
-		return stepExecution.getExitStatus();
-	}
+    @Override
+    public ExitStatus afterStep(StepExecution stepExecution) {
+        if (progressBar != null) {
+            if (!stepExecution.getStatus().isUnsuccessful()) {
+                progressBar.stepTo(progressBar.getMax());
+            }
+            progressBar.close();
+            progressBar = null;
+        }
+        return stepExecution.getExitStatus();
+    }
 
-	public ProgressArgs getProgressArgs() {
-		return progressArgs;
-	}
+    public ProgressArgs getProgressArgs() {
+        return progressArgs;
+    }
 
-	public void setProgressArgs(ProgressArgs args) {
-		this.progressArgs = args;
-	}
+    public void setProgressArgs(ProgressArgs args) {
+        this.progressArgs = args;
+    }
 
 }
