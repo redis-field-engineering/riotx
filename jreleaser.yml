@@ -94,7 +94,7 @@ announce:
   slack:
     active: RELEASE
     channel: '#field-engineering-announcements'
-    message: '🧯️ RIOT-X {{projectVersion}} has been released! https://github.com/redis-field-engineering/riotx-dist/releases/tag/v{{projectEffectiveVersion}} {{changelog}}'
+    message: '🧯️ RIOT-X {{projectVersion}} has been released! https://github.com/redis-field-engineering/riotx-dist/releases/tag/v{{projectVersion}}'
 
 assemble:
   jlink:
@@ -102,7 +102,7 @@ assemble:
       active: ALWAYS
       java:
         version: '21'
-      imageName: '{{distributionName}}-{{projectEffectiveVersion}}'
+      imageName: '{{distributionName}}-{{projectVersion}}'
       executable: riotx
       fileSets:
         - input: '.'
@@ -175,11 +175,11 @@ distributions:
         commitMessage: 'riotx {{tagName}}'
     artifacts:
       - path: plugins/{{distributionName}}/build/distributions/{{distributionName}}-{{projectVersion}}.zip
-        transform: '{{distributionName}}/{{distributionName}}-{{projectEffectiveVersion}}.zip'
+        transform: '{{distributionName}}/{{distributionName}}-{{projectVersion}}.zip'
         extraProperties:
           skipSpec: 'true'
       - path: plugins/{{distributionName}}/build/distributions/{{distributionName}}-{{projectVersion}}.tar
-        transform: '{{distributionName}}/{{distributionName}}-{{projectEffectiveVersion}}.tar'
+        transform: '{{distributionName}}/{{distributionName}}-{{projectVersion}}.tar'
         extraProperties:
           skipFlatpak: 'true'
 
