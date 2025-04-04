@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.common.RedisOperation;
 
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.RestoreArgs;
@@ -46,13 +47,13 @@ public class Restore<K, V, T> extends AbstractValueWriteOperation<K, V, byte[], 
                 .collect(Collectors.toList());
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private List<RedisFuture<Object>> restore(RedisAsyncCommands<K, V> commands, Iterable<? extends T> items) {
-        return BatchUtils.stream(items).filter(deletePredicate.negate()).map(t -> restore(commands, t))
+        return (List) BatchUtils.stream(items).filter(deletePredicate.negate()).map(t -> restore(commands, t))
                 .collect(Collectors.toList());
     }
 
-    @SuppressWarnings("rawtypes")
-    private RedisFuture restore(RedisAsyncCommands<K, V> commands, T item) {
+    private RedisFuture<String> restore(RedisAsyncCommands<K, V> commands, T item) {
         RestoreArgs args = new RestoreArgs().replace(true);
         long ttl = ttl(item);
         if (ttl > 0) {
@@ -60,7 +61,7 @@ public class Restore<K, V, T> extends AbstractValueWriteOperation<K, V, byte[], 
         }
         byte[] value = value(item);
         if (value == null) {
-            return NOOP_REDIS_FUTURE;
+            return RedisOperation.noopRedisFuture();
         }
         return commands.restore(key(item), value, args);
 
