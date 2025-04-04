@@ -7,10 +7,9 @@ import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 
-import org.springframework.batch.item.Chunk;
-
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.common.RedisOperation;
 
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.RestoreArgs;
@@ -18,53 +17,54 @@ import io.lettuce.core.api.async.RedisAsyncCommands;
 
 public class Restore<K, V, T> extends AbstractValueWriteOperation<K, V, byte[], T> {
 
-	private final Predicate<T> deletePredicate = t -> ttl(t) == KeyValue.TTL_NO_KEY;
-	private ToLongFunction<T> ttlFunction = t -> 0;
+    private final Predicate<T> deletePredicate = t -> ttl(t) == KeyValue.TTL_NO_KEY;
 
-	public Restore(Function<T, K> keyFunction, Function<T, byte[]> valueFunction) {
-		super(keyFunction, valueFunction);
-	}
+    private ToLongFunction<T> ttlFunction = t -> 0;
 
-	public void setTtlFunction(ToLongFunction<T> function) {
-		this.ttlFunction = function;
-	}
+    public Restore(Function<T, K> keyFunction, Function<T, byte[]> valueFunction) {
+        super(keyFunction, valueFunction);
+    }
 
-	private long ttl(T item) {
-		return ttlFunction.applyAsLong(item);
-	}
+    public void setTtlFunction(ToLongFunction<T> function) {
+        this.ttlFunction = function;
+    }
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Override
-	public List<RedisFuture<Object>> execute(RedisAsyncCommands<K, V> commands, Chunk<? extends T> items) {
-		List<RedisFuture<?>> futures = new ArrayList<>();
-		futures.addAll(delete(commands, items));
-		futures.addAll(restore(commands, items));
-		return (List) futures;
-	}
+    private long ttl(T item) {
+        return ttlFunction.applyAsLong(item);
+    }
 
-	@SuppressWarnings("unchecked")
-	private List<RedisFuture<Long>> delete(RedisAsyncCommands<K, V> commands, Chunk<? extends T> items) {
-		return BatchUtils.stream(items).filter(deletePredicate).map(keyFunction).map(commands::del)
-				.collect(Collectors.toList());
-	}
+    @Override
+    public List<RedisFuture<Object>> execute(RedisAsyncCommands<K, V> commands, Iterable<? extends T> items) {
+        List<RedisFuture<Object>> futures = new ArrayList<>();
+        futures.addAll(delete(commands, items));
+        futures.addAll(restore(commands, items));
+        return futures;
+    }
 
-	private List<RedisFuture<String>> restore(RedisAsyncCommands<K, V> commands, Chunk<? extends T> items) {
-		return BatchUtils.stream(items).filter(deletePredicate.negate()).map(t -> restore(commands, t))
-				.collect(Collectors.toList());
-	}
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private List<RedisFuture<Object>> delete(RedisAsyncCommands<K, V> commands, Iterable<? extends T> items) {
+        return (List) BatchUtils.stream(items).filter(deletePredicate).map(keyFunction).map(commands::del)
+                .collect(Collectors.toList());
+    }
 
-	private RedisFuture<String> restore(RedisAsyncCommands<K, V> commands, T item) {
-		RestoreArgs args = new RestoreArgs().replace(true);
-		long ttl = ttl(item);
-		if (ttl > 0) {
-			args.absttl().ttl(ttl);
-		}
-		byte[] value = value(item);
-		if (value == null) {
-			return null;
-		}
-		return commands.restore(key(item), value, args);
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private List<RedisFuture<Object>> restore(RedisAsyncCommands<K, V> commands, Iterable<? extends T> items) {
+        return (List) BatchUtils.stream(items).filter(deletePredicate.negate()).map(t -> restore(commands, t))
+                .collect(Collectors.toList());
+    }
 
-	}
+    private RedisFuture<String> restore(RedisAsyncCommands<K, V> commands, T item) {
+        RestoreArgs args = new RestoreArgs().replace(true);
+        long ttl = ttl(item);
+        if (ttl > 0) {
+            args.absttl().ttl(ttl);
+        }
+        byte[] value = value(item);
+        if (value == null) {
+            return RedisOperation.noopRedisFuture();
+        }
+        return commands.restore(key(item), value, args);
+
+    }
 
 }

@@ -4,49 +4,49 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.Properties;
 
-import com.redis.lettucemod.RedisModulesUtils;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 
 import io.lettuce.core.AbstractRedisClient;
 
 public class RedisInfo {
 
-	public static final String SERVER_NAME = "server_name";
-	public static final String OS = "os";
+    public static final String SERVER_NAME = "server_name";
 
-	private final Properties properties;
+    public static final String OS = "os";
 
-	public RedisInfo(Properties properties) {
-		this.properties = properties;
-	}
+    private final Properties properties;
 
-	public String getOS() {
-		return getProperty(OS);
-	}
+    public RedisInfo(Properties properties) {
+        this.properties = properties;
+    }
 
-	public String getServerName() {
-		return getProperty(SERVER_NAME);
-	}
+    public String getOS() {
+        return getProperty(OS);
+    }
 
-	private String getProperty(String key) {
-		return properties.getProperty(key);
-	}
+    public String getServerName() {
+        return getProperty(SERVER_NAME);
+    }
 
-	@Override
-	public String toString() {
-		return properties.toString();
-	}
+    private String getProperty(String key) {
+        return properties.getProperty(key);
+    }
 
-	public static RedisInfo from(AbstractRedisClient client) {
-		Properties properties = new Properties();
-		try (StatefulRedisModulesConnection<String, String> connection = RedisModulesUtils.connection(client)) {
-			try {
-				properties.load(new StringReader(connection.sync().info("server")));
-			} catch (IOException e) {
-				// ignore
-			}
-		}
-		return new RedisInfo(properties);
-	}
+    @Override
+    public String toString() {
+        return properties.toString();
+    }
+
+    public static RedisInfo from(AbstractRedisClient client) {
+        Properties properties = new Properties();
+        try (StatefulRedisModulesConnection<String, String> connection = BatchUtils.connection(client)) {
+            try {
+                properties.load(new StringReader(connection.sync().info("server")));
+            } catch (IOException e) {
+                // ignore
+            }
+        }
+        return new RedisInfo(properties);
+    }
 
 }
