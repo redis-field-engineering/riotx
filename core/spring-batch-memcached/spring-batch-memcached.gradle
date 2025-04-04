@@ -11,11 +11,3 @@ dependencies {
 compileJava {
     options.compilerArgs += ["-AprojectPath=${project.group}/${project.name}"]
 }
-
-if (!(project.findProperty('automatic.module.name.skip') ?: false).toBoolean()) {
-    jar {
-        manifest {
-            attributes('Automatic-Module-Name': project.findProperty('automatic.module.name'))
-        }
-    }
-}

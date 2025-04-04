@@ -20,11 +20,11 @@ jar {
 
 startScripts {
     defaultJvmOpts = ["--add-opens=java.base/java.nio=ALL-UNNAMED"]
+    classpath = files( '$APP_HOME/lib/*' )
 }
 
 test {
     jvmArgs += ["--add-opens=java.base/java.nio=ALL-UNNAMED"]
-    classpath = files( '$APP_HOME/lib/*' )
 }
 
 dependencies {
