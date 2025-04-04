@@ -35,7 +35,7 @@ import com.redis.riot.operation.XaddCommand;
 import com.redis.riot.operation.ZaddCommand;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.MultiOperation;
-import com.redis.spring.batch.item.redis.common.Operation;
+import com.redis.spring.batch.item.redis.common.RedisOperation;
 
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -80,7 +80,7 @@ public abstract class AbstractImportCommand extends AbstractJobCommand {
 		super.teardown();
 	}
 
-	protected List<Operation<String, String, Map<String, Object>, Object>> operations() {
+	protected List<RedisOperation<String, String, Map<String, Object>, Object>> operations() {
 		return importOperationCommands.stream().map(OperationCommand::operation).collect(Collectors.toList());
 	}
 

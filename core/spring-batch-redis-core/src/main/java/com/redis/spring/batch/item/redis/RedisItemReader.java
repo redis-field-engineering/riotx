@@ -18,7 +18,7 @@ import com.redis.spring.batch.item.ChunkProcessingItemWriter;
 import com.redis.spring.batch.item.PollableItemReader;
 import com.redis.spring.batch.item.QueueItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.Operation;
+import com.redis.spring.batch.item.redis.common.RedisOperation;
 import com.redis.spring.batch.item.redis.common.OperationExecutor;
 import com.redis.spring.batch.item.redis.reader.KeyEvent;
 import com.redis.spring.batch.item.redis.reader.KeyEventItemReader;
@@ -56,7 +56,7 @@ public class RedisItemReader<K, V> extends AbstractAsyncItemStreamSupport<KeyEve
 	public static final String QUEUE_GAUGE_NAME = METRICS_PREFIX + "queue";
 
 	private final RedisCodec<K, V> codec;
-	private final Operation<K, V, KeyEvent<K>, KeyValue<K>> operation;
+	private final RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> operation;
 
 	private Duration pollTimeout = DEFAULT_POLL_TIMEOUT;
 	private Duration flushInterval = DEFAULT_FLUSH_INTERVAL;
@@ -75,7 +75,7 @@ public class RedisItemReader<K, V> extends AbstractAsyncItemStreamSupport<KeyEve
 	private AbstractRedisClient client;
 	private BlockingQueue<KeyValue<K>> queue;
 
-	public RedisItemReader(RedisCodec<K, V> codec, Operation<K, V, KeyEvent<K>, KeyValue<K>> operation) {
+	public RedisItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> operation) {
 		setName(ClassUtils.getShortName(getClass()));
 		this.codec = codec;
 		this.operation = operation;
@@ -234,7 +234,7 @@ public class RedisItemReader<K, V> extends AbstractAsyncItemStreamSupport<KeyEve
 		this.keyEventListener = listener;
 	}
 
-	public Operation<K, V, KeyEvent<K>, KeyValue<K>> getOperation() {
+	public RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> getOperation() {
 		return operation;
 	}
 

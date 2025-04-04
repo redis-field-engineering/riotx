@@ -9,36 +9,39 @@ import java.util.stream.Collectors;
 
 import org.springframework.batch.item.Chunk;
 
-import com.redis.spring.batch.item.redis.common.Operation;
+import com.redis.spring.batch.item.redis.common.BatchUtils;
+import com.redis.spring.batch.item.redis.common.RedisOperation;
 
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 
-public class ClassifierOperation<K, V, T, C> implements Operation<K, V, T, Object> {
+public class ClassifierOperation<K, V, T, C> implements RedisOperation<K, V, T, Object> {
 
-	private Operation<K, V, T, Object> defaultOperation = new Noop<>();
-	private final Map<C, Operation<K, V, T, Object>> operations = new LinkedHashMap<>();
-	private final Function<T, C> classifier;
+    private RedisOperation<K, V, T, Object> defaultOperation = new Noop<>();
 
-	public ClassifierOperation(Function<T, C> classifier) {
-		this.classifier = classifier;
-	}
+    private final Map<C, RedisOperation<K, V, T, Object>> operations = new LinkedHashMap<>();
 
-	public void setOperation(C key, Operation<K, V, T, Object> operation) {
-		operations.put(key, operation);
-	}
+    private final Function<T, C> classifier;
 
-	public void setDefaultOperation(Operation<K, V, T, Object> operation) {
-		this.defaultOperation = operation;
-	}
+    public ClassifierOperation(Function<T, C> classifier) {
+        this.classifier = classifier;
+    }
 
-	@Override
-	public List<RedisFuture<Object>> execute(RedisAsyncCommands<K, V> commands, Chunk<? extends T> items) {
-		List<RedisFuture<Object>> futures = new ArrayList<>();
-		Map<C, List<T>> groupedItems = items.getItems().stream().collect(Collectors.groupingBy(classifier));
-		groupedItems.forEach((c, l) -> futures
-				.addAll(operations.getOrDefault(c, defaultOperation).execute(commands, new Chunk<>(l))));
-		return futures;
-	}
+    public void setOperation(C key, RedisOperation<K, V, T, Object> operation) {
+        operations.put(key, operation);
+    }
+
+    public void setDefaultOperation(RedisOperation<K, V, T, Object> operation) {
+        this.defaultOperation = operation;
+    }
+
+    @Override
+    public List<RedisFuture<Object>> execute(RedisAsyncCommands<K, V> commands, Iterable<? extends T> items) {
+        List<RedisFuture<Object>> futures = new ArrayList<>();
+        Map<C, List<T>> groupedItems = BatchUtils.stream(items).collect(Collectors.groupingBy(classifier));
+        groupedItems.forEach(
+                (c, l) -> futures.addAll(operations.getOrDefault(c, defaultOperation).execute(commands, new Chunk<>(l))));
+        return futures;
+    }
 
 }

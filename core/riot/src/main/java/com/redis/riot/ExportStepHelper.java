@@ -8,11 +8,11 @@ import org.slf4j.Logger;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.util.Assert;
 
-import com.redis.lettucemod.RedisModulesUtils;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.riot.core.Step;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemReader.ReaderMode;
+import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 
 import io.lettuce.core.AbstractRedisClient;
@@ -47,7 +47,7 @@ public class ExportStepHelper {
 
 	public static void checkNotifyConfig(AbstractRedisClient client, Logger log) {
 		Map<String, String> valueMap;
-		try (StatefulRedisModulesConnection<String, String> conn = RedisModulesUtils.connection(client)) {
+		try (StatefulRedisModulesConnection<String, String> conn = BatchUtils.connection(client)) {
 			try {
 				valueMap = conn.sync().configGet(NOTIFY_CONFIG);
 			} catch (RedisException e) {
