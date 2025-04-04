@@ -94,7 +94,7 @@ announce:
   slack:
     active: RELEASE
     channel: '#field-engineering-announcements'
-    message: '🧯️ RIOT-X {{projectVersion}} has been released! https://github.com/redis-field-engineering/riotx-dist/releases/tag/v{{projectEffectiveVersion}}'
+    message: '🧯️ RIOT-X {{projectVersion}} has been released! https://github.com/redis-field-engineering/riotx-dist/releases/tag/v{{projectEffectiveVersion}} {{changelog}}'
 
 assemble:
   jlink:
