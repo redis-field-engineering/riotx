@@ -9,45 +9,49 @@ import picocli.CommandLine.ArgGroup;
 
 public abstract class AbstractRedisCommand extends AbstractJobCommand {
 
-	@ArgGroup(exclusive = false, heading = "Redis options%n")
-	private RedisArgs redisArgs = new RedisArgs();
+    @ArgGroup(exclusive = false, heading = "Redis options%n")
+    private RedisArgs redisArgs = new RedisArgs();
 
-	private RedisContext redisContext;
+    private RedisContext redisContext;
 
-	@Override
-	protected void initialize() {
-		super.initialize();
-		redisContext = RedisContext.of(redisArgs);
-		redisContext.afterPropertiesSet();
-	}
+    @Override
+    protected void initialize() {
+        super.initialize();
+        redisContext = RedisContext.of(redisArgs);
+        redisContext.afterPropertiesSet();
+    }
 
-	@Override
-	protected void teardown() {
-		if (redisContext != null) {
-			redisContext.close();
-		}
-		super.teardown();
-	}
+    protected RedisContext getRedisContext() {
+        return redisContext;
+    }
 
-	protected RedisModulesCommands<String, String> commands() {
-		return redisContext.getConnection().sync();
-	}
+    @Override
+    protected void teardown() {
+        if (redisContext != null) {
+            redisContext.close();
+        }
+        super.teardown();
+    }
 
-	protected void configure(RedisItemReader<?, ?> reader) {
-		configureAsyncStreamSupport(reader);
-		redisContext.configure(reader);
-	}
+    protected RedisModulesCommands<String, String> commands() {
+        return redisContext.getConnection().sync();
+    }
 
-	protected void configure(RedisItemWriter<?, ?, ?> writer) {
-		redisContext.configure(writer);
-	}
+    protected void configure(RedisItemReader<?, ?> reader) {
+        configureAsyncStreamSupport(reader);
+        redisContext.configure(reader);
+    }
 
-	public RedisArgs getRedisArgs() {
-		return redisArgs;
-	}
+    protected void configure(RedisItemWriter<?, ?, ?> writer) {
+        redisContext.configure(writer);
+    }
 
-	public void setRedisArgs(RedisArgs clientArgs) {
-		this.redisArgs = clientArgs;
-	}
+    public RedisArgs getRedisArgs() {
+        return redisArgs;
+    }
+
+    public void setRedisArgs(RedisArgs clientArgs) {
+        this.redisArgs = clientArgs;
+    }
 
 }
