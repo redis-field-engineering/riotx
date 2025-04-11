@@ -1,19 +1,9 @@
 package com.redis.riot;
 
-import java.time.temporal.ChronoUnit;
-
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.function.FunctionItemProcessor;
-
-import com.redis.riot.core.RiotDuration;
-import com.redis.riot.core.processor.FunctionPredicate;
-import com.redis.riot.core.processor.PredicateOperator;
-import com.redis.spring.batch.item.AbstractAsyncItemStreamSupport;
-import com.redis.spring.batch.item.AbstractPollableItemReader;
 import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.reader.KeyEvent;
+import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 
-import io.lettuce.core.codec.RedisCodec;
 import lombok.ToString;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
@@ -21,139 +11,85 @@ import picocli.CommandLine.Option;
 @ToString
 public class RedisReaderArgs {
 
-	public static final long DEFAULT_SCAN_COUNT = 1000;
-	public static final int DEFAULT_QUEUE_CAPACITY = RedisItemReader.DEFAULT_QUEUE_CAPACITY;
-	public static final int DEFAULT_THREADS = AbstractAsyncItemStreamSupport.DEFAULT_THREADS;
-	public static final int DEFAULT_CHUNK_SIZE = AbstractAsyncItemStreamSupport.DEFAULT_CHUNK_SIZE;
-	public static final RiotDuration DEFAULT_POLL_TIMEOUT = RiotDuration
-			.of(AbstractPollableItemReader.DEFAULT_POLL_TIMEOUT, ChronoUnit.MILLIS);
+    public static final long DEFAULT_SCAN_COUNT = RedisScanItemReader.DEFAULT_SCAN_LIMIT;
 
-	@Option(names = "--key-pattern", description = "Pattern of keys to read (default: *).", paramLabel = "<glob>")
-	private String keyPattern;
+    public static final int DEFAULT_EVENT_QUEUE_CAPACITY = RedisLiveItemReader.DEFAULT_QUEUE_CAPACITY;
 
-	@Option(names = "--key-type", description = "Type of keys to read (default: all types).", paramLabel = "<type>")
-	private String keyType;
+    public static final int DEFAULT_BATCH_SIZE = RedisScanItemReader.DEFAULT_BATCH_SIZE;
 
-	@Option(names = "--scan-count", description = "How many keys to read at once on each SCAN call (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
-	private long scanCount = DEFAULT_SCAN_COUNT;
+    @Option(names = "--key-pattern", description = "Pattern of keys to read (default: *).", paramLabel = "<glob>")
+    private String keyPattern;
 
-	@Option(names = "--read-queue", description = "Max items that reader threads can queue up (default: ${DEFAULT-VALUE}). When the queue is full the threads wait for space to become available.", paramLabel = "<int>")
-	private int queueCapacity = DEFAULT_QUEUE_CAPACITY;
+    @Option(names = "--key-type", description = "Type of keys to read (default: all types).", paramLabel = "<type>")
+    private String keyType;
 
-	@Option(names = "--read-threads", description = "How many value reader threads to use in parallel (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
-	private int threads = DEFAULT_THREADS;
+    @Option(names = "--scan-count", description = "How many keys to read at once on each scan iteration (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    private long scanCount = DEFAULT_SCAN_COUNT;
 
-	@Option(names = "--read-batch", description = "Number of values each reader thread should read in a pipelined call (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
-	private int chunkSize = DEFAULT_CHUNK_SIZE;
+    @Option(names = "--read-batch", description = "Number of values each reader thread should read in a pipelined call (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    private int batchSize = DEFAULT_BATCH_SIZE;
 
-	@Option(names = "--read-retry", description = "Max number of times to try failed reads. 0 and 1 both mean no retry (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
-	private int retryLimit;
+    @Option(names = "--event-queue", description = "Capacity of the keyspace notification queue (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    private int eventQueueCapacity = DEFAULT_EVENT_QUEUE_CAPACITY;
 
-	@Option(names = "--read-skip", description = "Max number of failed reads before considering the reader has failed (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
-	private int skipLimit;
+    @ArgGroup(exclusive = false)
+    private KeyFilterArgs keyFilterArgs = new KeyFilterArgs();
 
-	@Option(names = "--read-poll", description = "Interval between queue polls (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>", hidden = true)
-	private RiotDuration pollTimeout = DEFAULT_POLL_TIMEOUT;
+    public <K, V> void configure(RedisItemReader<K, V> reader) {
+        reader.setKeyFilter(keyFilterArgs.predicate(reader.getCodec()));
+        reader.setKeyPattern(keyPattern);
+        reader.setKeyType(keyType);
+        if (reader instanceof RedisLiveItemReader) {
+            ((RedisLiveItemReader<K, V>) reader).setQueueCapacity(eventQueueCapacity);
+        }
+    }
 
-	@ArgGroup(exclusive = false)
-	private KeyFilterArgs keyFilterArgs = new KeyFilterArgs();
+    public String getKeyPattern() {
+        return keyPattern;
+    }
 
-	public <K> void configure(RedisItemReader<K, ?> reader) {
-		reader.setChunkSize(chunkSize);
-		reader.setKeyPattern(keyPattern);
-		reader.setKeyType(keyType);
-		reader.setQueueCapacity(queueCapacity);
-		reader.setRetryLimit(retryLimit);
-		reader.setScanCount(scanCount);
-		reader.setSkipLimit(skipLimit);
-		reader.setThreads(threads);
-		reader.setPollTimeout(pollTimeout.getValue());
-		reader.setProcessor(keyProcessor(reader.getCodec(), keyFilterArgs));
-	}
+    public void setKeyPattern(String scanMatch) {
+        this.keyPattern = scanMatch;
+    }
 
-	private <K> ItemProcessor<KeyEvent<K>, KeyEvent<K>> keyProcessor(RedisCodec<K, ?> codec, KeyFilterArgs args) {
-		return args.predicate(codec).map(p -> new FunctionPredicate<KeyEvent<K>, K>(KeyEvent::getKey, p))
-				.map(PredicateOperator::new).map(FunctionItemProcessor::new).orElse(null);
-	}
+    public long getScanCount() {
+        return scanCount;
+    }
 
-	public String getKeyPattern() {
-		return keyPattern;
-	}
+    public void setScanCount(long scanCount) {
+        this.scanCount = scanCount;
+    }
 
-	public void setKeyPattern(String scanMatch) {
-		this.keyPattern = scanMatch;
-	}
+    public String getKeyType() {
+        return keyType;
+    }
 
-	public long getScanCount() {
-		return scanCount;
-	}
+    public void setKeyType(String scanType) {
+        this.keyType = scanType;
+    }
 
-	public void setScanCount(long scanCount) {
-		this.scanCount = scanCount;
-	}
+    public int getBatchSize() {
+        return batchSize;
+    }
 
-	public String getKeyType() {
-		return keyType;
-	}
+    public void setBatchSize(int chunkSize) {
+        this.batchSize = chunkSize;
+    }
 
-	public void setKeyType(String scanType) {
-		this.keyType = scanType;
-	}
+    public KeyFilterArgs getKeyFilterArgs() {
+        return keyFilterArgs;
+    }
 
-	public int getQueueCapacity() {
-		return queueCapacity;
-	}
+    public void setKeyFilterArgs(KeyFilterArgs keyFilterArgs) {
+        this.keyFilterArgs = keyFilterArgs;
+    }
 
-	public void setQueueCapacity(int queueCapacity) {
-		this.queueCapacity = queueCapacity;
-	}
+    public int getEventQueueCapacity() {
+        return eventQueueCapacity;
+    }
 
-	public int getThreads() {
-		return threads;
-	}
-
-	public void setThreads(int threads) {
-		this.threads = threads;
-	}
-
-	public int getChunkSize() {
-		return chunkSize;
-	}
-
-	public void setChunkSize(int chunkSize) {
-		this.chunkSize = chunkSize;
-	}
-
-	public int getRetryLimit() {
-		return retryLimit;
-	}
-
-	public void setRetryLimit(int retryLimit) {
-		this.retryLimit = retryLimit;
-	}
-
-	public int getSkipLimit() {
-		return skipLimit;
-	}
-
-	public void setSkipLimit(int skipLimit) {
-		this.skipLimit = skipLimit;
-	}
-
-	public RiotDuration getPollTimeout() {
-		return pollTimeout;
-	}
-
-	public void setPollTimeout(RiotDuration pollTimeout) {
-		this.pollTimeout = pollTimeout;
-	}
-
-	public KeyFilterArgs getKeyFilterArgs() {
-		return keyFilterArgs;
-	}
-
-	public void setKeyFilterArgs(KeyFilterArgs keyFilterArgs) {
-		this.keyFilterArgs = keyFilterArgs;
-	}
+    public void setEventQueueCapacity(int eventQueueCapacity) {
+        this.eventQueueCapacity = eventQueueCapacity;
+    }
 
 }

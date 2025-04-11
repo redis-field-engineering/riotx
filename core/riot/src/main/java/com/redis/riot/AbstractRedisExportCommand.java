@@ -15,39 +15,39 @@ import picocli.CommandLine.Option;
 
 public abstract class AbstractRedisExportCommand extends AbstractExportCommand {
 
-	@ArgGroup(exclusive = false, heading = "Redis options%n")
-	private RedisArgs redisArgs = new RedisArgs();
+    @ArgGroup(exclusive = false, heading = "Redis options%n")
+    private RedisArgs redisArgs = new RedisArgs();
 
-	@Option(names = "--key-regex", description = "Regex for key-field extraction, e.g. '\\w+:(?<id>.+)' extracts an id field from the key", paramLabel = "<rex>")
-	private Pattern keyRegex;
+    @Option(names = "--key-regex", description = "Regex for key-field extraction, e.g. '\\w+:(?<id>.+)' extracts an id field from the key", paramLabel = "<rex>")
+    private Pattern keyRegex;
 
-	@Override
-	protected RedisContext sourceRedisContext() {
-		return RedisContext.of(redisArgs);
-	}
+    @Override
+    protected RedisContext sourceRedisContext() {
+        return RedisContext.of(redisArgs);
+    }
 
-	protected ItemProcessor<KeyValue<String>, Map<String, Object>> mapProcessor() {
-		KeyValueMap mapFunction = new KeyValueMap();
-		if (keyRegex != null) {
-			mapFunction.setKey(new RegexNamedGroupFunction(keyRegex));
-		}
-		return new FunctionItemProcessor<>(mapFunction);
-	}
+    protected ItemProcessor<KeyValue<String>, Map<String, Object>> mapProcessor() {
+        KeyValueMap mapFunction = new KeyValueMap();
+        if (keyRegex != null) {
+            mapFunction.setKey(new RegexNamedGroupFunction(keyRegex));
+        }
+        return new FunctionItemProcessor<>(mapFunction);
+    }
 
-	public RedisArgs getRedisArgs() {
-		return redisArgs;
-	}
+    public RedisArgs getRedisArgs() {
+        return redisArgs;
+    }
 
-	public void setRedisArgs(RedisArgs clientArgs) {
-		this.redisArgs = clientArgs;
-	}
+    public void setRedisArgs(RedisArgs clientArgs) {
+        this.redisArgs = clientArgs;
+    }
 
-	public Pattern getKeyRegex() {
-		return keyRegex;
-	}
+    public Pattern getKeyRegex() {
+        return keyRegex;
+    }
 
-	public void setKeyRegex(Pattern regex) {
-		this.keyRegex = regex;
-	}
+    public void setKeyRegex(Pattern regex) {
+        this.keyRegex = regex;
+    }
 
 }

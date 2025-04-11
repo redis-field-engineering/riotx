@@ -12,13 +12,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redis.riot.AbstractRedisTargetExportCommand;
 import com.redis.riot.ExportStepHelper;
 import com.redis.riot.RedisWriterArgs;
-import com.redis.riot.core.Step;
-import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.RedisItemReader.ReaderMode;
+import com.redis.riot.core.RiotStep;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.KeyEventItemReader;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader.ReaderMode;
 import com.redis.spring.batch.item.redis.writer.impl.Xadd;
 
 import io.lettuce.core.StreamMessage;
@@ -60,18 +60,18 @@ public class StreamExport extends AbstractRedisTargetExportCommand {
 		targetRedisWriterArgs.configure(writer);
 	}
 
-	private Step<KeyValue<String>, StreamMessage<String, String>> step() {
-		RedisItemReader<String, String> reader = RedisItemReader.struct();
+	private RiotStep<KeyValue<String>, StreamMessage<String, String>> step() {
+		RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
 		configureSourceRedisReader(reader);
 		RedisItemWriter<String, String, StreamMessage<String, String>> writer = writer();
 		configureTargetRedisWriter(writer);
-		Step<KeyValue<String>, StreamMessage<String, String>> step = new ExportStepHelper(log).step(reader, writer);
+		RiotStep<KeyValue<String>, StreamMessage<String, String>> step = new ExportStepHelper(log).step(reader, writer);
 		step.processor(this::process);
 		step.taskName(TASK_NAME);
 		if (reader.getMode() != ReaderMode.SCAN) {
 			step.statusMessageSupplier(() -> liveExtraMessage(reader));
 		}
-		step.maxItemCountSupplier(RedisScanSizeEstimator.from(reader));
+		step.maxItemCount(RedisScanSizeEstimator.from(reader));
 		return step;
 	}
 
@@ -104,7 +104,7 @@ public class StreamExport extends AbstractRedisTargetExportCommand {
 	}
 
 	@SuppressWarnings("rawtypes")
-	private String liveExtraMessage(RedisItemReader<?, ?> reader) {
+	private String liveExtraMessage(RedisScanItemReader<?, ?> reader) {
 		KeyEventItemReader keyReader = (KeyEventItemReader) reader.getReader();
 		if (keyReader == null || keyReader.getQueue() == null) {
 			return "";

@@ -7,7 +7,7 @@ import org.springframework.batch.core.Job;
 
 import com.redis.riot.core.AbstractJobCommand;
 import com.redis.riot.core.RiotException;
-import com.redis.riot.core.Step;
+import com.redis.riot.core.RiotStep;
 import com.redis.spring.batch.memcached.MemcachedEntry;
 import com.redis.spring.batch.memcached.MemcachedItemReader;
 import com.redis.spring.batch.memcached.MemcachedItemWriter;
@@ -84,7 +84,7 @@ public class MemcachedReplicate extends AbstractJobCommand {
 		MemcachedItemReader reader = new MemcachedItemReader(sourceMemcachedContext::safeMemcachedClient);
 		configureAsyncStreamSupport(reader);
 		MemcachedItemWriter writer = new MemcachedItemWriter(targetMemcachedContext::safeMemcachedClient);
-		Step<MemcachedEntry, MemcachedEntry> step = new Step<>(reader, writer);
+		RiotStep<MemcachedEntry, MemcachedEntry> step = new RiotStep<>(reader, writer);
 		step.processor(this::process);
 		step.taskName(TASK_NAME);
 		step.noSkip(TimeoutException.class);

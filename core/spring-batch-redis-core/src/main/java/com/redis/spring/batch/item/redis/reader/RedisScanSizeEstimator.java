@@ -5,9 +5,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -16,13 +16,13 @@ import org.springframework.util.StringUtils;
 
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.async.RedisModulesAsyncCommands;
-import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.RedisFuture;
+import io.lettuce.core.internal.Exceptions;
 
-public class RedisScanSizeEstimator implements Callable<Long> {
+public class RedisScanSizeEstimator implements LongSupplier {
 
     public static final int DEFAULT_SAMPLES = 100;
 
@@ -44,24 +44,23 @@ public class RedisScanSizeEstimator implements Callable<Long> {
      * @throws IOException if script execution exception happens during estimation
      */
     @Override
-    public Long call() throws TimeoutException, InterruptedException, ExecutionException {
+    public long getAsLong() {
         Assert.notNull(client, "Redis client not set");
         try (StatefulRedisModulesConnection<String, String> connection = BatchUtils.connection(client)) {
             try {
                 return size(connection);
+            } catch (Exception e) {
+                throw Exceptions.bubble(e);
             } finally {
                 connection.setAutoFlushCommands(true);
             }
         }
     }
 
-    private Long size(StatefulRedisModulesConnection<String, String> connection)
+    private long size(StatefulRedisModulesConnection<String, String> connection)
             throws TimeoutException, InterruptedException, ExecutionException {
         RedisModulesAsyncCommands<String, String> commands = connection.async();
-        Long dbsize = connection.sync().dbsize();
-        if (dbsize == null) {
-            return null;
-        }
+        long dbsize = connection.sync().dbsize();
         if (!StringUtils.hasLength(keyPattern) && !StringUtils.hasLength(keyType)) {
             return dbsize;
         }
@@ -117,11 +116,11 @@ public class RedisScanSizeEstimator implements Callable<Long> {
         this.samples = samples;
     }
 
-    public static RedisScanSizeEstimator from(RedisItemReader<?, ?> reader) {
+    public static RedisScanSizeEstimator from(AbstractRedisClient client, String keyPattern, String keyType) {
         RedisScanSizeEstimator estimator = new RedisScanSizeEstimator();
-        estimator.setClient(reader.getClient());
-        estimator.setKeyPattern(reader.getKeyPattern());
-        estimator.setKeyType(reader.getKeyType());
+        estimator.setClient(client);
+        estimator.setKeyPattern(keyPattern);
+        estimator.setKeyType(keyType);
         return estimator;
     }
 

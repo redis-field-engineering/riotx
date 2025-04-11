@@ -2,8 +2,8 @@ package com.redis.riot;
 
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
-import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 
 import io.lettuce.core.RedisURI;
 import picocli.CommandLine.ArgGroup;
@@ -11,7 +11,7 @@ import picocli.CommandLine.Parameters;
 
 public abstract class AbstractRedisTargetExportCommand extends AbstractExportCommand {
 
-	public static final int DEFAULT_TARGET_POOL_SIZE = RedisItemReader.DEFAULT_POOL_SIZE;
+	public static final int DEFAULT_TARGET_POOL_SIZE = RedisScanItemReader.DEFAULT_POOL_SIZE;
 	private static final String VAR_TARGET = "target";
 
 	@Parameters(arity = "1", index = "0", description = "Source server URI or endpoint in the form host:port.", paramLabel = "SOURCE")
@@ -60,7 +60,7 @@ public abstract class AbstractRedisTargetExportCommand extends AbstractExportCom
 		context.setVariable(VAR_TARGET, targetRedisContext.getConnection().sync());
 	}
 
-	protected void configureTargetRedisReader(RedisItemReader<?, ?> reader) {
+	protected void configureTargetRedisReader(RedisScanItemReader<?, ?> reader) {
 		configureAsyncStreamSupport(reader);
 		targetRedisContext.configure(reader);
 	}

@@ -8,7 +8,7 @@ import org.springframework.util.StringUtils;
 
 import com.redis.lettucemod.search.CreateOptions;
 import com.redis.lettucemod.search.Field;
-import com.redis.riot.core.Step;
+import com.redis.riot.core.RiotStep;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
@@ -33,7 +33,7 @@ public class Generate extends AbstractRedisCommand {
 		if (StringUtils.hasLength(generateArgs.getIndex())) {
 			commands().ftCreate(generateArgs.getIndex(), indexCreateOptions(), indexFields());
 		}
-		Step<KeyValue<String>, KeyValue<String>> step = new Step<>(reader(), writer());
+		RiotStep<KeyValue<String>, KeyValue<String>> step = new RiotStep<>(reader(), writer());
 		step.taskName(TASK_NAME);
 		step.maxItemCount(generateArgs.getCount());
 		return job(step);

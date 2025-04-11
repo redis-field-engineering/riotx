@@ -8,6 +8,7 @@ import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
+import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
 
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.ClientOptions;
@@ -60,14 +61,16 @@ public class RedisContext implements InitializingBean, AutoCloseable {
         return options.build();
     }
 
-    public void configure(RedisItemReader<?, ?> reader) {
+    public <K, V> void configure(RedisItemReader<K, V> reader) {
         reader.setClient(client);
-        reader.setDatabase(uri.getDatabase());
         reader.setPoolSize(poolSize);
+        if (reader instanceof RedisLiveItemReader) {
+            ((RedisLiveItemReader<K, V>) reader).setDatabase(uri.getDatabase());
+        }
         reader.setReadFrom(readFrom);
     }
 
-    public void configure(RedisItemWriter<?, ?, ?> writer) {
+    public <K, V, T> void configure(RedisItemWriter<K, V, T> writer) {
         writer.setClient(client);
         writer.setPoolSize(poolSize);
     }

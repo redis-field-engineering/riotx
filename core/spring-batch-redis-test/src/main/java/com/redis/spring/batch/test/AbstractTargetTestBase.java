@@ -1,7 +1,6 @@
 package com.redis.spring.batch.test;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -13,23 +12,25 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.springframework.batch.core.JobExecutionException;
+import org.springframework.batch.item.support.ListItemWriter;
 import org.testcontainers.lifecycle.Startable;
 
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.sync.RedisModulesCommands;
 import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.RedisItemReader.ReaderMode;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.common.Range;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
 import com.redis.spring.batch.item.redis.gen.ItemType;
+import com.redis.spring.batch.item.redis.gen.StreamOptions;
 import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
-import com.redis.spring.batch.item.redis.reader.KeyComparisonItemWriter;
+import com.redis.spring.batch.item.redis.reader.KeyComparisonItemReader;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.testcontainers.RedisServer;
 
 import io.lettuce.core.AbstractRedisClient;
@@ -101,6 +102,16 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
         this.ttlTolerance = tolerance;
     }
 
+    protected <K, V, R extends RedisItemReader<K, V>> R targetClient(R reader) {
+        reader.setClient(targetRedisClient);
+        return reader;
+    }
+
+    protected <K, V, T> RedisItemWriter<K, V, T> targetClient(RedisItemWriter<K, V, T> writer) {
+        writer.setClient(targetRedisClient);
+        return writer;
+    }
+
     protected RedisItemWriter<String, String, KeyValue<String>> structWriter() {
         return structWriter(StringCodec.UTF8);
     }
@@ -116,9 +127,7 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
     }
 
     protected RedisItemWriter<byte[], byte[], KeyValue<byte[]>> dumpWriter() {
-        RedisItemWriter<byte[], byte[], KeyValue<byte[]>> writer = RedisItemWriter.dump();
-        writer.setClient(targetRedisClient);
-        return writer;
+        return targetClient(RedisItemWriter.dump());
     }
 
     protected void assertCompare(TestInfo info) throws Exception {
@@ -149,45 +158,37 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
     protected <K, V> List<KeyComparison<K>> compare(TestInfo info, RedisCodec<K, V> codec, KeyComparator<K> comparator)
             throws JobExecutionException {
         assertDbNotEmpty(redisCommands);
-        RedisItemReader<K, V> sourceReader = structReader(testInfo(info, "comparisonReader", "source"), codec);
-        RedisItemReader<K, V> targetReader = structReader(testInfo(info, "comparisonReader", "target"), targetRedisClient,
-                codec);
-        targetReader.setClient(targetRedisClient);
-        KeyComparisonItemWriter<K, V> writer = new KeyComparisonItemWriter<>(targetReader, comparator);
-        List<KeyComparison<K>> comparisons = new ArrayList<>();
-        writer.addListener(comparisons::add);
-        writer.setName(name(testInfo(info, "comparisonReader")));
-        run(testInfo(info, "compare"), sourceReader, writer);
+        RedisScanItemReader<K, V> sourceReader = client(RedisItemReader.scanStruct(codec));
+        RedisScanItemReader<K, V> targetReader = targetClient(RedisItemReader.scanStruct(codec));
+        KeyComparisonItemReader<K, V> reader = new KeyComparisonItemReader<>(sourceReader, targetReader);
+        reader.setComparator(comparator);
+        ListItemWriter<KeyComparison<K>> writer = new ListItemWriter<>();
+        run(testInfo(info, "compare"), reader, writer);
+        List<KeyComparison<K>> comparisons = writer.getWrittenItems();
         return comparisons;
     }
 
     protected <K, V> List<KeyComparison<String>> replicate(TestInfo info, RedisItemReader<K, V> reader,
             RedisItemWriter<K, V, KeyValue<K>> writer) throws Exception {
-        if (reader.getMode() != ReaderMode.LIVEONLY) {
+        if (reader instanceof RedisScanItemReader) {
             generate(info, generator(130));
-        }
-        if (reader.getMode() != ReaderMode.SCAN) {
-            GeneratorItemReader liveGen = generator(70, ItemType.HASH, ItemType.STRING);
-            liveGen.setKeyRange(new Range(300, 500));
-            generateAsync(testInfo(info, "genasync"), liveGen);
+        } else {
+            GeneratorItemReader generator = generator(1, ItemType.STREAM);
+            StreamOptions streamOptions = generator.getStreamOptions();
+            streamOptions.setMessageCount(Range.of(3));
+            streamOptions.getBodyOptions().setFieldCount(Range.of(1));
+            generateAsync(info, generator);
         }
         return runAndCompare(info, reader, writer);
     }
 
     protected <K, V> List<KeyComparison<String>> runAndCompare(TestInfo info, RedisItemReader<K, V> reader,
             RedisItemWriter<K, V, KeyValue<K>> writer) throws Exception {
-        run(testInfo(info, "replicate"), reader, writer);
-        List<KeyComparison<String>> comparisons = compare(testInfo(info, "replicate"));
+        TestInfo replicateInfo = testInfo(info, "replicate");
+        run(replicateInfo, reader, writer);
+        List<KeyComparison<String>> comparisons = compare(replicateInfo);
         List<KeyComparison<String>> mismatches = comparisons.stream().filter(s -> s.getStatus() != Status.OK)
                 .collect(Collectors.toList());
-        if (!mismatches.isEmpty()) {
-            List<String> sourceKeys = BatchUtils.connection(reader.getClient()).sync().keys("*");
-            Collections.sort(sourceKeys);
-            log.info("Source keys: {}", sourceKeys);
-            List<String> targetKeys = BatchUtils.connection(writer.getClient()).sync().keys("*");
-            Collections.sort(targetKeys);
-            log.info("Target keys: {}", targetKeys);
-        }
         Assertions.assertEquals(Collections.emptyList(), mismatches);
         return comparisons;
     }

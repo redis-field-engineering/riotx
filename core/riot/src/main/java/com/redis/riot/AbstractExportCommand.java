@@ -1,121 +1,107 @@
 package com.redis.riot;
 
-import org.springframework.batch.item.ItemWriter;
+import java.time.temporal.ChronoUnit;
+
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import com.redis.riot.core.AbstractJobCommand;
-import com.redis.riot.core.Step;
-import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.RedisItemReader.ReaderMode;
+import com.redis.riot.core.RiotDuration;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.reader.KeyValueRead;
+import com.redis.spring.batch.step.FlushingChunkProvider;
 
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
 public abstract class AbstractExportCommand extends AbstractJobCommand {
 
-	public static final ReaderMode DEFAULT_MODE = RedisItemReader.DEFAULT_MODE;
+    public static final RedisReaderMode DEFAULT_REDIS_READER_MODE = RedisReaderMode.SCAN;
 
-	private static final String TASK_NAME = "Exporting";
-	private static final String VAR_SOURCE = "source";
+    public static final RiotDuration DEFAULT_FLUSH_INTERVAL = RiotDuration.of(FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL,
+            ChronoUnit.MILLIS);
 
-	@Option(names = "--mode", description = "Source for keys: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE})", paramLabel = "<name>")
-	private ReaderMode mode = DEFAULT_MODE;
+    private static final String VAR_SOURCE = "source";
 
-	@ArgGroup(exclusive = false)
-	private RedisReaderArgs readerArgs = new RedisReaderArgs();
+    @Option(names = "--mode", description = "Redis reader mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE})", paramLabel = "<name>")
+    private RedisReaderMode mode = DEFAULT_REDIS_READER_MODE;
 
-	@ArgGroup(exclusive = false)
-	private RedisReaderLiveArgs readerLiveArgs = new RedisReaderLiveArgs();
+    @Option(names = "--flush-interval", description = "Max duration between flushes in live mode (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
+    private RiotDuration flushInterval = DEFAULT_FLUSH_INTERVAL;
 
-	@ArgGroup(exclusive = false)
-	private MemoryUsageArgs readerMemoryUsageArgs = new MemoryUsageArgs();
+    @Option(names = "--idle-timeout", description = "Min duration to consider reader complete in live mode, for example 3s 5m (default: no timeout).", paramLabel = "<dur>")
+    private RiotDuration idleTimeout;
 
-	private RedisContext sourceRedisContext;
+    @ArgGroup(exclusive = false)
+    private RedisReaderArgs readerArgs = new RedisReaderArgs();
 
-	@Override
-	protected void initialize() {
-		super.initialize();
-		sourceRedisContext = sourceRedisContext();
-		sourceRedisContext.afterPropertiesSet();
-	}
+    @ArgGroup(exclusive = false)
+    private MemoryUsageArgs memoryUsageArgs = new MemoryUsageArgs();
 
-	@Override
-	protected void teardown() {
-		if (sourceRedisContext != null) {
-			sourceRedisContext.close();
-		}
-		super.teardown();
-	}
+    private RedisContext sourceRedisContext;
 
-	protected void configure(StandardEvaluationContext context) {
-		context.setVariable(VAR_SOURCE, sourceRedisContext.getConnection().sync());
-	}
+    @Override
+    protected void initialize() {
+        super.initialize();
+        sourceRedisContext = sourceRedisContext();
+        sourceRedisContext.afterPropertiesSet();
+    }
 
-	protected void configureSourceRedisReader(RedisItemReader<?, ?> reader) {
-		configureAsyncStreamSupport(reader);
-		sourceRedisContext.configure(reader);
-		log.info("Configuring {} in {} mode", reader.getName(), mode);
-		reader.setMode(mode);
-		log.info("Configuring {} with {}", reader.getName(), readerArgs);
-		readerArgs.configure(reader);
-		if (mode != ReaderMode.SCAN) {
-			log.info("Configuring {} with {}", reader.getName(), readerLiveArgs);
-			readerLiveArgs.configure(reader);
-		}
-		if (readerMemoryUsageArgs.getLimit() != null && reader.getOperation() instanceof KeyValueRead) {
-			log.info("Configuring {} with {}", reader.getName(), readerMemoryUsageArgs);
-			readerMemoryUsageArgs.configure(reader);
-		}
-	}
+    @Override
+    protected void teardown() {
+        if (sourceRedisContext != null) {
+            sourceRedisContext.close();
+        }
+        super.teardown();
+    }
 
-	protected void configureSourceRedisWriter(RedisItemWriter<?, ?, ?> writer) {
-		log.info("Configuring source writer with Redis context");
-		sourceRedisContext.configure(writer);
-	}
+    protected void configure(StandardEvaluationContext context) {
+        context.setVariable(VAR_SOURCE, sourceRedisContext.getConnection().sync());
+    }
 
-	protected abstract RedisContext sourceRedisContext();
+    protected void configureSource(RedisItemWriter<?, ?, ?> writer) {
+        log.info("Configuring source writer with Redis context");
+        sourceRedisContext.configure(writer);
+    }
 
-	protected <O> Step<KeyValue<String>, O> step(ItemWriter<O> writer) {
-		RedisItemReader<String, String> reader = RedisItemReader.struct();
-		configureSourceRedisReader(reader);
-		Step<KeyValue<String>, O> step = new ExportStepHelper(log).step(reader, writer);
-		step.taskName(TASK_NAME);
-		return step;
-	}
+    protected abstract RedisContext sourceRedisContext();
 
-	public ReaderMode getMode() {
-		return mode;
-	}
+    public RedisReaderMode getMode() {
+        return mode;
+    }
 
-	public void setMode(ReaderMode mode) {
-		this.mode = mode;
-	}
+    public void setMode(RedisReaderMode mode) {
+        this.mode = mode;
+    }
 
-	public RedisReaderArgs getReaderArgs() {
-		return readerArgs;
-	}
+    public RedisReaderArgs getReaderArgs() {
+        return readerArgs;
+    }
 
-	public void setReaderArgs(RedisReaderArgs args) {
-		this.readerArgs = args;
-	}
+    public void setReaderArgs(RedisReaderArgs args) {
+        this.readerArgs = args;
+    }
 
-	public RedisReaderLiveArgs getReaderLiveArgs() {
-		return readerLiveArgs;
-	}
+    public MemoryUsageArgs getMemoryUsageArgs() {
+        return memoryUsageArgs;
+    }
 
-	public void setReaderLiveArgs(RedisReaderLiveArgs args) {
-		this.readerLiveArgs = args;
-	}
+    public void setMemoryUsageArgs(MemoryUsageArgs args) {
+        this.memoryUsageArgs = args;
+    }
 
-	public MemoryUsageArgs getReaderMemoryUsageArgs() {
-		return readerMemoryUsageArgs;
-	}
+    public RiotDuration getFlushInterval() {
+        return flushInterval;
+    }
 
-	public void setReaderMemoryUsageArgs(MemoryUsageArgs args) {
-		this.readerMemoryUsageArgs = args;
-	}
+    public void setFlushInterval(RiotDuration interval) {
+        this.flushInterval = interval;
+    }
+
+    public RiotDuration getIdleTimeout() {
+        return idleTimeout;
+    }
+
+    public void setIdleTimeout(RiotDuration idleTimeout) {
+        this.idleTimeout = idleTimeout;
+    }
 
 }

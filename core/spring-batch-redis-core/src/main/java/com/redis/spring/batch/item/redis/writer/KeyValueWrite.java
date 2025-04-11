@@ -44,9 +44,12 @@ public class KeyValueWrite<K, V> implements RedisOperation<K, V, KeyValue<K>, Ob
     @Override
     public List<RedisFuture<Object>> execute(RedisAsyncCommands<K, V> commands, Iterable<? extends KeyValue<K>> items) {
         List<RedisFuture<Object>> futures = new ArrayList<>();
-        futures.addAll(delete.execute(commands, toDelete(items)));
-        futures.addAll(write.execute(commands, toWrite(items)));
-        futures.addAll(expire.execute(commands, toExpire(items)));
+        List<KeyValue<K>> toDelete = toDelete(items);
+        futures.addAll(delete.execute(commands, toDelete));
+        List<? extends KeyValue<K>> toWrite = toWrite(items);
+        futures.addAll(write.execute(commands, toWrite));
+        List<KeyValue<K>> toExpire = toExpire(items);
+        futures.addAll(expire.execute(commands, toExpire));
         return futures;
     }
 
@@ -118,12 +121,6 @@ public class KeyValueWrite<K, V> implements RedisOperation<K, V, KeyValue<K>, Ob
 
     public WriteMode getMode() {
         return mode;
-    }
-
-    public static <K, V> KeyValueWrite<K, V> create(WriteMode mode) {
-        KeyValueWrite<K, V> operation = new KeyValueWrite<>();
-        operation.setMode(mode);
-        return operation;
     }
 
 }

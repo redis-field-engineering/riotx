@@ -6,6 +6,6 @@ import io.lettuce.core.AbstractRedisClient;
 
 public interface InitializingOperation<K, V, I, O> extends RedisOperation<K, V, I, O>, InitializingBean {
 
-	void setClient(AbstractRedisClient client);
+    void setClient(AbstractRedisClient client);
 
 }

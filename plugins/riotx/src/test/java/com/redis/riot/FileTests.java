@@ -20,7 +20,8 @@ import org.springframework.util.StreamUtils;
 import com.redis.riot.core.AbstractJobCommand;
 import com.redis.riot.core.ProgressStyle;
 import com.redis.riot.operation.HsetCommand;
-import com.redis.riotx.FileExportX;
+import com.redis.riotx.FileExport;
+import com.redis.riotx.FileImport;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
 import com.redis.spring.batch.test.AbstractTargetTestBase;
@@ -111,7 +112,7 @@ abstract class FileTests extends AbstractTargetTestBase {
 
     private void configureJobCommand(TestInfo info, AbstractJobCommand callable) {
         callable.setJobName(name(info));
-        callable.getJobArgs().getProgressArgs().setStyle(ProgressStyle.NONE);
+        callable.getProgressArgs().setStyle(ProgressStyle.NONE);
     }
 
     private void configure(RedisArgs redisArgs) {
@@ -145,7 +146,7 @@ abstract class FileTests extends AbstractTargetTestBase {
 
     @Test
     void fileImportCSVMultiThreaded(TestInfo info) throws Exception {
-        AbstractFileImport executable = new FileImport();
+        FileImport executable = new FileImport();
         configure(info, executable);
         executable.setFiles("https://storage.googleapis.com/jrx/beers.csv");
         executable.getFileReaderArgs().setHeader(true);
@@ -207,7 +208,7 @@ abstract class FileTests extends AbstractTargetTestBase {
         String dirName = name(info);
         Path dir = Files.createTempDirectory(dirName);
         String file = dir.resolve(filename).toFile().getPath();
-        FileExportX fileExport = new FileExportX();
+        FileExport fileExport = new FileExport();
         configure(info, fileExport);
         fileExport.setContentType(ContentType.STRUCT);
         fileExport.setFile(file);
@@ -229,7 +230,7 @@ abstract class FileTests extends AbstractTargetTestBase {
         StreamUtils.copy(getClass().getClassLoader().getResourceAsStream("files/redis-export.json"),
                 new FileOutputStream(file));
         FileImport fileImport = new FileImport();
-        fileImport.getJobArgs().getProgressArgs().setStyle(ProgressStyle.NONE);
+        fileImport.getProgressArgs().setStyle(ProgressStyle.NONE);
         fileImport.setFiles(file.toString());
         fileImport.getRedisArgs().setUri(redisURI);
         fileImport.call();

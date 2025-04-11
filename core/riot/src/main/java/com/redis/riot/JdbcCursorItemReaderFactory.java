@@ -2,13 +2,8 @@ package com.redis.riot;
 
 import java.util.Map;
 
-import javax.sql.DataSource;
-
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
 import org.springframework.jdbc.core.ColumnMapRowMapper;
-import org.springframework.util.Assert;
-
-import com.redis.riot.core.RiotException;
 
 public class JdbcCursorItemReaderFactory {
 

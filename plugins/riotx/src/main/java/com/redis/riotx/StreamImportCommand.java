@@ -8,7 +8,7 @@ import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.util.Assert;
 
 import com.redis.riot.core.RiotUtils;
-import com.redis.riot.core.Step;
+import com.redis.riot.core.RiotStep;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader;
 
 import io.lettuce.core.StreamMessage;
@@ -33,10 +33,10 @@ public class StreamImportCommand extends AbstractTargetRedisImportCommand {
 	protected Job job() {
 		Assert.isTrue(hasOperations(), "No Redis command specified");
 		StreamItemReader<String, String> reader = reader();
-		Step<StreamMessage<String, String>, Map<String, Object>> step = new Step<>(reader, operationWriter());
+		RiotStep<StreamMessage<String, String>, Map<String, Object>> step = new RiotStep<>(reader, operationWriter());
 		step.processor(streamMessageProcessor());
 		step.live(true);
-		step.flushInterval(reader.getBlock());
+		step.setFlushInterval(reader.getBlock());
 		step.idleTimeout(reader.getPollTimeout());
 		step.taskName(TASK_NAME);
 		return job(step);

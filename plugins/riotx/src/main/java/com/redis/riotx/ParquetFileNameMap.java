@@ -12,7 +12,7 @@ public class ParquetFileNameMap implements FileNameMap {
 			return null;
 		}
 		if (fileName.endsWith(PARQUET_SUFFIX)) {
-			return FileImportX.MIME_TYPE_PARQUET.toString();
+			return FileImport.MIME_TYPE_PARQUET.toString();
 		}
 		return null;
 	}

@@ -20,11 +20,11 @@ import com.redis.riot.AbstractRedisCommand;
 import com.redis.riot.ExportStepHelper;
 import com.redis.riot.MemoryUsageArgs;
 import com.redis.riot.RedisReaderArgs;
-import com.redis.riot.core.Step;
-import com.redis.spring.batch.item.redis.RedisItemReader;
+import com.redis.riot.core.RiotStep;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.KeyEventListenerContainer;
 import com.redis.spring.batch.item.redis.reader.KeyValueRead;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 
 import io.lettuce.core.codec.StringCodec;
 import picocli.CommandLine.ArgGroup;
@@ -62,7 +62,7 @@ public class Stats extends AbstractRedisCommand {
     @SuppressWarnings("rawtypes")
     @Override
     protected Job job() {
-        RedisItemReader<String, String> reader = RedisItemReader.struct();
+        RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
         KeyValueRead operation = (KeyValueRead) reader.getOperation();
         operation.setMemUsageLimit(1); // lowest limit while still reading mem usage
         operation.setMemUsageSamples(memoryUsageSamples);
@@ -74,9 +74,9 @@ public class Stats extends AbstractRedisCommand {
                 .create(getRedisContext().getClient(), StringCodec.UTF8);
         int database = getRedisContext().getUri().getDatabase();
         StatsWriter writer = new StatsWriter(stats, listenerContainer, database, readerArgs.getKeyPattern());
-        Step<KeyValue<String>, KeyValue<String>> step = new ExportStepHelper(log).step(reader, writer);
+        RiotStep<KeyValue<String>, KeyValue<String>> step = new ExportStepHelper(log).step(reader, writer);
         step.taskName(TASK_NAME);
-        step.executionListener(new ExecutionListener(statsPrinter(stats)));
+        step.addExecutionListener(new ExecutionListener(statsPrinter(stats)));
         return job(step);
     }
 
@@ -94,7 +94,7 @@ public class Stats extends AbstractRedisCommand {
     }
 
     @Override
-    protected void configure(RedisItemReader<?, ?> reader) {
+    protected void configure(RedisScanItemReader<?, ?> reader) {
         log.info("Configuring reader with {}", readerArgs);
         super.configure(reader);
         readerArgs.configure(reader);

@@ -28,7 +28,7 @@ public class FileTypeArgsX {
 
 	public static Map<String, MimeType> typeMap() {
 		Map<String, MimeType> map = FileTypeArgs.typeMap();
-		map.put("parquet", FileImportX.MIME_TYPE_PARQUET);
+		map.put("parquet", FileImport.MIME_TYPE_PARQUET);
 		return map;
 	}
 

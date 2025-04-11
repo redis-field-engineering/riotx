@@ -12,16 +12,16 @@ import org.springframework.util.Assert;
 import com.redis.riot.core.ProcessingItemWriter;
 import com.redis.riot.core.RiotDuration;
 import com.redis.riot.core.RiotUtils;
-import com.redis.riot.core.Step;
+import com.redis.riot.core.RiotStep;
 import com.redis.riot.function.StringKeyValue;
 import com.redis.riot.function.ToStringKeyValue;
-import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparator;
-import com.redis.spring.batch.item.redis.reader.KeyComparisonItemWriter;
+import com.redis.spring.batch.item.redis.reader.KeyComparisonItemReader;
 import com.redis.spring.batch.item.redis.reader.KeyComparisonStat;
 import com.redis.spring.batch.item.redis.reader.KeyComparisonStats;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
 
 import io.lettuce.core.codec.ByteArrayCodec;
@@ -85,30 +85,30 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExportCo
 				.collect(Collectors.joining(" | "));
 	}
 
-	protected Step<KeyValue<byte[]>, KeyValue<byte[]>> compareStep() {
-		RedisItemReader<byte[], byte[]> sourceReader = compareSourceReader();
-		RedisItemReader<byte[], byte[]> targetReader = compareTargetReader();
-		KeyComparisonItemWriter<byte[], byte[]> writer = new KeyComparisonItemWriter<>(targetReader, keyComparator());
+	protected RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> compareStep() {
+		RedisScanItemReader<byte[], byte[]> sourceReader = compareSourceReader();
+		RedisScanItemReader<byte[], byte[]> targetReader = compareTargetReader();
+		KeyComparisonItemReader<byte[], byte[]> writer = new KeyComparisonItemReader<>(targetReader, keyComparator());
 		if (showDiffs) {
 			log.info("Adding key diff logger");
 			writer.addListener(new CompareLoggingWriteListener<>(ByteArrayCodec.INSTANCE));
 		}
-		Step<KeyValue<byte[]>, KeyValue<byte[]>> step = new Step<>(sourceReader, processingWriter(writer));
+		RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> step = new RiotStep<>(sourceReader, processingWriter(writer));
 		step.processor(filter());
 		step.taskName(COMPARE_TASK_NAME);
 		step.statusMessageSupplier(() -> compareMessage(writer.getStats()));
-		step.maxItemCountSupplier(RedisScanSizeEstimator.from(sourceReader));
-		step.executionListener(new CompareStepListener(writer.getStats()));
+		step.maxItemCount(RedisScanSizeEstimator.from(sourceReader));
+		step.addExecutionListener(new CompareStepListener(writer.getStats()));
 		return step;
 	}
 
-	private RedisItemReader<byte[], byte[]> compareRedisReader() {
+	private RedisScanItemReader<byte[], byte[]> compareRedisReader() {
 		if (isQuickCompare()) {
 			log.info("Creating Redis quick compare reader");
-			return RedisItemReader.type(ByteArrayCodec.INSTANCE);
+			return RedisScanItemReader.type(ByteArrayCodec.INSTANCE);
 		}
 		log.info("Creating Redis full compare reader");
-		return RedisItemReader.struct(ByteArrayCodec.INSTANCE);
+		return RedisScanItemReader.struct(ByteArrayCodec.INSTANCE);
 	}
 
 	protected abstract boolean isQuickCompare();
@@ -126,14 +126,14 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExportCo
 		return processorArgs.isNoStreamIds();
 	}
 
-	private RedisItemReader<byte[], byte[]> compareSourceReader() {
-		RedisItemReader<byte[], byte[]> reader = compareRedisReader();
+	private RedisScanItemReader<byte[], byte[]> compareSourceReader() {
+		RedisScanItemReader<byte[], byte[]> reader = compareRedisReader();
 		configureSourceRedisReader(reader);
 		return reader;
 	}
 
-	private RedisItemReader<byte[], byte[]> compareTargetReader() {
-		RedisItemReader<byte[], byte[]> reader = compareRedisReader();
+	private RedisScanItemReader<byte[], byte[]> compareTargetReader() {
+		RedisScanItemReader<byte[], byte[]> reader = compareRedisReader();
 		configureTargetRedisReader(reader);
 		return reader;
 	}
