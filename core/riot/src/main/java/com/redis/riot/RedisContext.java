@@ -3,7 +3,6 @@ package com.redis.riot;
 import org.springframework.beans.factory.InitializingBean;
 
 import com.redis.lettucemod.RedisModulesClientBuilder;
-import com.redis.lettucemod.RedisURIBuilder;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;

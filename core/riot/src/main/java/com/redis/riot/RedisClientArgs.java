@@ -2,7 +2,6 @@ package com.redis.riot;
 
 import java.io.File;
 
-import com.redis.lettucemod.RedisURIBuilder;
 import com.redis.riot.core.RiotDuration;
 
 import io.lettuce.core.RedisURI;
