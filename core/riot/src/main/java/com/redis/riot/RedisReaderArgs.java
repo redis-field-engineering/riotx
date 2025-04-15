@@ -36,6 +36,7 @@ public class RedisReaderArgs {
     private KeyFilterArgs keyFilterArgs = new KeyFilterArgs();
 
     public <K, V> void configure(RedisItemReader<K, V> reader) {
+        reader.setBatchSize(batchSize);
         reader.setKeyFilter(keyFilterArgs.predicate(reader.getCodec()));
         reader.setKeyPattern(keyPattern);
         reader.setKeyType(keyType);
