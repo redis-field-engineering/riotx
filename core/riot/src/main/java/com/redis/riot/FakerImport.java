@@ -25,9 +25,6 @@ public class FakerImport extends AbstractRedisImportCommand {
     @Option(names = "--count", description = "Number of items to generate (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
     private int count = DEFAULT_COUNT;
 
-    @Option(names = "--infer", description = "Introspect given RediSearch index to infer Faker fields.", paramLabel = "<name>")
-    private String searchIndex;
-
     @Option(names = "--locale", description = "Faker locale (default: ${DEFAULT-VALUE}).", paramLabel = "<tag>")
     private Locale locale = DEFAULT_LOCALE;
 
@@ -42,14 +39,6 @@ public class FakerImport extends AbstractRedisImportCommand {
         reader.setLocale(locale);
         reader.setExpressions(fields);
         return reader;
-    }
-
-    public String getSearchIndex() {
-        return searchIndex;
-    }
-
-    public void setSearchIndex(String index) {
-        this.searchIndex = index;
     }
 
     public Locale getLocale() {
