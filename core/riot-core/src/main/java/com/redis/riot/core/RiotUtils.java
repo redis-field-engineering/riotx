@@ -21,6 +21,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.batch.item.support.CompositeItemProcessor;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
@@ -126,6 +127,14 @@ public abstract class RiotUtils {
 
     public static <S, T> Predicate<S> predicate(Function<S, T> function, Predicate<T> predicate) {
         return s -> predicate.test(function.apply(s));
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <S, T> ItemWriter<S> writer(ItemProcessor<S, T> processor, ItemWriter<T> writer) {
+        if (processor == null) {
+            return (ItemWriter<S>) writer;
+        }
+        return new ProcessingItemWriter<>(processor, writer);
     }
 
 }

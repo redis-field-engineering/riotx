@@ -670,11 +670,6 @@ class StackRiotTests extends RiotTests {
     }
 
     @Test
-    void replicateLiveReadThreads(TestInfo info) throws Exception {
-        runLiveReplication(info, "replicate-live-read-threads");
-    }
-
-    @Test
     void replicateLiveKeySlot(TestInfo info) throws Exception {
         String filename = "replicate-live-keyslot";
         enableKeyspaceNotifications();

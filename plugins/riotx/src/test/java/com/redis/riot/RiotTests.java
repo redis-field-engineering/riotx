@@ -17,6 +17,8 @@ import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.riot.core.ProgressStyle;
 import com.redis.riotx.AbstractRiotxApplicationTestBase;
 import com.redis.riotx.Replicate;
+import com.redis.riotx.ReplicateWriteLogger;
+import com.redis.riotx.ReplicationMode;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.Range;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
@@ -115,7 +117,7 @@ abstract class RiotTests extends AbstractRiotxApplicationTestBase {
         enableKeyspaceNotifications();
         executeWhenSubscribers(() -> connection.sync().set(key, value));
         Replicate replicate = new Replicate();
-        replicate.setMode(RedisReaderMode.LIVE);
+        replicate.setMode(ReplicationMode.LIVE);
         replicate.setCompareMode(CompareMode.NONE);
         execute(replicate, info);
         Assertions.assertArrayEquals(connection.sync().get(key), targetConnection.sync().get(key));
@@ -125,7 +127,7 @@ abstract class RiotTests extends AbstractRiotxApplicationTestBase {
     void filterKeySlot(TestInfo info) throws Exception {
         enableKeyspaceNotifications();
         Replicate replication = new Replicate();
-        replication.setMode(RedisReaderMode.LIVE);
+        replication.setMode(ReplicationMode.LIVE);
         replication.setCompareMode(CompareMode.NONE);
         replication.getReaderArgs().getKeyFilterArgs().setSlots(Arrays.asList(new Range(0, 8000)));
         generateAsync(info, generator(100));

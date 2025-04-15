@@ -57,7 +57,7 @@ public class FileImport extends AbstractRedisImportCommand {
             Arrays.asList(ResourceMap.JSON, ResourceMap.JSON_LINES, ResourceMap.XML));
 
     @ArgGroup(exclusive = false)
-    private FileTypeArgsX fileTypeArgs = new FileTypeArgsX();
+    private FileTypeArgs fileTypeArgs = new FileTypeArgs();
 
     @Parameters(arity = "1..*", description = "Files or URLs to import. Use '-' to read from stdin.", paramLabel = "FILE")
     private List<String> files;
@@ -138,7 +138,7 @@ public class FileImport extends AbstractRedisImportCommand {
         ItemReader<?> reader = readerFactory.create(resource, readOptions);
         RedisItemWriter<?, ?, ?> writer = writer();
         configureTargetRedisWriter(writer);
-        RiotStep<?, ?> step = new RiotStep<>(reader, writer);
+        RiotStep<?, ?> step = new RiotStep<>(resource.getFilename(), reader, writer);
         step.name(location);
         if (hasOperations()) {
             step.processor(RiotUtils.processor(processor(), regexProcessor()));
@@ -226,11 +226,11 @@ public class FileImport extends AbstractRedisImportCommand {
         this.readerRegistry = registry;
     }
 
-    public FileTypeArgsX getFileTypeArgs() {
+    public FileTypeArgs getFileTypeArgs() {
         return fileTypeArgs;
     }
 
-    public void setFileTypeArgs(FileTypeArgsX args) {
+    public void setFileTypeArgs(FileTypeArgs args) {
         this.fileTypeArgs = args;
     }
 

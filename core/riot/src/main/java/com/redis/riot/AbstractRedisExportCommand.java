@@ -4,10 +4,13 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 
+import com.redis.riot.core.RiotStep;
 import com.redis.riot.core.processor.RegexNamedGroupFunction;
 import com.redis.riot.function.KeyValueMap;
+import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 
 import picocli.CommandLine.ArgGroup;
@@ -20,6 +23,12 @@ public abstract class AbstractRedisExportCommand extends AbstractExportCommand {
 
     @Option(names = "--key-regex", description = "Regex for key-field extraction, e.g. '\\w+:(?<id>.+)' extracts an id field from the key", paramLabel = "<rex>")
     private Pattern keyRegex;
+
+    private static final String TASK_NAME = "Exporting";
+
+    protected <T> RiotStep<KeyValue<String>, T> step(ItemProcessor<KeyValue<String>, T> processor, ItemWriter<T> writer) {
+        return step("export", RedisItemReader.scanStruct(), processor, writer, TASK_NAME);
+    }
 
     @Override
     protected RedisContext sourceRedisContext() {

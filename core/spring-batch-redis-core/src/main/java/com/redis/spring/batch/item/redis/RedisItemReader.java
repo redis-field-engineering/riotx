@@ -66,7 +66,11 @@ public abstract class RedisItemReader<K, V> extends AbstractItemCountingItemStre
     @Override
     protected synchronized void doOpen() throws Exception {
         if (operationExecutor == null) {
-            operationExecutor = operationExecutor();
+            Assert.notNull(client, getName() + ": Redis client not set");
+            operationExecutor = new OperationExecutor<>(codec, operation);
+            operationExecutor.setClient(client);
+            operationExecutor.setPoolSize(poolSize);
+            operationExecutor.setReadFrom(readFrom);
             operationExecutor.afterPropertiesSet();
         }
     }
@@ -77,15 +81,6 @@ public abstract class RedisItemReader<K, V> extends AbstractItemCountingItemStre
             operationExecutor.close();
             operationExecutor = null;
         }
-    }
-
-    private OperationExecutor<K, V, KeyEvent<K>, KeyValue<K>> operationExecutor() {
-        Assert.notNull(client, getName() + ": Redis client not set");
-        OperationExecutor<K, V, KeyEvent<K>, KeyValue<K>> executor = new OperationExecutor<>(codec, operation);
-        executor.setClient(client);
-        executor.setPoolSize(poolSize);
-        executor.setReadFrom(readFrom);
-        return executor;
     }
 
     protected boolean acceptKeyType(String type) {

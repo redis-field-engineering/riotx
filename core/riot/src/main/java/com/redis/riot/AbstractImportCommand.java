@@ -16,8 +16,8 @@ import org.springframework.util.CollectionUtils;
 
 import com.redis.riot.core.AbstractJobCommand;
 import com.redis.riot.core.QuietMapAccessor;
-import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.processor.PredicateOperator;
 import com.redis.riot.operation.DelCommand;
 import com.redis.riot.operation.ExpireCommand;
@@ -93,10 +93,7 @@ public abstract class AbstractImportCommand extends AbstractJobCommand {
         Assert.isTrue(hasOperations(), "No Redis command specified");
         RedisItemWriter<String, String, Map<String, Object>> writer = operationWriter();
         configureTargetRedisWriter(writer);
-        RiotStep<Map<String, Object>, Map<String, Object>> step = new RiotStep<>(reader, writer);
-        step.processor(processor());
-        step.taskName(TASK_NAME);
-        return step;
+        return new RiotStep<>("import", reader, writer).processor(processor()).taskName(TASK_NAME);
     }
 
     protected ItemProcessor<Map<String, Object>, Map<String, Object>> processor() {

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 
@@ -22,19 +21,10 @@ public class MultiOperation<K, V, I, O> implements InitializingOperation<K, V, I
     }
 
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void initialize(RedisAsyncCommands<K, V> commands) throws Exception {
         for (RedisOperation<K, V, I, O> delegate : delegates) {
             if (delegate instanceof InitializingOperation) {
-                ((InitializingOperation<K, V, I, O>) delegate).afterPropertiesSet();
-            }
-        }
-    }
-
-    @Override
-    public void setClient(AbstractRedisClient client) {
-        for (RedisOperation<K, V, I, O> delegate : delegates) {
-            if (delegate instanceof InitializingOperation) {
-                ((InitializingOperation<K, V, I, O>) delegate).setClient(client);
+                ((InitializingOperation<K, V, I, O>) delegate).initialize(commands);
             }
         }
     }

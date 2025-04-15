@@ -24,7 +24,6 @@ import org.springframework.util.MimeType;
 
 import com.redis.riot.AbstractRedisExportCommand;
 import com.redis.riot.ContentType;
-import com.redis.riot.FileTypeArgs;
 import com.redis.riot.FileWriterArgs;
 import com.redis.riot.core.RiotException;
 import com.redis.riot.core.RiotStep;
@@ -35,6 +34,7 @@ import com.redis.riot.file.RiotResourceMap;
 import com.redis.riot.file.StdOutProtocolResolver;
 import com.redis.riot.file.WriteOptions;
 import com.redis.riot.file.WriterFactory;
+import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 
@@ -109,9 +109,7 @@ public class FileExport extends AbstractRedisExportCommand {
         WriterFactory writerFactory = writerRegistry.getWriterFactory(type);
         Assert.notNull(writerFactory, String.format("No writer found for file %s", file));
         ItemWriter<?> writer = writerFactory.create(resource, writeOptions);
-        RiotStep<KeyValue<String>, ?> step = step(writer);
-        step.setProcessor((ItemProcessor) processor(type));
-        return step;
+        return step(processor(type), writer);
     }
 
     @Override
@@ -124,7 +122,8 @@ public class FileExport extends AbstractRedisExportCommand {
                 || ResourceMap.TEXT.equals(type) || FileImport.MIME_TYPE_PARQUET.equals(type);
     }
 
-    private ItemProcessor<KeyValue<String>, ?> processor(MimeType type) {
+    @SuppressWarnings("rawtypes")
+    private ItemProcessor processor(MimeType type) {
         if (isFlatFile(type) || contentType == ContentType.MAP) {
             return mapProcessor();
         }
@@ -132,8 +131,8 @@ public class FileExport extends AbstractRedisExportCommand {
     }
 
     private Map<String, Object> headerRecord() {
-        RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
-        configureSourceRedisReader(reader);
+        RedisScanItemReader<String, String> reader = RedisItemReader.scanStruct();
+        configureSource(reader);
         try {
             reader.open(new ExecutionContext());
             try {

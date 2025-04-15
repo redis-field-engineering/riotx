@@ -8,12 +8,13 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.util.Assert;
 
-import com.redis.riot.ExportStepHelper;
 import com.redis.riot.RedisReaderArgs;
-import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.processor.RegexNamedGroupFunction;
 import com.redis.riot.function.KeyValueMap;
+import com.redis.spring.batch.item.redis.RedisItemReader;
+import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 
@@ -42,25 +43,16 @@ public class RedisImportCommand extends AbstractTargetRedisImportCommand {
     protected Job job() {
         Assert.isTrue(hasOperations(), "No Redis command specified");
         RedisScanItemReader<String, String> reader = reader();
-        RiotStep<KeyValue<String>, Map<String, Object>> step = new RiotStep<>(reader, operationWriter());
+        RiotStep<KeyValue<String>, Map<String, Object>> step = new RiotStep<>("redis-import", reader, operationWriter());
         step.processor(RiotUtils.processor(mapProcessor(), processor()));
         step.taskName(TASK_NAME);
-        if (reader.getMode() == ReaderMode.SCAN) {
-            step.maxItemCount(reader.scanSizeEstimator());
-        } else {
-            ExportStepHelper.checkNotifyConfig(reader.getClient(), log);
-            log.info("Configuring export step with live true, flushInterval {}, idleTimeout {}", reader.getFlushInterval(),
-                    reader.getIdleTimeout());
-            step.live(true);
-            step.setFlushInterval(reader.getFlushInterval());
-            step.idleTimeout(reader.getIdleTimeout());
-        }
+        step.maxItemCount(BatchUtils.scanSizeEstimator(reader));
         return job(step);
     }
 
     private RedisScanItemReader<String, String> reader() {
         log.info("Creating source Redis reader with {}", sourceRedisReaderArgs);
-        RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
+        RedisScanItemReader<String, String> reader = RedisItemReader.scanStruct();
         configureSourceRedisReader(reader);
         return reader;
     }

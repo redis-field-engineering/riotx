@@ -10,6 +10,7 @@ import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.batch.core.ItemProcessListener;
 import org.springframework.batch.core.ItemReadListener;
 import org.springframework.batch.core.ItemWriteListener;
 import org.springframework.batch.core.StepExecutionListener;
@@ -58,6 +59,8 @@ public class RiotStep<I, O> {
 
     private Set<ItemReadListener<I>> readListeners = new LinkedHashSet<>();
 
+    private Set<ItemProcessListener<I, O>> processListeners = new LinkedHashSet<>();
+
     private Set<ItemWriteListener<O>> writeListeners = new LinkedHashSet<>();
 
     private Duration flushInterval;
@@ -80,11 +83,13 @@ public class RiotStep<I, O> {
 
     private Supplier<String> extraMessage;
 
-    public RiotStep(ItemReader<I> reader, ItemWriter<O> writer) {
+    public RiotStep(String name, ItemReader<I> reader, ItemWriter<O> writer) {
+        this.name = name;
         this.reader = reader;
         this.writer = writer;
     }
 
+    @SuppressWarnings("removal")
     public SimpleStepBuilder<I, O> build() {
         log.info("Creating step {} with {}", name, stepArgs);
         String stepName = stepName();
@@ -200,6 +205,11 @@ public class RiotStep<I, O> {
         return this;
     }
 
+    public RiotStep<I, O> addProcessListener(ItemProcessListener<I, O> listener) {
+        this.processListeners.add(listener);
+        return this;
+    }
+
     public RiotStep<I, O> addWriteListener(ItemWriteListener<O> listener) {
         writeListeners.add(listener);
         return this;
@@ -234,128 +244,113 @@ public class RiotStep<I, O> {
         return name;
     }
 
-    public void setName(String name) {
+    public RiotStep<I, O> name(String name) {
         this.name = name;
+        return this;
     }
 
     public JobRepository getJobRepository() {
         return jobRepository;
     }
 
-    public void setJobRepository(JobRepository jobRepository) {
+    public RiotStep<I, O> jobRepository(JobRepository jobRepository) {
         this.jobRepository = jobRepository;
+        return this;
     }
 
     public PlatformTransactionManager getTransactionManager() {
         return transactionManager;
     }
 
-    public void setTransactionManager(PlatformTransactionManager transactionManager) {
+    public RiotStep<I, O> transactionManager(PlatformTransactionManager transactionManager) {
         this.transactionManager = transactionManager;
+        return this;
     }
 
     public ItemProcessor<I, O> getProcessor() {
         return processor;
     }
 
-    public void setProcessor(ItemProcessor<I, O> processor) {
+    public RiotStep<I, O> processor(ItemProcessor<I, O> processor) {
         this.processor = processor;
+        return this;
     }
 
     public Set<StepExecutionListener> getExecutionListeners() {
         return executionListeners;
     }
 
-    public void setExecutionListeners(Set<StepExecutionListener> executionListeners) {
-        this.executionListeners = executionListeners;
+    public Set<ItemProcessListener<I, O>> getProcessListeners() {
+        return processListeners;
     }
 
     public Set<ItemReadListener<I>> getReadListeners() {
         return readListeners;
     }
 
-    public void setReadListeners(Set<ItemReadListener<I>> readListeners) {
-        this.readListeners = readListeners;
-    }
-
     public Set<ItemWriteListener<O>> getWriteListeners() {
         return writeListeners;
-    }
-
-    public void setWriteListeners(Set<ItemWriteListener<O>> writeListeners) {
-        this.writeListeners = writeListeners;
     }
 
     public Duration getFlushInterval() {
         return flushInterval;
     }
 
-    public void setFlushInterval(Duration flushInterval) {
+    public RiotStep<I, O> flushInterval(Duration flushInterval) {
         this.flushInterval = flushInterval;
+        return this;
     }
 
     public Duration getIdleTimeout() {
         return idleTimeout;
     }
 
-    public void setIdleTimeout(Duration idleTimeout) {
+    public RiotStep<I, O> idleTimeout(Duration idleTimeout) {
         this.idleTimeout = idleTimeout;
+        return this;
     }
 
     public Collection<Class<? extends Throwable>> getSkip() {
         return skip;
     }
 
-    public void setSkip(Collection<Class<? extends Throwable>> skip) {
-        this.skip = skip;
-    }
-
     public Collection<Class<? extends Throwable>> getNoSkip() {
         return noSkip;
-    }
-
-    public void setNoSkip(Collection<Class<? extends Throwable>> noSkip) {
-        this.noSkip = noSkip;
     }
 
     public Collection<Class<? extends Throwable>> getRetry() {
         return retry;
     }
 
-    public void setRetry(Collection<Class<? extends Throwable>> retry) {
-        this.retry = retry;
-    }
-
     public Collection<Class<? extends Throwable>> getNoRetry() {
         return noRetry;
-    }
-
-    public void setNoRetry(Collection<Class<? extends Throwable>> noRetry) {
-        this.noRetry = noRetry;
     }
 
     public StepArgs getStepArgs() {
         return stepArgs;
     }
 
-    public void setStepArgs(StepArgs stepArgs) {
+    public RiotStep<I, O> stepArgs(StepArgs stepArgs) {
         this.stepArgs = stepArgs;
+        return this;
     }
 
     public LongSupplier getMaxItemCount() {
         return maxItemCount;
     }
 
-    public void setMaxItemCount(LongSupplier maxItemCount) {
+    public RiotStep<I, O> maxItemCount(LongSupplier maxItemCount) {
         this.maxItemCount = maxItemCount;
+        return this;
     }
 
     public String getTaskName() {
         return taskName;
     }
 
-    public void setTaskName(String taskName) {
+    public RiotStep<I, O> taskName(String taskName) {
         this.taskName = taskName;
+        return this;
     }
 
     public ItemReader<I> getReader() {
@@ -370,8 +365,9 @@ public class RiotStep<I, O> {
         return extraMessage;
     }
 
-    public void setExtraMessage(Supplier<String> extraMessage) {
-        this.extraMessage = extraMessage;
+    public RiotStep<I, O> extraMessage(Supplier<String> messageSupplier) {
+        this.extraMessage = messageSupplier;
+        return this;
     }
 
 }

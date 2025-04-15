@@ -53,9 +53,9 @@ public class Ping extends AbstractRedisCommand {
         PingExecutionItemReader reader = new PingExecutionItemReader(commands());
         reader.setMaxItemCount(count);
         PingLatencyItemWriter writer = new PingLatencyItemWriter();
-        RiotStep<PingExecution, PingExecution> step = new RiotStep<>(reader, writer);
+        RiotStep<PingExecution, PingExecution> step = new RiotStep<>("ping", reader, writer);
         step.taskName(TASK_NAME);
-        step.maxItemCount(count);
+        step.maxItemCount(this::getCount);
         return job(step);
     }
 

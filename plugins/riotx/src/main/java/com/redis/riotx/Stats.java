@@ -17,13 +17,13 @@ import org.springframework.batch.item.support.AbstractItemStreamItemWriter;
 import org.springframework.util.unit.DataSize;
 
 import com.redis.riot.AbstractRedisCommand;
-import com.redis.riot.ExportStepHelper;
 import com.redis.riot.MemoryUsageArgs;
 import com.redis.riot.RedisReaderArgs;
 import com.redis.riot.core.RiotStep;
+import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.KeyEventListenerContainer;
-import com.redis.spring.batch.item.redis.reader.KeyValueRead;
+import com.redis.spring.batch.item.redis.reader.MemoryUsage;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 
 import io.lettuce.core.codec.StringCodec;
@@ -59,13 +59,10 @@ public class Stats extends AbstractRedisCommand {
     @Option(names = "--quantiles", description = "Key size percentiles to report (default: ${DEFAULT-VALUE}).", paramLabel = "<per>")
     private short[] quantiles = StatsPrinter.DEFAULT_QUANTILES;
 
-    @SuppressWarnings("rawtypes")
     @Override
     protected Job job() {
-        RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
-        KeyValueRead operation = (KeyValueRead) reader.getOperation();
-        operation.setMemUsageLimit(1); // lowest limit while still reading mem usage
-        operation.setMemUsageSamples(memoryUsageSamples);
+        RedisScanItemReader<String, String> reader = RedisItemReader.scanStruct();
+        reader.setMemoryUsage(memoryUsage());
         configure(reader);
         DatabaseStats stats = new DatabaseStats();
         stats.setKeyspacePattern(keyspacePattern);
@@ -74,10 +71,15 @@ public class Stats extends AbstractRedisCommand {
                 .create(getRedisContext().getClient(), StringCodec.UTF8);
         int database = getRedisContext().getUri().getDatabase();
         StatsWriter writer = new StatsWriter(stats, listenerContainer, database, readerArgs.getKeyPattern());
-        RiotStep<KeyValue<String>, KeyValue<String>> step = new ExportStepHelper(log).step(reader, writer);
+        RiotStep<KeyValue<String>, KeyValue<String>> step = new RiotStep<>("stats", reader, writer);
         step.taskName(TASK_NAME);
         step.addExecutionListener(new ExecutionListener(statsPrinter(stats)));
         return job(step);
+    }
+
+    private MemoryUsage memoryUsage() {
+        // lowest limit while still reading mem usage
+        return MemoryUsage.of(DataSize.ofBytes(1), memoryUsageSamples);
     }
 
     @Override

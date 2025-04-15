@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -31,6 +32,8 @@ import com.redis.lettucemod.cluster.RedisModulesClusterClient;
 import com.redis.lettucemod.cluster.api.StatefulRedisModulesClusterConnection;
 import com.redis.spring.batch.BatchRedisMetrics;
 import com.redis.spring.batch.item.redis.reader.KeyEvent;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
+import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
 
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.ReadFrom;
@@ -58,6 +61,10 @@ public abstract class BatchUtils {
         try (InputStream inputStream = BatchUtils.class.getClassLoader().getResourceAsStream(filename)) {
             return FileCopyUtils.copyToString(new InputStreamReader(inputStream));
         }
+    }
+
+    public static <K, V> LongSupplier scanSizeEstimator(RedisScanItemReader<K, V> reader) {
+        return RedisScanSizeEstimator.from(reader.getClient(), reader.getKeyPattern(), reader.getKeyType());
     }
 
     public static <K, V> Iterator<K> scanIterator(StatefulRedisClusterConnection<K, V> connection, ScanArgs args) {

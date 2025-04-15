@@ -1,41 +1,28 @@
 package com.redis.riot;
 
-import java.util.function.Function;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.util.unit.DataSize;
 
-import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 
-import io.lettuce.core.codec.RedisCodec;
+public class KeyValueFilter<K> implements ItemProcessor<KeyValue<K>, KeyValue<K>> {
 
-public class KeyValueFilter<K, T extends KeyValue<K>> implements ItemProcessor<T, T> {
+    private long memoryLimit;
 
-	private static final Logger log = LoggerFactory.getLogger(KeyValueFilter.class);
+    public void setMemoryLimit(DataSize limit) {
+        setMemoryLimit(limit.toBytes());
+    }
 
-	private final Function<K, String> keyToString;
+    public void setMemoryLimit(long bytes) {
+        this.memoryLimit = bytes;
+    }
 
-	public KeyValueFilter(RedisCodec<K, ?> codec) {
-		this.keyToString = BatchUtils.toStringKeyFunction(codec);
-	}
-
-	@Override
-	public T process(T item) throws Exception {
-		if (KeyValue.exists(item) && !KeyValue.hasValue(item) && item.getMemoryUsage() > 0) {
-			if (log.isInfoEnabled()) {
-				DataSize memUsage = DataSize.ofBytes(item.getMemoryUsage());
-				log.info("Skipping {} {} ({})", item.getType(), string(item.getKey()), memUsage);
-			}
-			return null;
-		}
-		return item;
-	}
-
-	private String string(K key) {
-		return keyToString.apply(key);
-	}
+    @Override
+    public KeyValue<K> process(KeyValue<K> item) throws Exception {
+        if (KeyValue.exists(item) && !KeyValue.hasValue(item) && item.getMemoryUsage() > memoryLimit) {
+            return null;
+        }
+        return item;
+    }
 
 }

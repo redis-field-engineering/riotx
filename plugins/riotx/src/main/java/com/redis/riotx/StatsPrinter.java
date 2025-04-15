@@ -20,188 +20,194 @@ import com.redis.spring.batch.item.redis.common.KeyValue;
 
 public class StatsPrinter {
 
-	public static final AsciiTableBorder DEFAULT_TABLE_BORDER = AsciiTableBorder.NONE;
-	public static final short[] DEFAULT_QUANTILES = { 50, 95, 99 };
-	public static final DataSize DEFAULT_WRITE_BANDWIDTH_THRESHOLD = DataSize.ofMegabytes(10);
+    public static final AsciiTableBorder DEFAULT_TABLE_BORDER = AsciiTableBorder.NONE;
 
-	private static final String CURSOR_UP = "\033[1A";
-	private static final Object CURSOR_DOWN = "\033[K";
-	private static final Comparator<? super BigKey> DESC_BANDWIDTH = Comparator.comparing(BigKey::writeBandwidth)
-			.reversed();
-	private static final String NEWLINE = System.lineSeparator();
+    public static final short[] DEFAULT_QUANTILES = { 50, 95, 99 };
 
-	private final PrintStream out;
-	private final DecimalFormat longFormat = new DecimalFormat("###,###,###");
-	private final DatabaseStats stats;
+    public static final DataSize DEFAULT_WRITE_BANDWIDTH_THRESHOLD = DataSize.ofMegabytes(10);
 
-	private short[] quantiles = DEFAULT_QUANTILES;
-	private AsciiTableBorder tableBorder = DEFAULT_TABLE_BORDER;
+    private static final String CURSOR_UP = "\033[1A";
 
-	private boolean firstWrite = true;
-	private int lastDisplayedLines = 0;
-	private DataSize writeBandwidthThreshold = DEFAULT_WRITE_BANDWIDTH_THRESHOLD;
+    private static final Object CURSOR_DOWN = "\033[K";
 
-	public StatsPrinter(DatabaseStats stats, PrintStream out) {
-		this.stats = stats;
-		this.out = out;
-	}
+    private static final Comparator<? super BigKey> DESC_BANDWIDTH = Comparator.comparing(BigKey::writeBandwidth).reversed();
 
-	public synchronized void display() {
+    private static final String NEWLINE = System.lineSeparator();
 
-		// Clear the previous output if not the first write
-		if (!firstWrite) {
-			// Move cursor up to the beginning of the previous output
-			for (int i = 0; i < lastDisplayedLines; i++) {
-				out.print(CURSOR_UP); // Move up one line
-			}
-		} else {
-			firstWrite = false;
-		}
+    private final PrintStream out;
 
-		Printer printer = new Printer();
-		List<Keyspace> keyspaces = stats.keyspaces();
-		printer.append(AsciiTable.builder().border(tableBorder.getBorder()).data(keyspaces, statsColumns()).toString());
+    private final DecimalFormat longFormat = new DecimalFormat("###,###,###");
 
-		printer.append(" ");
+    private final DatabaseStats stats;
 
-		List<BigKey> problemKeys = problemKeys();
-		if (problemKeys.isEmpty()) {
-			printer.append("No problematic keys detected");
-		} else {
-			printer.append(AsciiTable.builder().border(tableBorder.getBorder()).data(problemKeys, problemKeyColumns())
-					.toString());
-		}
+    private short[] quantiles = DEFAULT_QUANTILES;
 
-		// Count the number of lines in the output for next refresh
-		String outputStr = printer.getString();
-		lastDisplayedLines = outputStr.split(NEWLINE).length;
+    private AsciiTableBorder tableBorder = DEFAULT_TABLE_BORDER;
 
-		// Print the output
-		out.print(outputStr);
-		out.flush();
-	}
+    private boolean firstWrite = true;
 
-	private List<BigKey> problemKeys() {
-		return stats.bigKeys().stream().filter(this::aboveBandwidth).sorted(DESC_BANDWIDTH)
-				.collect(Collectors.toList());
-	}
+    private int lastDisplayedLines = 0;
 
-	private boolean aboveBandwidth(BigKey key) {
-		return key.writeBandwidth().compareTo(writeBandwidthThreshold) >= 0;
-	}
+    private DataSize writeBandwidthThreshold = DEFAULT_WRITE_BANDWIDTH_THRESHOLD;
 
-	private static class Printer {
+    public StatsPrinter(DatabaseStats stats, PrintStream out) {
+        this.stats = stats;
+        this.out = out;
+    }
 
-		private final StringBuilder output = new StringBuilder();
+    public synchronized void display() {
 
-		public void append(String multilineString) {
-			// Clear each line before printing the table
-			String[] lines = multilineString.split(NEWLINE);
-			for (String line : lines) {
-				output.append(CURSOR_DOWN).append(line).append(NEWLINE);
-			}
-		}
+        // Clear the previous output if not the first write
+        if (!firstWrite) {
+            // Move cursor up to the beginning of the previous output
+            for (int i = 0; i < lastDisplayedLines; i++) {
+                out.print(CURSOR_UP); // Move up one line
+            }
+        } else {
+            firstWrite = false;
+        }
 
-		public String getString() {
-			return output.toString();
-		}
+        Printer printer = new Printer();
+        List<Keyspace> keyspaces = stats.keyspaces();
+        printer.append(AsciiTable.builder().border(tableBorder.getBorder()).data(keyspaces, statsColumns()).toString());
 
-	}
+        printer.append(" ");
 
-	private List<ColumnData<Keyspace>> statsColumns() {
-		List<ColumnData<Keyspace>> columns = new ArrayList<>();
-		columns.add(string("keyspace", Keyspace::getPrefix));
-		columns.add(number("hash", typeCount(KeyValue.TYPE_HASH)));
-		columns.add(number("json", typeCount(KeyValue.TYPE_JSON)));
-		columns.add(number("list", typeCount(KeyValue.TYPE_LIST)));
-		columns.add(number("set", typeCount(KeyValue.TYPE_SET)));
-		columns.add(number("stream", typeCount(KeyValue.TYPE_STREAM)));
-		columns.add(number("string", typeCount(KeyValue.TYPE_STRING)));
-		columns.add(number("ts", typeCount(KeyValue.TYPE_TIMESERIES)));
-		columns.add(number("zset", typeCount(KeyValue.TYPE_ZSET)));
-		columns.add(number("big", row -> format(row.getBigKeys())));
-		for (short quantile : quantiles) {
-			columns.add(quantileColumn(quantile));
-		}
-		return columns;
-	}
+        List<BigKey> problemKeys = problemKeys();
+        if (problemKeys.isEmpty()) {
+            printer.append("No problematic keys detected");
+        } else {
+            printer.append(
+                    AsciiTable.builder().border(tableBorder.getBorder()).data(problemKeys, problemKeyColumns()).toString());
+        }
 
-	private Function<Keyspace, String> typeCount(String type) {
-		return row -> format(row.getTypeCounts().getOrDefault(type, 0));
-	}
+        // Count the number of lines in the output for next refresh
+        String outputStr = printer.getString();
+        lastDisplayedLines = outputStr.split(NEWLINE).length;
 
-	private ColumnData<Keyspace> quantileColumn(short quantile) {
-		return number(String.format("p%s", quantile),
-				row -> toString(DataSize.ofBytes(Math.round(row.getMemoryUsage().quantile(quantile / 100)))));
-	}
+        // Print the output
+        out.print(outputStr);
+        out.flush();
+    }
 
-	private List<ColumnData<BigKey>> problemKeyColumns() {
-		List<ColumnData<BigKey>> columns = new ArrayList<>();
-		columns.add(string("Problem Key", BigKey::getKey));
-		columns.add(string("Type", r -> type(r.getType())));
-		columns.add(number("Size", k -> toString(k.getMemoryUsage())));
-		columns.add(number("Ops/s", k -> format(k.getWriteThroughput())));
-		columns.add(number("Rate", k -> toString(k.writeBandwidth())));
-		return columns;
-	}
+    private List<BigKey> problemKeys() {
+        return stats.bigKeys().stream().filter(this::aboveBandwidth).sorted(DESC_BANDWIDTH).collect(Collectors.toList());
+    }
 
-	public String toString(DataSize size) {
-		if (size.toMegabytes() > 1) {
-			return format(size.toMegabytes(), "MB");
-		}
-		if (size.toKilobytes() > 1) {
-			return format(size.toKilobytes(), "KB");
-		}
-		return format(size.toBytes(), "B");
-	}
+    private boolean aboveBandwidth(BigKey key) {
+        return key.writeBandwidth().compareTo(writeBandwidthThreshold) >= 0;
+    }
 
-	private String format(long size, String unit) {
-		return String.format("%,d%s", size, unit);
-	}
+    private static class Printer {
 
-	private String format(long number) {
-		return longFormat.format(number);
-	}
+        private final StringBuilder output = new StringBuilder();
 
-	private String type(String type) {
-		if (type.equalsIgnoreCase(KeyValue.TYPE_JSON)) {
-			return "json";
-		}
-		return type;
-	}
+        public void append(String multilineString) {
+            // Clear each line before printing the table
+            String[] lines = multilineString.split(NEWLINE);
+            for (String line : lines) {
+                output.append(CURSOR_DOWN).append(line).append(NEWLINE);
+            }
+        }
 
-	private <T> ColumnData<T> string(String header, Function<T, String> getter) {
-		return new Column().header(header).headerAlign(HorizontalAlign.RIGHT).dataAlign(HorizontalAlign.LEFT)
-				.with(getter);
-	}
+        public String getString() {
+            return output.toString();
+        }
 
-	private <T> ColumnData<T> number(String header, Function<T, String> getter) {
-		return new Column().header(header).headerAlign(HorizontalAlign.RIGHT).dataAlign(HorizontalAlign.RIGHT)
-				.with(getter);
-	}
+    }
 
-	public short[] getQuantiles() {
-		return quantiles;
-	}
+    private List<ColumnData<Keyspace>> statsColumns() {
+        List<ColumnData<Keyspace>> columns = new ArrayList<>();
+        columns.add(string("keyspace", Keyspace::getPrefix));
+        columns.add(number("hash", typeCount(KeyValue.TYPE_HASH)));
+        columns.add(number("json", typeCount(KeyValue.TYPE_JSON)));
+        columns.add(number("list", typeCount(KeyValue.TYPE_LIST)));
+        columns.add(number("set", typeCount(KeyValue.TYPE_SET)));
+        columns.add(number("stream", typeCount(KeyValue.TYPE_STREAM)));
+        columns.add(number("string", typeCount(KeyValue.TYPE_STRING)));
+        columns.add(number("ts", typeCount(KeyValue.TYPE_TIMESERIES)));
+        columns.add(number("zset", typeCount(KeyValue.TYPE_ZSET)));
+        columns.add(number("big", row -> format(row.getBigKeys())));
+        for (short quantile : quantiles) {
+            columns.add(quantileColumn(quantile));
+        }
+        return columns;
+    }
 
-	public void setQuantiles(short[] quantiles) {
-		this.quantiles = quantiles;
-	}
+    private Function<Keyspace, String> typeCount(String type) {
+        return row -> format(row.getTypeCounts().getOrDefault(type, 0));
+    }
 
-	public AsciiTableBorder getTableBorder() {
-		return tableBorder;
-	}
+    private ColumnData<Keyspace> quantileColumn(short quantile) {
+        return number(String.format("p%s", quantile),
+                row -> toString(DataSize.ofBytes(Math.round(row.getMemoryUsage().quantile(quantile / 100)))));
+    }
 
-	public void setTableBorder(AsciiTableBorder tableBorder) {
-		this.tableBorder = tableBorder;
-	}
+    private List<ColumnData<BigKey>> problemKeyColumns() {
+        List<ColumnData<BigKey>> columns = new ArrayList<>();
+        columns.add(string("Problem Key", BigKey::getKey));
+        columns.add(string("Type", r -> type(r.getType())));
+        columns.add(number("Size", k -> toString(k.getMemoryUsage())));
+        columns.add(number("Ops/s", k -> format(k.getWriteThroughput())));
+        columns.add(number("Rate", k -> toString(k.writeBandwidth())));
+        return columns;
+    }
 
-	public DataSize getWriteBandwidthThreshold() {
-		return writeBandwidthThreshold;
-	}
+    public String toString(DataSize size) {
+        if (size.toMegabytes() > 1) {
+            return format(size.toMegabytes(), "MB");
+        }
+        if (size.toKilobytes() > 1) {
+            return format(size.toKilobytes(), "KB");
+        }
+        return format(size.toBytes(), "B");
+    }
 
-	public void setWriteBandwidthThreshold(DataSize writeThroughputThreshold) {
-		this.writeBandwidthThreshold = writeThroughputThreshold;
-	}
+    private String format(long size, String unit) {
+        return String.format("%,d%s", size, unit);
+    }
+
+    private String format(long number) {
+        return longFormat.format(number);
+    }
+
+    private String type(String type) {
+        if (type.equalsIgnoreCase(KeyValue.TYPE_JSON)) {
+            return "json";
+        }
+        return type;
+    }
+
+    private <T> ColumnData<T> string(String header, Function<T, String> getter) {
+        return new Column().header(header).headerAlign(HorizontalAlign.RIGHT).dataAlign(HorizontalAlign.LEFT).with(getter);
+    }
+
+    private <T> ColumnData<T> number(String header, Function<T, String> getter) {
+        return new Column().header(header).headerAlign(HorizontalAlign.RIGHT).dataAlign(HorizontalAlign.RIGHT).with(getter);
+    }
+
+    public short[] getQuantiles() {
+        return quantiles;
+    }
+
+    public void setQuantiles(short[] quantiles) {
+        this.quantiles = quantiles;
+    }
+
+    public AsciiTableBorder getTableBorder() {
+        return tableBorder;
+    }
+
+    public void setTableBorder(AsciiTableBorder tableBorder) {
+        this.tableBorder = tableBorder;
+    }
+
+    public DataSize getWriteBandwidthThreshold() {
+        return writeBandwidthThreshold;
+    }
+
+    public void setWriteBandwidthThreshold(DataSize writeThroughputThreshold) {
+        this.writeBandwidthThreshold = writeThroughputThreshold;
+    }
 
 }

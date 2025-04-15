@@ -6,8 +6,10 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
+import org.springframework.batch.item.support.PassThroughItemProcessor;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
@@ -21,11 +23,11 @@ public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStrea
 
     private final RedisScanItemReader<K, V> targetReader;
 
+    private ItemProcessor<KeyValue<K>, KeyValue<K>> processor = new PassThroughItemProcessor<>();
+
     private int batchSize = DEFAULT_BATCH_SIZE;
 
     private KeyComparator<K> comparator;
-
-    private final KeyComparisonStats stats = new KeyComparisonStats();
 
     private Iterator<KeyComparison<K>> iterator = Collections.emptyIterator();
 
@@ -34,14 +36,6 @@ public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStrea
         this.sourceReader = sourceReader;
         this.targetReader = targetReader;
         this.comparator = new DefaultKeyComparator<>(sourceReader.getCodec());
-    }
-
-    public KeyComparator<K> getComparator() {
-        return comparator;
-    }
-
-    public void setComparator(KeyComparator<K> comparator) {
-        this.comparator = comparator;
     }
 
     @Override
@@ -83,7 +77,10 @@ public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStrea
         List<KeyValue<K>> sourceValues = new ArrayList<>();
         KeyValue<K> sourceValue;
         while (sourceValues.size() < batchSize && (sourceValue = sourceReader.read()) != null) {
-            sourceValues.add(sourceValue);
+            KeyValue<K> processedKeyValue = processor.process(sourceValue);
+            if (processedKeyValue != null) {
+                sourceValues.add(processedKeyValue);
+            }
         }
         List<KeyValue<K>> targetValues = targetReader.read(sourceValues);
         Assert.isTrue(targetValues.size() == sourceValues.size(), "Size mismatch between target and source values");
@@ -98,12 +95,20 @@ public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStrea
         return null;
     }
 
-    public RedisScanItemReader<K, V> getTargetReader() {
-        return targetReader;
+    public KeyComparator<K> getComparator() {
+        return comparator;
     }
 
-    public KeyComparisonStats getStats() {
-        return stats;
+    public void setComparator(KeyComparator<K> comparator) {
+        this.comparator = comparator;
+    }
+
+    public ItemProcessor<KeyValue<K>, KeyValue<K>> getProcessor() {
+        return processor;
+    }
+
+    public void setProcessor(ItemProcessor<KeyValue<K>, KeyValue<K>> processor) {
+        this.processor = processor;
     }
 
 }

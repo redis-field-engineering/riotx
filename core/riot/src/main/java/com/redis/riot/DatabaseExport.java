@@ -34,7 +34,7 @@ public class DatabaseExport extends AbstractRedisExportCommand {
 
     @Override
     protected Job job() {
-        return job(step(writer()).processor(mapProcessor()));
+        return job(step(mapProcessor(), writer()));
     }
 
     private JdbcBatchItemWriter<Map<String, Object>> writer() {

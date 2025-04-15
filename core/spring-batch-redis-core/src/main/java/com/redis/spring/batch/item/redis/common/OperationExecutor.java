@@ -63,18 +63,18 @@ public class OperationExecutor<K, V, I, O> implements InitializingBean, AutoClos
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(client, "Redis client not set");
-        initializeOperation();
         GenericObjectPoolConfig<StatefulRedisModulesConnection<K, V>> config = new GenericObjectPoolConfig<>();
         config.setMaxTotal(poolSize);
         Supplier<StatefulRedisModulesConnection<K, V>> supplier = BatchUtils.supplier(client, codec, readFrom);
         pool = ConnectionPoolSupport.createGenericObjectPool(supplier, config);
+        initializeOperation();
     }
 
     private void initializeOperation() throws Exception {
         if (operation instanceof InitializingOperation) {
-            InitializingOperation<K, V, I, O> initializingOperation = (InitializingOperation<K, V, I, O>) operation;
-            initializingOperation.setClient(client);
-            initializingOperation.afterPropertiesSet();
+            try (StatefulRedisModulesConnection<K, V> connection = pool.borrowObject()) {
+                ((InitializingOperation<K, V, I, O>) operation).initialize(connection.async());
+            }
         }
     }
 

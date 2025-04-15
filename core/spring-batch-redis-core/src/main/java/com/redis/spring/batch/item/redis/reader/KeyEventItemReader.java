@@ -34,6 +34,8 @@ public class KeyEventItemReader<K, V> extends AbstractItemCountingItemStreamItem
 
     private final Log log = LogFactory.getLog(getClass());
 
+    private final KeyEventListenerContainer<K, V> listenerContainer;
+
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
 
     private int queueCapacity = DEFAULT_QUEUE_CAPACITY;
@@ -45,8 +47,6 @@ public class KeyEventItemReader<K, V> extends AbstractItemCountingItemStreamItem
     private Predicate<KeyEvent<K>> filter = Predicates.isTrue();
 
     protected BlockingQueue<KeyEvent<K>> queue;
-
-    private final KeyEventListenerContainer<K, V> listenerContainer;
 
     public KeyEventItemReader(AbstractRedisClient client, RedisCodec<K, V> codec) {
         setName(ClassUtils.getShortName(getClass()));

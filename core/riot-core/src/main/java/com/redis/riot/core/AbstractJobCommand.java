@@ -1,7 +1,6 @@
 package com.redis.riot.core;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -16,7 +15,6 @@ import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.JobParametersInvalidException;
-import org.springframework.batch.core.Step;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.StepExecutionListener;
 import org.springframework.batch.core.explore.JobExplorer;
@@ -35,7 +33,6 @@ import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.batch.core.step.builder.SimpleStepBuilder;
 import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 
@@ -168,16 +165,19 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
     }
 
     protected Job job(RiotStep<?, ?>... steps) {
-        return job(flow(Arrays.asList(steps)));
+        return job(Arrays.asList(steps));
     }
 
-    protected Flow flow(Collection<RiotStep<?, ?>> steps) {
-        Assert.notEmpty(steps, "At least one step must be specified");
+    protected Job job(Iterable<RiotStep<?, ?>> steps) {
+        return job(flow(steps));
+    }
+
+    protected Flow flow(Iterable<RiotStep<?, ?>> steps) {
         FlowBuilder<SimpleFlow> builder = new FlowBuilder<>("sequentialStepflow");
         Iterator<RiotStep<?, ?>> iterator = steps.iterator();
-        builder.start(step(iterator.next()));
+        builder.start(step(iterator.next()).build());
         while (iterator.hasNext()) {
-            builder.next(step(iterator.next()));
+            builder.next(step(iterator.next()).build());
         }
         return builder.build();
     }
@@ -192,19 +192,22 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         return job.build();
     }
 
-    private Step step(RiotStep<?, ?> riotStep) {
-        SimpleStepBuilder<?, ?> builder = riotStep.build();
+    protected <I, O> SimpleStepBuilder<I, O> step(RiotStep<I, O> step) {
+        step.stepArgs(stepArgs);
+        step.transactionManager(transactionManager);
+        step.jobRepository(jobRepository);
+        SimpleStepBuilder<I, O> builder = step.build();
         if (shouldShowProgress()) {
             ProgressStepExecutionListener listener = new ProgressStepExecutionListener();
-            listener.setTaskName(riotStep.getTaskName());
-            listener.setInitialMax(riotStep.getMaxItemCount());
-            listener.setExtraMessage(riotStep.getExtraMessage());
+            listener.setTaskName(step.getTaskName());
+            listener.setInitialMax(step.getMaxItemCount());
+            listener.setExtraMessage(step.getExtraMessage());
             listener.setProgressStyle(progressArgs.getStyle());
             listener.setUpdateInterval(progressArgs.getUpdateInterval().getValue());
             builder.listener((StepExecutionListener) listener);
             builder.listener((ItemWriteListener<?>) listener);
         }
-        return builder.build();
+        return builder;
     }
 
     private class RepeatJobExecutionListener implements JobExecutionListener {

@@ -1,4 +1,4 @@
-package com.redis.riot;
+package com.redis.riotx;
 
 import java.util.function.Function;
 

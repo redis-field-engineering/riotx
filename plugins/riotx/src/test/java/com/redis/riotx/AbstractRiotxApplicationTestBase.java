@@ -13,7 +13,6 @@ import com.redis.riot.AbstractRedisImportCommand;
 import com.redis.riot.AbstractRedisTargetExportCommand;
 import com.redis.riot.CompareMode;
 import com.redis.riot.RedisArgs;
-import com.redis.riot.ReplicateWriteLogger;
 import com.redis.riot.TargetRedisArgs;
 import com.redis.riot.core.AbstractJobCommand;
 import com.redis.riot.core.MainCommand;

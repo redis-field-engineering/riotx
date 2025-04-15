@@ -1,5 +1,6 @@
 package com.redis.spring.batch.item.redis.reader;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -7,18 +8,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.springframework.util.Assert;
-
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.timeseries.Sample;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.InitializingOperation;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 
-import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.StreamMessage;
@@ -38,20 +38,15 @@ public class KeyValueRead<K, V> implements InitializingOperation<K, V, KeyEvent<
 
     private static final String SCRIPT_FILENAME = "keyvalue.lua";
 
-    private final RedisCodec<K, V> codec;
-
     private final Evalsha<K, V, KeyEvent<K>, KeyValue<K>> evalsha;
 
     private final Function<V, String> toStringValueFunction;
 
     private final ValueType mode;
 
-    private AbstractRedisClient client;
-
     private MemoryUsage memoryUsage = MemoryUsage.of(MemoryUsage.DISABLED);
 
     public KeyValueRead(RedisCodec<K, V> codec, ValueType mode) {
-        this.codec = codec;
         this.mode = mode;
         this.evalsha = new Evalsha<>(codec, KeyEvent::getKey, this::convert);
         this.toStringValueFunction = BatchUtils.toStringValueFunction(codec);
@@ -81,15 +76,15 @@ public class KeyValueRead<K, V> implements InitializingOperation<K, V, KeyEvent<
         return new KeyValueRead<>(codec, ValueType.NONE);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
-    public void afterPropertiesSet() throws Exception {
-        Assert.notNull(client, "Redis client not set");
+    public void initialize(RedisAsyncCommands<K, V> commands)
+            throws IOException, InterruptedException, ExecutionException, TimeoutException {
         evalsha.setArgs(mode, memoryUsage.getLimit().toBytes(), memoryUsage.getSamples());
         String lua = BatchUtils.readFile(SCRIPT_FILENAME);
-        try (StatefulRedisModulesConnection<K, V> connection = BatchUtils.connection(client, codec)) {
-            String digest = connection.sync().scriptLoad(lua);
-            evalsha.setDigest(digest);
-        }
+        String digest = commands.scriptLoad(lua).get(commands.getStatefulConnection().getTimeout().toNanos(),
+                TimeUnit.NANOSECONDS);
+        evalsha.setDigest(digest);
     }
 
     @Override
@@ -124,11 +119,6 @@ public class KeyValueRead<K, V> implements InitializingOperation<K, V, KeyEvent<
     @SuppressWarnings("unchecked")
     protected String toString(Object value) {
         return toStringValueFunction.apply((V) value);
-    }
-
-    @Override
-    public void setClient(AbstractRedisClient client) {
-        this.client = client;
     }
 
     public KeyValueRead<K, V> memoryUsage(MemoryUsage usage) {

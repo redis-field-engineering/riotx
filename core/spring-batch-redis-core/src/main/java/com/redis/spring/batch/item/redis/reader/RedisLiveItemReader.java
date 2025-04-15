@@ -37,6 +37,10 @@ public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements 
         super(codec, operation);
     }
 
+    public KeyEventItemReader<K, V> getKeyEventReader() {
+        return keyEventReader;
+    }
+
     @Override
     public synchronized void open(ExecutionContext executionContext) throws ItemStreamException {
         if (keyEventReader == null) {
