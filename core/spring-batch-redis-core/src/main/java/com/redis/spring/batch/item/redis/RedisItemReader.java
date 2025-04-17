@@ -1,257 +1,138 @@
 package com.redis.spring.batch.item.redis;
 
-import java.time.Duration;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
+import java.util.function.Predicate;
 
-import org.springframework.batch.core.step.builder.SimpleStepBuilder;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.ItemStreamSupport;
-import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
+import org.springframework.data.util.Predicates;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
-import com.redis.spring.batch.BatchRedisMetrics;
-import com.redis.spring.batch.UniqueBlockingQueue;
-import com.redis.spring.batch.item.AbstractAsyncItemStreamSupport;
-import com.redis.spring.batch.item.ChunkProcessingItemWriter;
-import com.redis.spring.batch.item.PollableItemReader;
-import com.redis.spring.batch.item.QueueItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.common.OperationExecutor;
 import com.redis.spring.batch.item.redis.common.RedisOperation;
 import com.redis.spring.batch.item.redis.reader.KeyEvent;
-import com.redis.spring.batch.item.redis.reader.KeyEventItemReader;
-import com.redis.spring.batch.item.redis.reader.KeyScanEventItemReader;
-import com.redis.spring.batch.item.redis.reader.KeyScanItemReader;
 import com.redis.spring.batch.item.redis.reader.KeyValueRead;
-import com.redis.spring.batch.item.redis.reader.KeyValueStructRead;
-import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
-import com.redis.spring.batch.step.FlushingChunkProvider;
-import com.redis.spring.batch.step.FlushingStepBuilder;
+import com.redis.spring.batch.item.redis.reader.MemoryUsage;
+import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 
 import io.lettuce.core.AbstractRedisClient;
-import io.lettuce.core.KeyScanArgs;
 import io.lettuce.core.ReadFrom;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 
-public class RedisItemReader<K, V> extends AbstractAsyncItemStreamSupport<KeyEvent<K>, KeyEvent<K>>
-        implements PollableItemReader<KeyValue<K>> {
-
-    public enum ReaderMode {
-        SCAN, LIVE, LIVEONLY
-    }
-
-    public static final Duration DEFAULT_POLL_TIMEOUT = Duration.ofMillis(100);
-
-    public static final int DEFAULT_SCAN_COUNT = 100;
+public abstract class RedisItemReader<K, V> extends AbstractItemCountingItemStreamItemReader<KeyValue<K>> {
 
     public static final int DEFAULT_POOL_SIZE = OperationExecutor.DEFAULT_POOL_SIZE;
 
-    public static final int DEFAULT_EVENT_QUEUE_CAPACITY = KeyEventItemReader.DEFAULT_QUEUE_CAPACITY;
+    public static final int DEFAULT_BATCH_SIZE = 50;
 
-    public static final ReaderMode DEFAULT_MODE = ReaderMode.SCAN;
-
-    public static final int DEFAULT_QUEUE_CAPACITY = 10000;
-
-    public static final Duration DEFAULT_FLUSH_INTERVAL = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
-
-    public static final Duration DEFAULT_IDLE_TIMEOUT = FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT;
-
-    public static final String QUEUE_GAUGE_NAME = METRICS_PREFIX + "queue";
-
-    private final RedisCodec<K, V> codec;
+    protected final RedisCodec<K, V> codec;
 
     private final RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> operation;
 
-    private Duration pollTimeout = DEFAULT_POLL_TIMEOUT;
-
-    private Duration flushInterval = DEFAULT_FLUSH_INTERVAL;
-
-    private Duration idleTimeout = DEFAULT_IDLE_TIMEOUT;
-
-    private ReaderMode mode = DEFAULT_MODE;
-
     private int poolSize = DEFAULT_POOL_SIZE;
 
-    private int queueCapacity = DEFAULT_QUEUE_CAPACITY;
+    protected ReadFrom readFrom;
 
-    private int eventQueueCapacity = DEFAULT_EVENT_QUEUE_CAPACITY;
+    protected int batchSize = DEFAULT_BATCH_SIZE;
 
-    private long scanCount = DEFAULT_SCAN_COUNT;
+    protected String keyPattern;
 
-    private ReadFrom readFrom;
+    protected String keyType;
 
-    private String keyPattern;
+    protected MeterRegistry meterRegistry = Metrics.globalRegistry;
 
-    private String keyType;
+    protected AbstractRedisClient client;
 
-    private int database;
+    private OperationExecutor<K, V, KeyEvent<K>, KeyValue<K>> operationExecutor;
 
-    private AbstractRedisClient client;
+    private Predicate<K> keyFilter = Predicates.isTrue();
 
-    private BlockingQueue<KeyValue<K>> queue;
-
-    public RedisItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> operation) {
+    protected RedisItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> operation) {
         setName(ClassUtils.getShortName(getClass()));
         this.codec = codec;
         this.operation = operation;
     }
 
-    @Override
-    protected SimpleStepBuilder<KeyEvent<K>, KeyEvent<K>> stepBuilder() {
-        SimpleStepBuilder<KeyEvent<K>, KeyEvent<K>> step = super.stepBuilder();
-        if (mode == ReaderMode.SCAN) {
-            return step;
-        }
-        FlushingStepBuilder<KeyEvent<K>, KeyEvent<K>> flushingStep = new FlushingStepBuilder<>(step);
-        flushingStep.flushInterval(flushInterval);
-        flushingStep.idleTimeout(idleTimeout);
-        return flushingStep;
+    public List<KeyValue<K>> read(Iterable<? extends KeyEvent<K>> keys) throws Exception {
+        return operationExecutor.execute(keys);
     }
 
     @Override
-    protected ItemReader<KeyEvent<K>> reader() {
-        switch (mode) {
-            case LIVEONLY:
-                return keyEventReader();
-            case LIVE:
-                return keyScanEventReader();
-            default:
-                return keyScanReader();
+    protected synchronized void doOpen() throws Exception {
+        if (operationExecutor == null) {
+            Assert.notNull(client, getName() + ": Redis client not set");
+            operationExecutor = new OperationExecutor<>(codec, operation);
+            operationExecutor.setClient(client);
+            operationExecutor.setPoolSize(poolSize);
+            operationExecutor.setReadFrom(readFrom);
+            operationExecutor.afterPropertiesSet();
         }
     }
 
     @Override
-    protected boolean jobRunning() {
-        return super.jobRunning() && readerOpen();
-    }
-
-    @SuppressWarnings("unchecked")
-    private boolean readerOpen() {
-        switch (mode) {
-            case LIVE:
-            case LIVEONLY:
-                return getReader() != null && ((KeyEventItemReader<K, V>) getReader()).isOpen();
-            default:
-                return true;
+    protected void doClose() throws Exception {
+        if (operationExecutor != null) {
+            operationExecutor.close();
+            operationExecutor = null;
         }
     }
 
-    private KeyScanItemReader<K, V> keyScanReader() {
-        KeyScanItemReader<K, V> reader = new KeyScanItemReader<>(client, codec);
-        setKeyReaderName(reader);
-        reader.setReadFrom(readFrom);
-        reader.setScanArgs(scanArgs());
-        reader.setMeterRegistry(meterRegistry);
-        return reader;
+    protected boolean acceptKeyType(String type) {
+        return keyType == null || keyType.equalsIgnoreCase(type);
     }
 
-    private KeyEventItemReader<K, V> keyEventReader() {
-        KeyEventItemReader<K, V> reader = new KeyEventItemReader<>(client, codec);
-        configure(reader);
-        return reader;
+    protected boolean acceptKey(K key) {
+        return keyFilter.test(key);
     }
 
-    private KeyScanEventItemReader<K, V> keyScanEventReader() {
-        KeyScanEventItemReader<K, V> reader = new KeyScanEventItemReader<>(client, codec, keyScanReader());
-        configure(reader);
-        return reader;
+    public static RedisScanItemReader<byte[], byte[]> scanDump() {
+        return new RedisScanItemReader<>(ByteArrayCodec.INSTANCE, KeyValueRead.dump(ByteArrayCodec.INSTANCE));
     }
 
-    private void setKeyReaderName(ItemStreamSupport reader) {
-        reader.setName(getName() + "-key-reader");
+    public static RedisScanItemReader<String, String> scanStruct() {
+        return scanStruct(StringCodec.UTF8);
     }
 
-    private void configure(KeyEventItemReader<K, V> reader) {
-        setKeyReaderName(reader);
-        reader.setMeterRegistry(meterRegistry);
-        reader.setQueueCapacity(eventQueueCapacity);
-        reader.setDatabase(database);
-        reader.setKeyPattern(keyPattern);
-        reader.setKeyType(keyType);
-        reader.setPollTimeout(pollTimeout);
+    public static <K, V> RedisScanItemReader<K, V> scanStruct(RedisCodec<K, V> codec) {
+        return new RedisScanItemReader<>(codec, KeyValueRead.struct(codec));
     }
 
-    @Override
-    public KeyValue<K> read() throws InterruptedException, Exception {
-        KeyValue<K> item;
-        do {
-            item = poll(pollTimeout.toMillis(), TimeUnit.MILLISECONDS);
-        } while (item == null && !isComplete());
-        return item;
+    public static RedisScanItemReader<String, String> scanNone() {
+        return scanNone(StringCodec.UTF8);
     }
 
-    @Override
-    public KeyValue<K> poll(long timeout, TimeUnit unit) throws InterruptedException, Exception {
-        return queue.poll(timeout, unit);
+    public static <K, V> RedisScanItemReader<K, V> scanNone(RedisCodec<K, V> codec) {
+        return new RedisScanItemReader<>(codec, KeyValueRead.type(codec));
     }
 
-    @Override
-    protected ItemWriter<KeyEvent<K>> writer() {
-        log.info(String.format("Creating queue with capacity %,d", queueCapacity));
-        queue = new UniqueBlockingQueue<>(queueCapacity);
-        BatchRedisMetrics.gaugeQueue(meterRegistry, QUEUE_GAUGE_NAME, queue, nameTag());
-        QueueItemWriter<KeyValue<K>> queueWriter = new QueueItemWriter<>(queue);
-        OperationExecutor<K, V, KeyEvent<K>, KeyValue<K>> executor = operationExecutor();
-        executor.setMeterRegistry(meterRegistry);
-        executor.setName(getName() + "-operation");
-        return new ChunkProcessingItemWriter<>(executor, queueWriter);
+    public static RedisLiveItemReader<byte[], byte[]> liveDump() {
+        return new RedisLiveItemReader<>(ByteArrayCodec.INSTANCE, KeyValueRead.dump(ByteArrayCodec.INSTANCE));
     }
 
-    public OperationExecutor<K, V, KeyEvent<K>, KeyValue<K>> operationExecutor() {
-        Assert.notNull(client, getName() + ": Redis client not set");
-        OperationExecutor<K, V, KeyEvent<K>, KeyValue<K>> executor = new OperationExecutor<>(codec, operation);
-        executor.setClient(client);
-        executor.setPoolSize(poolSize);
-        executor.setReadFrom(readFrom);
-        return executor;
+    public static RedisLiveItemReader<String, String> liveStruct() {
+        return liveStruct(StringCodec.UTF8);
     }
 
-    private KeyScanArgs scanArgs() {
-        KeyScanArgs args = new KeyScanArgs();
-        args.limit(scanCount);
-        if (keyPattern != null) {
-            args.match(keyPattern);
-        }
-        if (keyType != null) {
-            args.type(keyType);
-        }
-        return args;
+    public static <K, V> RedisLiveItemReader<K, V> liveStruct(RedisCodec<K, V> codec) {
+        return new RedisLiveItemReader<>(codec, KeyValueRead.struct(codec));
     }
 
-    public RedisScanSizeEstimator scanSizeEstimator() {
-        return RedisScanSizeEstimator.from(this);
+    public static RedisLiveItemReader<String, String> liveNone() {
+        return liveNone(StringCodec.UTF8);
     }
 
-    public static RedisItemReader<byte[], byte[]> dump() {
-        return new RedisItemReader<>(ByteArrayCodec.INSTANCE, KeyValueRead.dump(ByteArrayCodec.INSTANCE));
-    }
-
-    public static RedisItemReader<String, String> type() {
-        return type(StringCodec.UTF8);
-    }
-
-    public static <K, V> RedisItemReader<K, V> type(RedisCodec<K, V> codec) {
-        return new RedisItemReader<>(codec, KeyValueRead.type(codec));
-    }
-
-    public static RedisItemReader<String, String> struct() {
-        return struct(StringCodec.UTF8);
-    }
-
-    public static <K, V> RedisItemReader<K, V> struct(RedisCodec<K, V> codec) {
-        return new RedisItemReader<>(codec, new KeyValueStructRead<>(codec));
+    public static <K, V> RedisLiveItemReader<K, V> liveNone(RedisCodec<K, V> codec) {
+        return new RedisLiveItemReader<>(codec, KeyValueRead.type(codec));
     }
 
     public RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> getOperation() {
         return operation;
-    }
-
-    public BlockingQueue<KeyValue<K>> getQueue() {
-        return queue;
     }
 
     public RedisCodec<K, V> getCodec() {
@@ -266,12 +147,42 @@ public class RedisItemReader<K, V> extends AbstractAsyncItemStreamSupport<KeyEve
         this.client = client;
     }
 
+    public MeterRegistry getMeterRegistry() {
+        return meterRegistry;
+    }
+
+    public void setMeterRegistry(MeterRegistry registry) {
+        this.meterRegistry = registry;
+    }
+
     public int getPoolSize() {
         return poolSize;
     }
 
     public void setPoolSize(int size) {
         this.poolSize = size;
+    }
+
+    public ReadFrom getReadFrom() {
+        return readFrom;
+    }
+
+    public void setReadFrom(ReadFrom readFrom) {
+        this.readFrom = readFrom;
+    }
+
+    public int getBatchSize() {
+        return batchSize;
+    }
+
+    public void setBatchSize(int size) {
+        this.batchSize = size;
+    }
+
+    public void setMemoryUsage(MemoryUsage usage) {
+        if (operation instanceof KeyValueRead) {
+            ((KeyValueRead<K, V>) operation).memoryUsage(usage);
+        }
     }
 
     public String getKeyPattern() {
@@ -286,80 +197,16 @@ public class RedisItemReader<K, V> extends AbstractAsyncItemStreamSupport<KeyEve
         return keyType;
     }
 
-    public void setKeyType(String type) {
-        this.keyType = type;
+    public void setKeyType(String keyType) {
+        this.keyType = keyType;
     }
 
-    public long getScanCount() {
-        return scanCount;
+    public Predicate<K> getKeyFilter() {
+        return keyFilter;
     }
 
-    public void setScanCount(long count) {
-        this.scanCount = count;
-    }
-
-    public ReadFrom getReadFrom() {
-        return readFrom;
-    }
-
-    public void setReadFrom(ReadFrom readFrom) {
-        this.readFrom = readFrom;
-    }
-
-    public int getEventQueueCapacity() {
-        return eventQueueCapacity;
-    }
-
-    public void setEventQueueCapacity(int capacity) {
-        this.eventQueueCapacity = capacity;
-    }
-
-    public int getDatabase() {
-        return database;
-    }
-
-    public void setDatabase(int database) {
-        this.database = database;
-    }
-
-    public ReaderMode getMode() {
-        return mode;
-    }
-
-    public void setMode(ReaderMode mode) {
-        this.mode = mode;
-    }
-
-    public Duration getFlushInterval() {
-        return flushInterval;
-    }
-
-    public void setFlushInterval(Duration interval) {
-        this.flushInterval = interval;
-    }
-
-    public Duration getIdleTimeout() {
-        return idleTimeout;
-    }
-
-    public void setIdleTimeout(Duration timeout) {
-        this.idleTimeout = timeout;
-    }
-
-    public int getQueueCapacity() {
-        return queueCapacity;
-    }
-
-    public void setQueueCapacity(int capacity) {
-        this.queueCapacity = capacity;
-    }
-
-    public Duration getPollTimeout() {
-        return pollTimeout;
-    }
-
-    public void setPollTimeout(Duration timeout) {
-        this.pollTimeout = timeout;
+    public void setKeyFilter(Predicate<K> filter) {
+        this.keyFilter = filter;
     }
 
 }

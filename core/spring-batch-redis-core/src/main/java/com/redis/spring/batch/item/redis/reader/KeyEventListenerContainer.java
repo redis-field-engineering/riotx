@@ -1,17 +1,26 @@
 package com.redis.spring.batch.item.redis.reader;
 
+import java.text.MessageFormat;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.context.SmartLifecycle;
+import org.springframework.util.Assert;
 
+import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.reader.pubsub.PubSubListenerContainer;
 import com.redis.spring.batch.item.redis.reader.pubsub.PubSubMessage;
 import com.redis.spring.batch.item.redis.reader.pubsub.PubSubMessageListener;
-import com.redis.spring.batch.item.redis.reader.pubsub.PubSubListenerContainer;
 import com.redis.spring.batch.item.redis.reader.pubsub.Subscription;
 
 import io.lettuce.core.AbstractRedisClient;
+import io.lettuce.core.RedisException;
 import io.lettuce.core.codec.RedisCodec;
 
 public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
@@ -20,7 +29,15 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
 
     private static final String KEYEVENT_PATTERN = "__keyevent@%s__:*";
 
+    public static final String NOTIFY_CONFIG = "notify-keyspace-events";
+
+    public static final String NOTIFY_CONFIG_VALUE = "KEA";
+
     private static final String SEPARATOR = ":";
+
+    private final Log log = LogFactory.getLog(getClass());
+
+    private final AbstractRedisClient client;
 
     private final PubSubListenerContainer<K, V> pubSubListenerContainer;
 
@@ -31,6 +48,7 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
     private final Function<V, String> valueDecoder;
 
     public KeyEventListenerContainer(AbstractRedisClient client, RedisCodec<K, V> codec) {
+        this.client = client;
         this.pubSubListenerContainer = PubSubListenerContainer.create(client, codec);
         this.keyEncoder = BatchUtils.stringKeyFunction(codec);
         this.keyDecoder = BatchUtils.toStringKeyFunction(codec);
@@ -38,13 +56,18 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
     }
 
     @Override
-    public void start() {
-        pubSubListenerContainer.start();
+    public synchronized void start() {
+        if (!pubSubListenerContainer.isRunning()) {
+            checkNotifyConfig();
+            pubSubListenerContainer.start();
+        }
     }
 
     @Override
-    public void stop() {
-        pubSubListenerContainer.stop();
+    public synchronized void stop() {
+        if (pubSubListenerContainer.isRunning()) {
+            pubSubListenerContainer.stop();
+        }
     }
 
     @Override
@@ -74,7 +97,8 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
         return keyEvent(keyEncoder.apply(suffix(m.getChannel())), valueDecoder.apply(m.getMessage()));
     }
 
-    private Subscription receive(String pattern, KeyEventListener<K> listener, Function<PubSubMessage<K, V>, KeyEvent<K>> mapper) {
+    private Subscription receive(String pattern, KeyEventListener<K> listener,
+            Function<PubSubMessage<K, V>, KeyEvent<K>> mapper) {
         return pubSubListenerContainer.receive(keyEncoder.apply(pattern), new KeyEventMessageListener<>(listener, mapper));
     }
 
@@ -172,6 +196,28 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
             default:
                 return null;
         }
+    }
+
+    private void checkNotifyConfig() {
+        Map<String, String> valueMap;
+        try (StatefulRedisModulesConnection<String, String> connection = BatchUtils.connection(client)) {
+            try {
+                valueMap = connection.sync().configGet(NOTIFY_CONFIG);
+            } catch (RedisException e) {
+                log.info("Could not check keyspace notification config", e);
+                return;
+            }
+        }
+        String actual = valueMap.getOrDefault(NOTIFY_CONFIG, "");
+        log.info(MessageFormat.format("Retrieved config {0}: {1}", NOTIFY_CONFIG, actual));
+        Set<Character> expected = characterSet(NOTIFY_CONFIG_VALUE);
+        Assert.isTrue(characterSet(actual).containsAll(expected),
+                String.format("Keyspace notifications not property configured. Expected %s '%s' but was '%s'.", NOTIFY_CONFIG,
+                        NOTIFY_CONFIG_VALUE, actual));
+    }
+
+    private static Set<Character> characterSet(String string) {
+        return string.codePoints().mapToObj(c -> (char) c).collect(Collectors.toSet());
     }
 
 }

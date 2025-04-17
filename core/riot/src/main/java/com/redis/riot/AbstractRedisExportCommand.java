@@ -4,10 +4,13 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 
+import com.redis.riot.core.RiotStep;
 import com.redis.riot.core.processor.RegexNamedGroupFunction;
 import com.redis.riot.function.KeyValueMap;
+import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 
 import picocli.CommandLine.ArgGroup;
@@ -15,39 +18,45 @@ import picocli.CommandLine.Option;
 
 public abstract class AbstractRedisExportCommand extends AbstractExportCommand {
 
-	@ArgGroup(exclusive = false, heading = "Redis options%n")
-	private RedisArgs redisArgs = new RedisArgs();
+    @ArgGroup(exclusive = false, heading = "Redis options%n")
+    private RedisArgs redisArgs = new RedisArgs();
 
-	@Option(names = "--key-regex", description = "Regex for key-field extraction, e.g. '\\w+:(?<id>.+)' extracts an id field from the key", paramLabel = "<rex>")
-	private Pattern keyRegex;
+    @Option(names = "--key-regex", description = "Regex for key-field extraction, e.g. '\\w+:(?<id>.+)' extracts an id field from the key", paramLabel = "<rex>")
+    private Pattern keyRegex;
 
-	@Override
-	protected RedisContext sourceRedisContext() {
-		return RedisContext.of(redisArgs);
-	}
+    private static final String TASK_NAME = "Exporting";
 
-	protected ItemProcessor<KeyValue<String>, Map<String, Object>> mapProcessor() {
-		KeyValueMap mapFunction = new KeyValueMap();
-		if (keyRegex != null) {
-			mapFunction.setKey(new RegexNamedGroupFunction(keyRegex));
-		}
-		return new FunctionItemProcessor<>(mapFunction);
-	}
+    protected <T> RiotStep<KeyValue<String>, T> step(ItemProcessor<KeyValue<String>, T> processor, ItemWriter<T> writer) {
+        return step("export", RedisItemReader.scanStruct(), processor, writer, TASK_NAME);
+    }
 
-	public RedisArgs getRedisArgs() {
-		return redisArgs;
-	}
+    @Override
+    protected RedisContext sourceRedisContext() {
+        return RedisContext.of(redisArgs);
+    }
 
-	public void setRedisArgs(RedisArgs clientArgs) {
-		this.redisArgs = clientArgs;
-	}
+    protected ItemProcessor<KeyValue<String>, Map<String, Object>> mapProcessor() {
+        KeyValueMap mapFunction = new KeyValueMap();
+        if (keyRegex != null) {
+            mapFunction.setKey(new RegexNamedGroupFunction(keyRegex));
+        }
+        return new FunctionItemProcessor<>(mapFunction);
+    }
 
-	public Pattern getKeyRegex() {
-		return keyRegex;
-	}
+    public RedisArgs getRedisArgs() {
+        return redisArgs;
+    }
 
-	public void setKeyRegex(Pattern regex) {
-		this.keyRegex = regex;
-	}
+    public void setRedisArgs(RedisArgs clientArgs) {
+        this.redisArgs = clientArgs;
+    }
+
+    public Pattern getKeyRegex() {
+        return keyRegex;
+    }
+
+    public void setKeyRegex(Pattern regex) {
+        this.keyRegex = regex;
+    }
 
 }

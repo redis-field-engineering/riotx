@@ -41,149 +41,152 @@ import net.spy.memcached.MemcachedClient;
 @TestInstance(Lifecycle.PER_CLASS)
 public class MemcachedTests {
 
-	static {
-		System.setProperty("net.spy.log.LoggerImpl", "net.spy.memcached.compat.log.SLF4JLogger");
-		System.setProperty(SimpleLogger.SHOW_DATE_TIME_KEY, "true");
-	}
+    static {
+        System.setProperty("net.spy.log.LoggerImpl", "net.spy.memcached.compat.log.SLF4JLogger");
+        System.setProperty(SimpleLogger.SHOW_DATE_TIME_KEY, "true");
+    }
 
-	private static final DockerImageName imageName = MemcachedContainer.DEFAULT_IMAGE_NAME
-			.withTag(MemcachedContainer.DEFAULT_TAG);
+    private static final DockerImageName imageName = MemcachedContainer.DEFAULT_IMAGE_NAME
+            .withTag(MemcachedContainer.DEFAULT_TAG);
 
-	private static final MemcachedContainer source = new MemcachedContainer(imageName);
-	private static final MemcachedContainer target = new MemcachedContainer(imageName);
+    private static final MemcachedContainer source = new MemcachedContainer(imageName);
 
-	private JobRepository jobRepository;
-	private Supplier<MemcachedClient> clientSupplier;
-	private MemcachedClient client;
-	private Supplier<MemcachedClient> targetClientSupplier;
-	private MemcachedClient targetClient;
+    private static final MemcachedContainer target = new MemcachedContainer(imageName);
 
-	public static String name(TestInfo info) {
-		StringBuilder displayName = new StringBuilder(info.getDisplayName().replace("(TestInfo)", ""));
-		info.getTestClass().ifPresent(c -> displayName.append("-").append(ClassUtils.getShortName(c)));
-		return displayName.toString();
-	}
+    private JobRepository jobRepository;
 
-	public static <T> List<T> readAll(ItemReader<T> reader) throws Exception {
-		List<T> list = new ArrayList<>();
-		T element;
-		while ((element = reader.read()) != null) {
-			list.add(element);
-		}
-		return list;
-	}
+    private Supplier<MemcachedClient> clientSupplier;
 
-	@BeforeAll
-	void setup() throws Exception {
-		jobRepository = JobUtils.jobRepositoryFactoryBean(ClassUtils.getShortName(getClass())).getObject();
-		source.start();
-		target.start();
-		clientSupplier = () -> client(source.getMemcachedAddresses());
-		client = clientSupplier.get();
-		targetClientSupplier = () -> client(target.getMemcachedAddresses());
-		targetClient = targetClientSupplier.get();
-	}
+    private MemcachedClient client;
 
-	private static MemcachedClient client(List<InetSocketAddress> addresses) {
-		try {
-			return new MemcachedClient(addresses);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
+    private Supplier<MemcachedClient> targetClientSupplier;
 
-	@AfterAll
-	void teardown() {
-		if (client != null) {
-			client.shutdown();
-		}
-		if (source != null) {
-			source.stop();
-		}
-		if (targetClient != null) {
-			targetClient.shutdown();
-		}
-		if (target != null) {
-			target.stop();
-		}
-	}
+    private MemcachedClient targetClient;
 
-	@BeforeEach
-	void flushall() {
-		client.flush();
-		targetClient.flush();
-	}
+    public static String name(TestInfo info) {
+        StringBuilder displayName = new StringBuilder(info.getDisplayName().replace("(TestInfo)", ""));
+        info.getTestClass().ifPresent(c -> displayName.append("-").append(ClassUtils.getShortName(c)));
+        return displayName.toString();
+    }
 
-	private void compare(long startTime, Collection<MemcachedEntry> expected, Collection<MemcachedEntry> actual)
-			throws Exception {
-		Assertions.assertFalse(expected.isEmpty());
-		Assertions.assertFalse(actual.isEmpty());
-		Map<String, MemcachedEntry> entryMap = expected.stream()
-				.collect(Collectors.toMap(MemcachedEntry::getKey, Function.identity()));
-		Assertions.assertEquals(expected.size(), actual.size());
-		actual.forEach(e -> {
-			MemcachedEntry entry = entryMap.get(e.getKey());
-			Assertions.assertArrayEquals(entry.getValue(), e.getValue());
-			long expectedTime = startTime + entry.getExpiration();
-			long actualTime = e.getExpiration();
-			long delta = Math.abs(expectedTime - actualTime);
-			Assertions.assertTrue(delta < 30,
-					() -> String.format("Delta: %,d (%s <> %s)", delta, expectedTime, actualTime));
-		});
-	}
+    public static <T> List<T> readAll(ItemReader<T> reader) throws Exception {
+        List<T> list = new ArrayList<>();
+        T element;
+        while ((element = reader.read()) != null) {
+            list.add(element);
+        }
+        return list;
+    }
 
-	private List<MemcachedEntry> readAll(Supplier<MemcachedClient> clientSupplier) throws Exception {
-		MemcachedItemReader reader = new MemcachedItemReader(clientSupplier);
-		reader.setJobRepository(jobRepository);
-		reader.setName(UUID.randomUUID().toString());
-		try {
-			reader.open(new ExecutionContext());
-			return readAll(reader);
-		} finally {
-			reader.close();
-		}
-	}
+    @BeforeAll
+    void setup() throws Exception {
+        jobRepository = JobUtils.jobRepositoryFactoryBean(ClassUtils.getShortName(getClass())).getObject();
+        source.start();
+        target.start();
+        clientSupplier = () -> client(source.getMemcachedAddresses());
+        client = clientSupplier.get();
+        targetClientSupplier = () -> client(target.getMemcachedAddresses());
+        targetClient = targetClientSupplier.get();
+    }
 
-	private void write(List<MemcachedEntry> entries) throws Exception {
-		MemcachedItemWriter writer = new MemcachedItemWriter(clientSupplier);
-		try {
-			writer.open(new ExecutionContext());
-			writer.write(new Chunk<>(entries));
-		} finally {
-			writer.close();
-		}
-	}
+    private static MemcachedClient client(List<InetSocketAddress> addresses) {
+        try {
+            return new MemcachedClient(addresses);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-	private List<MemcachedEntry> entries(int count) throws Exception {
-		MemcachedGeneratorItemReader reader = new MemcachedGeneratorItemReader();
-		reader.setMaxItemCount(count);
-		try {
-			reader.open(new ExecutionContext());
-			return readAll(reader);
-		} finally {
-			reader.close();
-		}
+    @AfterAll
+    void teardown() {
+        if (client != null) {
+            client.shutdown();
+        }
+        if (source != null) {
+            source.stop();
+        }
+        if (targetClient != null) {
+            targetClient.shutdown();
+        }
+        if (target != null) {
+            target.stop();
+        }
+    }
 
-	}
+    @BeforeEach
+    void flushall() {
+        client.flush();
+        targetClient.flush();
+    }
 
-	@Test
-	void replicate(TestInfo info) throws Exception {
-		int count = 123;
-		write(entries(count));
-		MemcachedReplicate replication = new MemcachedReplicate();
-		replication.getJobArgs().getProgressArgs().setStyle(ProgressStyle.NONE);
-		replication.setJobName(name(info));
-		replication.setJobRepository(jobRepository);
-		replication.setSourceAddressList(new InetSocketAddressList(inetSocketAddress(source)));
-		replication.setTargetAddressList(new InetSocketAddressList(inetSocketAddress(target)));
-		replication.call();
-		List<MemcachedEntry> sourceEntries = readAll(clientSupplier);
-		List<MemcachedEntry> targetEntries = readAll(targetClientSupplier);
-		compare(0, sourceEntries, targetEntries);
-	}
+    private void compare(long startTime, Collection<MemcachedEntry> expected, Collection<MemcachedEntry> actual)
+            throws Exception {
+        Assertions.assertFalse(expected.isEmpty());
+        Assertions.assertFalse(actual.isEmpty());
+        Map<String, MemcachedEntry> entryMap = expected.stream()
+                .collect(Collectors.toMap(MemcachedEntry::getKey, Function.identity()));
+        Assertions.assertEquals(expected.size(), actual.size());
+        actual.forEach(e -> {
+            MemcachedEntry entry = entryMap.get(e.getKey());
+            Assertions.assertArrayEquals(entry.getValue(), e.getValue());
+            long expectedTime = startTime + entry.getExpiration();
+            long actualTime = e.getExpiration();
+            long delta = Math.abs(expectedTime - actualTime);
+            Assertions.assertTrue(delta < 30, () -> String.format("Delta: %,d (%s <> %s)", delta, expectedTime, actualTime));
+        });
+    }
 
-	private InetSocketAddress inetSocketAddress(MemcachedServer server) {
-		return InetSocketAddress.createUnresolved(server.getMemcachedHost(), server.getMemcachedPort());
-	}
+    private List<MemcachedEntry> readAll(Supplier<MemcachedClient> clientSupplier) throws Exception {
+        MemcachedItemReader reader = new MemcachedItemReader(clientSupplier);
+        reader.setName(UUID.randomUUID().toString());
+        try {
+            reader.open(new ExecutionContext());
+            return readAll(reader);
+        } finally {
+            reader.close();
+        }
+    }
+
+    private void write(List<MemcachedEntry> entries) throws Exception {
+        MemcachedItemWriter writer = new MemcachedItemWriter(clientSupplier);
+        try {
+            writer.open(new ExecutionContext());
+            writer.write(new Chunk<>(entries));
+        } finally {
+            writer.close();
+        }
+    }
+
+    private List<MemcachedEntry> entries(int count) throws Exception {
+        MemcachedGeneratorItemReader reader = new MemcachedGeneratorItemReader();
+        reader.setMaxItemCount(count);
+        try {
+            reader.open(new ExecutionContext());
+            return readAll(reader);
+        } finally {
+            reader.close();
+        }
+
+    }
+
+    @Test
+    void replicate(TestInfo info) throws Exception {
+        int count = 123;
+        write(entries(count));
+        MemcachedReplicate replication = new MemcachedReplicate();
+        replication.getProgressArgs().setStyle(ProgressStyle.NONE);
+        replication.setJobName(name(info));
+        replication.setJobRepository(jobRepository);
+        replication.setSourceAddressList(new InetSocketAddressList(inetSocketAddress(source)));
+        replication.setTargetAddressList(new InetSocketAddressList(inetSocketAddress(target)));
+        replication.call();
+        List<MemcachedEntry> sourceEntries = readAll(clientSupplier);
+        List<MemcachedEntry> targetEntries = readAll(targetClientSupplier);
+        compare(0, sourceEntries, targetEntries);
+    }
+
+    private InetSocketAddress inetSocketAddress(MemcachedServer server) {
+        return InetSocketAddress.createUnresolved(server.getMemcachedHost(), server.getMemcachedPort());
+    }
 
 }

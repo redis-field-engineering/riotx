@@ -13,9 +13,6 @@ import com.redis.riot.AbstractRedisImportCommand;
 import com.redis.riot.AbstractRedisTargetExportCommand;
 import com.redis.riot.CompareMode;
 import com.redis.riot.RedisArgs;
-import com.redis.riot.RedisReaderLiveArgs;
-import com.redis.riot.Replicate;
-import com.redis.riot.ReplicateWriteLogger;
 import com.redis.riot.TargetRedisArgs;
 import com.redis.riot.core.AbstractJobCommand;
 import com.redis.riot.core.MainCommand;
@@ -60,11 +57,6 @@ public abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestB
             redisArgs.setCluster(getRedisServer().isRedisCluster());
         }
 
-        private void configure(RedisReaderLiveArgs args) {
-            args.setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
-            args.setEventQueueCapacity(DEFAULT_EVENT_QUEUE_CAPACITY);
-        }
-
         @Override
         protected int executionStrategy(ParseResult parseResult) {
             for (ParseResult subParseResult : parseResult.subcommands()) {
@@ -74,7 +66,7 @@ public abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestB
                 }
                 if (command instanceof AbstractJobCommand) {
                     AbstractJobCommand jobCommand = ((AbstractJobCommand) command);
-                    jobCommand.getJobArgs().getProgressArgs().setStyle(ProgressStyle.NONE);
+                    jobCommand.getProgressArgs().setStyle(ProgressStyle.NONE);
                     jobCommand.setJobName(name(info));
                 }
                 if (command instanceof AbstractRedisCommand) {
@@ -87,11 +79,11 @@ public abstract class AbstractRiotxApplicationTestBase extends AbstractRiotTestB
                     configure(((AbstractRedisImportCommand) command).getRedisArgs());
                 }
                 if (command instanceof AbstractExportCommand) {
-                    configure(((AbstractExportCommand) command).getReaderLiveArgs());
+                    ((AbstractExportCommand) command).setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
+                    ((AbstractExportCommand) command).getReaderArgs().setEventQueueCapacity(DEFAULT_EVENT_QUEUE_CAPACITY);
                 }
                 if (command instanceof AbstractRedisTargetExportCommand) {
                     AbstractRedisTargetExportCommand targetCommand = (AbstractRedisTargetExportCommand) command;
-                    configure(targetCommand.getReaderLiveArgs());
                     targetCommand.setSourceRedisUri(redisURI);
                     targetCommand.getSourceRedisArgs().setCluster(getRedisServer().isRedisCluster());
                     targetCommand.setTargetRedisUri(targetRedisURI);

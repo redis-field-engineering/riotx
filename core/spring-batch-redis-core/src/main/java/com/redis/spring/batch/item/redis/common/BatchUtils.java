@@ -7,14 +7,18 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -28,16 +32,25 @@ import com.redis.lettucemod.cluster.RedisModulesClusterClient;
 import com.redis.lettucemod.cluster.api.StatefulRedisModulesClusterConnection;
 import com.redis.spring.batch.BatchRedisMetrics;
 import com.redis.spring.batch.item.redis.reader.KeyEvent;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
+import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
 
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.ReadFrom;
 import io.lettuce.core.RedisFuture;
+import io.lettuce.core.ScanArgs;
+import io.lettuce.core.ScanIterator;
+import io.lettuce.core.ScanStream;
+import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
+import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
+import io.lettuce.core.cluster.models.partitions.RedisClusterNode;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import io.micrometer.core.instrument.Tags;
+import reactor.core.publisher.Flux;
 
 public abstract class BatchUtils {
 
@@ -48,6 +61,22 @@ public abstract class BatchUtils {
         try (InputStream inputStream = BatchUtils.class.getClassLoader().getResourceAsStream(filename)) {
             return FileCopyUtils.copyToString(new InputStreamReader(inputStream));
         }
+    }
+
+    public static <K, V> LongSupplier scanSizeEstimator(RedisScanItemReader<K, V> reader) {
+        return RedisScanSizeEstimator.from(reader.getClient(), reader.getKeyPattern(), reader.getKeyType());
+    }
+
+    public static <K, V> Iterator<K> scanIterator(StatefulRedisClusterConnection<K, V> connection, ScanArgs args) {
+        Set<RedisClusterNode> nodes = connection.sync().nodes(n -> n.getRole().isMaster()).asMap().keySet();
+        List<Flux<K>> flux = nodes.stream().map(n -> ScanStream.scan(connection.getConnection(n.getNodeId()).reactive(), args))
+                .collect(Collectors.toList());
+        return Flux.merge(flux).toIterable().iterator();
+    }
+
+    public static <K, V> ScanIterator<K> scanIterator(StatefulRedisConnection<K, V> connection, ScanArgs args) {
+        return ScanIterator.scan(connection.sync(), args);
+
     }
 
     public static <T> Stream<T> stream(Iterable<T> items) {

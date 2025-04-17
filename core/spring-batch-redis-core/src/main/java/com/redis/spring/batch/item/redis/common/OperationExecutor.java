@@ -8,13 +8,8 @@ import java.util.function.Supplier;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.springframework.batch.core.observability.BatchMetrics;
-import org.springframework.batch.item.Chunk;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemStreamException;
-import org.springframework.batch.item.ItemStreamSupport;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
 
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.spring.batch.BatchRedisMetrics;
@@ -30,7 +25,7 @@ import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer.Sample;
 
-public class OperationExecutor<K, V, I, O> extends ItemStreamSupport implements ItemProcessor<Chunk<? extends I>, Chunk<O>> {
+public class OperationExecutor<K, V, I, O> implements InitializingBean, AutoCloseable {
 
     public static final int DEFAULT_POOL_SIZE = GenericObjectPoolConfig.DEFAULT_MAX_TOTAL;
 
@@ -53,7 +48,6 @@ public class OperationExecutor<K, V, I, O> extends ItemStreamSupport implements 
     private GenericObjectPool<StatefulRedisModulesConnection<K, V>> pool;
 
     public OperationExecutor(RedisCodec<K, V> codec, RedisOperation<K, V, I, O> operation) {
-        setName(ClassUtils.getShortName(getClass()));
         this.codec = codec;
         this.operation = operation;
     }
@@ -67,23 +61,19 @@ public class OperationExecutor<K, V, I, O> extends ItemStreamSupport implements 
     }
 
     @Override
-    public synchronized void open(ExecutionContext executionContext) throws ItemStreamException {
+    public void afterPropertiesSet() throws Exception {
         Assert.notNull(client, "Redis client not set");
-        initializeOperation();
         GenericObjectPoolConfig<StatefulRedisModulesConnection<K, V>> config = new GenericObjectPoolConfig<>();
         config.setMaxTotal(poolSize);
         Supplier<StatefulRedisModulesConnection<K, V>> supplier = BatchUtils.supplier(client, codec, readFrom);
         pool = ConnectionPoolSupport.createGenericObjectPool(supplier, config);
+        initializeOperation();
     }
 
-    private void initializeOperation() {
+    private void initializeOperation() throws Exception {
         if (operation instanceof InitializingOperation) {
-            InitializingOperation<K, V, I, O> initializingOperation = (InitializingOperation<K, V, I, O>) operation;
-            initializingOperation.setClient(client);
-            try {
-                initializingOperation.afterPropertiesSet();
-            } catch (Exception e) {
-                throw new ItemStreamException(e);
+            try (StatefulRedisModulesConnection<K, V> connection = pool.borrowObject()) {
+                ((InitializingOperation<K, V, I, O>) operation).initialize(connection.async());
             }
         }
     }
@@ -96,8 +86,7 @@ public class OperationExecutor<K, V, I, O> extends ItemStreamSupport implements 
         }
     }
 
-    @Override
-    public Chunk<O> process(Chunk<? extends I> items) throws Exception {
+    public List<O> execute(Iterable<? extends I> items) throws Exception {
         Sample sample = BatchMetrics.createTimerSample(meterRegistry);
         String status = BatchMetrics.STATUS_SUCCESS;
         try (StatefulRedisModulesConnection<K, V> connection = pool.borrowObject()) {
@@ -115,16 +104,15 @@ public class OperationExecutor<K, V, I, O> extends ItemStreamSupport implements 
             status = BatchMetrics.STATUS_FAILURE;
             throw e;
         } finally {
-            sample.stop(BatchRedisMetrics.createTimer(meterRegistry, TIMER_NAME, TIMER_DESCRIPTION, Tag.of("name", getName()),
-                    Tag.of("status", status)));
+            sample.stop(BatchRedisMetrics.createTimer(meterRegistry, TIMER_NAME, TIMER_DESCRIPTION, Tag.of("status", status)));
         }
     }
 
-    private Chunk<O> execute(StatefulRedisModulesConnection<K, V> connection, Chunk<? extends I> items)
+    private List<O> execute(StatefulRedisModulesConnection<K, V> connection, Iterable<? extends I> items)
             throws TimeoutException, InterruptedException, ExecutionException {
         List<RedisFuture<O>> futures = operation.execute(connection.async(), items);
         connection.flushCommands();
-        return new Chunk<>(BatchUtils.getAll(connection.getTimeout(), futures));
+        return BatchUtils.getAll(connection.getTimeout(), futures);
     }
 
     public void setReadFrom(ReadFrom readFrom) {

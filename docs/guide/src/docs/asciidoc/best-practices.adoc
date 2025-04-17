@@ -32,13 +32,9 @@ A queue utilization close to 100% means writes are slower than reads.
 
 To improve reader performance tweak the options below until you reach optimal throughput.
 
-`--read-threads`:: How many value reader threads to use in parallel (default: 1).
+`--scan-count`:: Number of keys each scan call should fetch (default: 100).
 
 `--read-batch`:: Number of values each reader thread should read in a single pipelined call (default: 50).
-
-`--read-queue`:: Capacity of the reader queue (default: 10000).
-When the queue is full the threads wait for space to become available.
-Increase this value if you have peaky traffic on the source database causing fluctuating reader throughput.
 
 `--source-pool`:: Number of Redis connections to the source database (default: 8).
 Keep in sync with the number of read threads to have a dedicated connection per thread.  
@@ -75,10 +71,14 @@ Memory requirements for {project-title} itself are very light.
 Being JVM-based the default initial heap size is dependent on available system memory and on the operating system.
 
 If you have very intensive replication requirements you will need to https://www.baeldung.com/jvm-parameters[increase the JVM heap size].
-To estimate the worst case scenario for memory requirements you can use this formula: `keySize * queueSize` where:
+To estimate the worst case scenario for memory requirements you can use this formula: `keySize * batchSize * threads` where:
 
 `keySize`:: average key size as reported by the `MEMORY USAGE` command
-`queueSize`:: Redis reader queue capacity configured with the `--read-queue` option
+
+`batchSize`:: number of items to read in each batch
+
+`threads`:: Number of threads that process batches concurrently
+
 
 Conversely if you need to minimize memory used by {project-title} you can lower the reader queue size (but possibly at the expense of reader throughtput).
 

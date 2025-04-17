@@ -37,20 +37,20 @@ public class MapFlatteningFunction<T> implements Function<Map<String, Object>, M
     }
 
     @SuppressWarnings("unchecked")
-    private void flattenElement(String propertyPrefix, @Nullable Object source, Map<String, T> flatMap) {
-        if (source == null) {
+    private void flattenElement(String key, @Nullable Object value, Map<String, T> map) {
+        if (value == null) {
             return;
         }
-        if (source instanceof Iterable) {
+        if (value instanceof Iterable) {
             int counter = 0;
-            for (Object element : (Iterable<Object>) source) {
-                flattenElement(propertyPrefix + "[" + counter + "]", element, flatMap);
+            for (Object element : (Iterable<Object>) value) {
+                flattenElement(key + "[" + counter + "]", element, map);
                 counter++;
             }
-        } else if (source instanceof Map) {
-            flatten(propertyPrefix, ((Map<String, Object>) source).entrySet().iterator(), flatMap);
+        } else if (value instanceof Map) {
+            flatten(key, ((Map<String, Object>) value).entrySet().iterator(), map);
         } else {
-            ((Map<String, Object>) flatMap).put(propertyPrefix, elementFunction.apply(source));
+            ((Map<String, Object>) map).put(key, elementFunction.apply(value));
         }
     }
 

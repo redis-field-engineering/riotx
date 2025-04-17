@@ -10,15 +10,13 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redis.riot.AbstractRedisTargetExportCommand;
-import com.redis.riot.ExportStepHelper;
 import com.redis.riot.RedisWriterArgs;
-import com.redis.riot.core.Step;
+import com.redis.riot.core.RiotStep;
 import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.RedisItemReader.ReaderMode;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.KeyEventItemReader;
-import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
+import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
 import com.redis.spring.batch.item.redis.writer.impl.Xadd;
 
 import io.lettuce.core.StreamMessage;
@@ -29,95 +27,92 @@ import picocli.CommandLine.Option;
 @Command(name = "stream-export", description = "Export Redis data to a Redis stream.")
 public class StreamExport extends AbstractRedisTargetExportCommand {
 
-	public static final String DEFAULT_STREAM = "stream:export";
+    public static final String DEFAULT_STREAM = "stream:export";
 
-	private static final String QUEUE_MESSAGE = " | capacity: %,d";
-	private static final String TASK_NAME = "Streaming";
-	private static final ObjectMapper jsonMapper = jsonMapper();
+    private static final String QUEUE_MESSAGE = " | capacity: %,d";
 
-	@ArgGroup(exclusive = false)
-	private RedisWriterArgs targetRedisWriterArgs = new RedisWriterArgs();
+    private static final String TASK_NAME = "Streaming";
 
-	@Option(names = "--stream", description = "Target stream key (default: ${DEFAULT-VALUE}).", paramLabel = "<key>")
-	private String stream = DEFAULT_STREAM;
+    private static final ObjectMapper jsonMapper = jsonMapper();
 
-	private static ObjectMapper jsonMapper() {
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.setSerializationInclusion(Include.NON_NULL);
-		mapper.setSerializationInclusion(Include.NON_DEFAULT);
-		return mapper;
-	}
+    @ArgGroup(exclusive = false)
+    private RedisWriterArgs targetRedisWriterArgs = new RedisWriterArgs();
 
-	@Override
-	protected Job job() {
-		return job(step());
-	}
+    @Option(names = "--stream", description = "Target stream key (default: ${DEFAULT-VALUE}).", paramLabel = "<key>")
+    private String stream = DEFAULT_STREAM;
 
-	@Override
-	protected void configureTargetRedisWriter(RedisItemWriter<?, ?, ?> writer) {
-		super.configureTargetRedisWriter(writer);
-		log.info("Configuring target Redis writer with {}", targetRedisWriterArgs);
-		targetRedisWriterArgs.configure(writer);
-	}
+    private static ObjectMapper jsonMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.setSerializationInclusion(Include.NON_NULL);
+        mapper.setSerializationInclusion(Include.NON_DEFAULT);
+        return mapper;
+    }
 
-	private Step<KeyValue<String>, StreamMessage<String, String>> step() {
-		RedisItemReader<String, String> reader = RedisItemReader.struct();
-		configureSourceRedisReader(reader);
-		RedisItemWriter<String, String, StreamMessage<String, String>> writer = writer();
-		configureTargetRedisWriter(writer);
-		Step<KeyValue<String>, StreamMessage<String, String>> step = new ExportStepHelper(log).step(reader, writer);
-		step.processor(this::process);
-		step.taskName(TASK_NAME);
-		if (reader.getMode() != ReaderMode.SCAN) {
-			step.statusMessageSupplier(() -> liveExtraMessage(reader));
-		}
-		step.maxItemCountSupplier(RedisScanSizeEstimator.from(reader));
-		return step;
-	}
+    @Override
+    protected Job job() {
+        return job(step());
+    }
 
-	private RedisItemWriter<String, String, StreamMessage<String, String>> writer() {
-		return RedisItemWriter.operation(new Xadd<>(t -> stream, Arrays::asList));
-	}
+    @Override
+    protected <K, V, T> RedisItemWriter<K, V, T> configureTarget(RedisItemWriter<K, V, T> writer) {
+        log.info("Configuring target Redis writer with {}", targetRedisWriterArgs);
+        targetRedisWriterArgs.configure(writer);
+        return super.configureTarget(writer);
+    }
 
-	private StreamMessage<String, String> process(KeyValue<String> struct) throws JsonProcessingException {
-		Map<String, String> body = new LinkedHashMap<>();
-		body.put("key", struct.getKey());
-		body.put("time", String.valueOf(struct.getTimestamp()));
-		body.put("type", struct.getType());
-		body.put("ttl", String.valueOf(struct.getTtl()));
-		body.put("mem", String.valueOf(struct.getMemoryUsage()));
-		body.put("value", value(struct));
-		return new StreamMessage<>(stream, null, body);
-	}
+    private RiotStep<KeyValue<String>, StreamMessage<String, String>> step() {
+        RedisLiveItemReader<String, String> reader = RedisItemReader.liveStruct();
+        configureSource(reader);
+        RedisItemWriter<String, String, StreamMessage<String, String>> writer = writer();
+        configureTarget(writer);
+        RiotStep<KeyValue<String>, StreamMessage<String, String>> step = step("stream-export", reader, this::process, writer,
+                TASK_NAME);
+        step.extraMessage(() -> liveExtraMessage(reader));
+        return step;
+    }
 
-	private String value(KeyValue<String> struct) throws JsonProcessingException {
-		if (struct.getType() == null) {
-			return null;
-		}
-		switch (struct.getType()) {
-		case KeyValue.TYPE_STRING:
-		case KeyValue.TYPE_JSON:
-			return (String) struct.getValue();
-		default:
-			return jsonMapper.writeValueAsString(struct.getValue());
-		}
-	}
+    private RedisItemWriter<String, String, StreamMessage<String, String>> writer() {
+        return RedisItemWriter.operation(new Xadd<>(t -> stream, Arrays::asList));
+    }
 
-	@SuppressWarnings("rawtypes")
-	private String liveExtraMessage(RedisItemReader<?, ?> reader) {
-		KeyEventItemReader keyReader = (KeyEventItemReader) reader.getReader();
-		if (keyReader == null || keyReader.getQueue() == null) {
-			return "";
-		}
-		return String.format(QUEUE_MESSAGE, keyReader.getQueue().remainingCapacity());
-	}
+    private StreamMessage<String, String> process(KeyValue<String> struct) throws JsonProcessingException {
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("key", struct.getKey());
+        body.put("time", String.valueOf(struct.getTimestamp()));
+        body.put("type", struct.getType());
+        body.put("ttl", String.valueOf(struct.getTtl()));
+        body.put("mem", String.valueOf(struct.getMemoryUsage()));
+        body.put("value", value(struct));
+        return new StreamMessage<>(stream, null, body);
+    }
 
-	public RedisWriterArgs getTargetRedisWriterArgs() {
-		return targetRedisWriterArgs;
-	}
+    private String value(KeyValue<String> struct) throws JsonProcessingException {
+        if (struct.getType() == null) {
+            return null;
+        }
+        switch (struct.getType()) {
+            case KeyValue.TYPE_STRING:
+            case KeyValue.TYPE_JSON:
+                return (String) struct.getValue();
+            default:
+                return jsonMapper.writeValueAsString(struct.getValue());
+        }
+    }
 
-	public void setTargetRedisWriterArgs(RedisWriterArgs redisWriterArgs) {
-		this.targetRedisWriterArgs = redisWriterArgs;
-	}
+    private <K, V> String liveExtraMessage(RedisLiveItemReader<K, V> reader) {
+        KeyEventItemReader<K, V> keyReader = reader.getKeyEventReader();
+        if (keyReader == null || keyReader.getQueue() == null) {
+            return "";
+        }
+        return String.format(QUEUE_MESSAGE, keyReader.getQueue().remainingCapacity());
+    }
+
+    public RedisWriterArgs getTargetRedisWriterArgs() {
+        return targetRedisWriterArgs;
+    }
+
+    public void setTargetRedisWriterArgs(RedisWriterArgs redisWriterArgs) {
+        this.targetRedisWriterArgs = redisWriterArgs;
+    }
 
 }

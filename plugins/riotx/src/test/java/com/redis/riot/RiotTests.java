@@ -16,7 +16,9 @@ import org.testcontainers.shaded.org.bouncycastle.util.encoders.Hex;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.riot.core.ProgressStyle;
 import com.redis.riotx.AbstractRiotxApplicationTestBase;
-import com.redis.spring.batch.item.redis.RedisItemReader.ReaderMode;
+import com.redis.riotx.Replicate;
+import com.redis.riotx.ReplicateWriteLogger;
+import com.redis.riotx.ReplicationMode;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.Range;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
@@ -63,14 +65,14 @@ abstract class RiotTests extends AbstractRiotxApplicationTestBase {
 
     protected void execute(Replicate replicate, TestInfo info) throws Exception {
         System.setProperty(SimpleLogger.LOG_KEY_PREFIX + ReplicateWriteLogger.class.getName(), "error");
-        replicate.getJobArgs().getProgressArgs().setStyle(ProgressStyle.NONE);
+        replicate.getProgressArgs().setStyle(ProgressStyle.NONE);
         replicate.setJobName(name(info));
         replicate.setJobRepository(jobRepository);
         replicate.setSourceRedisUri(redisURI);
         replicate.getSourceRedisArgs().setCluster(getRedisServer().isRedisCluster());
         replicate.setTargetRedisUri(targetRedisURI);
         replicate.getTargetRedisArgs().setCluster(getTargetRedisServer().isRedisCluster());
-        replicate.getReaderLiveArgs().setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
+        replicate.setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
         replicate.call();
     }
 
@@ -115,7 +117,7 @@ abstract class RiotTests extends AbstractRiotxApplicationTestBase {
         enableKeyspaceNotifications();
         executeWhenSubscribers(() -> connection.sync().set(key, value));
         Replicate replicate = new Replicate();
-        replicate.setMode(ReaderMode.LIVE);
+        replicate.setMode(ReplicationMode.LIVE);
         replicate.setCompareMode(CompareMode.NONE);
         execute(replicate, info);
         Assertions.assertArrayEquals(connection.sync().get(key), targetConnection.sync().get(key));
@@ -125,7 +127,7 @@ abstract class RiotTests extends AbstractRiotxApplicationTestBase {
     void filterKeySlot(TestInfo info) throws Exception {
         enableKeyspaceNotifications();
         Replicate replication = new Replicate();
-        replication.setMode(ReaderMode.LIVE);
+        replication.setMode(ReplicationMode.LIVE);
         replication.setCompareMode(CompareMode.NONE);
         replication.getReaderArgs().getKeyFilterArgs().setSlots(Arrays.asList(new Range(0, 8000)));
         generateAsync(info, generator(100));

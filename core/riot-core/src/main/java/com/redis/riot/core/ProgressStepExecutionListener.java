@@ -1,5 +1,9 @@
 package com.redis.riot.core;
 
+import java.time.Duration;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.ExitStatus;
@@ -20,43 +24,43 @@ import me.tongfei.progressbar.ProgressBarStyle;
  * @since 3.1.2
  */
 @SuppressWarnings("rawtypes")
-public class ProgressStepExecutionListener<I, O> implements StepExecutionListener, ItemWriteListener {
+public class ProgressStepExecutionListener implements StepExecutionListener, ItemWriteListener {
 
-    private final Step<I, O> step;
+    private String taskName;
 
-    private ProgressArgs progressArgs = new ProgressArgs();
+    private Duration updateInterval;
+
+    private LongSupplier initialMax;
+
+    private ProgressStyle progressStyle = ProgressStyle.ASCII;
+
+    private Supplier<String> extraMessage;
 
     private ProgressBar progressBar;
-
-    public ProgressStepExecutionListener(Step<I, O> step) {
-        this.step = step;
-    }
 
     @Override
     public void beforeStep(StepExecution stepExecution) {
         ProgressBarBuilder progressBarBuilder = new ProgressBarBuilder();
-        progressBarBuilder.setTaskName(step.getTaskName());
+        if (taskName != null) {
+            progressBarBuilder.setTaskName(taskName);
+        }
         progressBarBuilder.setStyle(progressBarStyle());
-        progressBarBuilder.setUpdateIntervalMillis(Math.toIntExact(progressArgs.getUpdateInterval().getValue().toMillis()));
+        if (updateInterval != null) {
+            progressBarBuilder.setUpdateIntervalMillis(Math.toIntExact(updateInterval.toMillis()));
+        }
         progressBarBuilder.showSpeed();
-        if (progressArgs.getStyle() == ProgressStyle.LOG) {
+        if (progressStyle == ProgressStyle.LOG) {
             Logger logger = LoggerFactory.getLogger(getClass());
             progressBarBuilder.setConsumer(new DelegatingProgressBarConsumer(logger::info));
         }
-        Long count = null;
-        try {
-            count = step.maxItemCount();
-        } catch (Exception e) {
-            // ignore
-        }
-        if (count != null) {
-            progressBarBuilder.setInitialMax(count);
+        if (initialMax != null) {
+            progressBarBuilder.setInitialMax(initialMax.getAsLong());
         }
         this.progressBar = progressBarBuilder.build();
     }
 
     private ProgressBarStyle progressBarStyle() {
-        switch (progressArgs.getStyle()) {
+        switch (progressStyle) {
             case BAR:
                 return ProgressBarStyle.COLORFUL_UNICODE_BAR;
             case BLOCK:
@@ -70,7 +74,9 @@ public class ProgressStepExecutionListener<I, O> implements StepExecutionListene
     public void afterWrite(Chunk items) {
         if (progressBar != null) {
             progressBar.stepBy(items.size());
-            progressBar.setExtraMessage(step.statusMessage());
+            if (extraMessage != null) {
+                progressBar.setExtraMessage(extraMessage.get());
+            }
         }
     }
 
@@ -86,12 +92,44 @@ public class ProgressStepExecutionListener<I, O> implements StepExecutionListene
         return stepExecution.getExitStatus();
     }
 
-    public ProgressArgs getProgressArgs() {
-        return progressArgs;
+    public String getTaskName() {
+        return taskName;
     }
 
-    public void setProgressArgs(ProgressArgs args) {
-        this.progressArgs = args;
+    public void setTaskName(String taskName) {
+        this.taskName = taskName;
+    }
+
+    public LongSupplier getInitialMax() {
+        return initialMax;
+    }
+
+    public void setInitialMax(LongSupplier initialMax) {
+        this.initialMax = initialMax;
+    }
+
+    public Supplier<String> getExtraMessage() {
+        return extraMessage;
+    }
+
+    public void setExtraMessage(Supplier<String> extraMessage) {
+        this.extraMessage = extraMessage;
+    }
+
+    public Duration getUpdateInterval() {
+        return updateInterval;
+    }
+
+    public void setUpdateInterval(Duration updateInterval) {
+        this.updateInterval = updateInterval;
+    }
+
+    public ProgressStyle getProgressStyle() {
+        return progressStyle;
+    }
+
+    public void setProgressStyle(ProgressStyle progressStyle) {
+        this.progressStyle = progressStyle;
     }
 
 }

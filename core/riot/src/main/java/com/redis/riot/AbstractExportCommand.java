@@ -1,121 +1,132 @@
 package com.redis.riot;
 
+import java.time.temporal.ChronoUnit;
+
+import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import com.redis.riot.core.AbstractJobCommand;
-import com.redis.riot.core.Step;
+import com.redis.riot.core.RiotDuration;
+import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.RiotUtils;
 import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.RedisItemReader.ReaderMode;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.reader.KeyValueRead;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
+import com.redis.spring.batch.step.FlushingChunkProvider;
 
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
 public abstract class AbstractExportCommand extends AbstractJobCommand {
 
-	public static final ReaderMode DEFAULT_MODE = RedisItemReader.DEFAULT_MODE;
+    public static final RiotDuration DEFAULT_FLUSH_INTERVAL = RiotDuration.of(FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL,
+            ChronoUnit.MILLIS);
 
-	private static final String TASK_NAME = "Exporting";
-	private static final String VAR_SOURCE = "source";
+    public static final RiotDuration DEFAULT_IDLE_TIMEOUT = RiotDuration.of(FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT,
+            ChronoUnit.SECONDS);
 
-	@Option(names = "--mode", description = "Source for keys: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE})", paramLabel = "<name>")
-	private ReaderMode mode = DEFAULT_MODE;
+    private static final String VAR_SOURCE = "source";
 
-	@ArgGroup(exclusive = false)
-	private RedisReaderArgs readerArgs = new RedisReaderArgs();
+    @Option(names = "--flush-interval", description = "Max duration between flushes in live mode (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
+    private RiotDuration flushInterval = DEFAULT_FLUSH_INTERVAL;
 
-	@ArgGroup(exclusive = false)
-	private RedisReaderLiveArgs readerLiveArgs = new RedisReaderLiveArgs();
+    @Option(names = "--idle-timeout", description = "Min duration to consider reader complete in live mode, for example 3s 5m (default: no timeout).", paramLabel = "<dur>")
+    private RiotDuration idleTimeout = DEFAULT_IDLE_TIMEOUT;
 
-	@ArgGroup(exclusive = false)
-	private MemoryUsageArgs readerMemoryUsageArgs = new MemoryUsageArgs();
+    @ArgGroup(exclusive = false)
+    private RedisReaderArgs readerArgs = new RedisReaderArgs();
 
-	private RedisContext sourceRedisContext;
+    @ArgGroup(exclusive = false)
+    private MemoryUsageArgs memoryUsageArgs = new MemoryUsageArgs();
 
-	@Override
-	protected void initialize() {
-		super.initialize();
-		sourceRedisContext = sourceRedisContext();
-		sourceRedisContext.afterPropertiesSet();
-	}
+    private RedisContext sourceRedisContext;
 
-	@Override
-	protected void teardown() {
-		if (sourceRedisContext != null) {
-			sourceRedisContext.close();
-		}
-		super.teardown();
-	}
+    protected <K> ItemProcessor<KeyValue<K>, KeyValue<K>> keyValueFilter() {
+        KeyValueFilter<K> filter = new KeyValueFilter<>();
+        filter.setMemoryLimit(memoryUsageArgs.getLimit());
+        return filter;
+    }
 
-	protected void configure(StandardEvaluationContext context) {
-		context.setVariable(VAR_SOURCE, sourceRedisContext.getConnection().sync());
-	}
+    @Override
+    protected void initialize() {
+        super.initialize();
+        sourceRedisContext = sourceRedisContext();
+        sourceRedisContext.afterPropertiesSet();
+    }
 
-	protected void configureSourceRedisReader(RedisItemReader<?, ?> reader) {
-		configureAsyncStreamSupport(reader);
-		sourceRedisContext.configure(reader);
-		log.info("Configuring {} in {} mode", reader.getName(), mode);
-		reader.setMode(mode);
-		log.info("Configuring {} with {}", reader.getName(), readerArgs);
-		readerArgs.configure(reader);
-		if (mode != ReaderMode.SCAN) {
-			log.info("Configuring {} with {}", reader.getName(), readerLiveArgs);
-			readerLiveArgs.configure(reader);
-		}
-		if (readerMemoryUsageArgs.getLimit() != null && reader.getOperation() instanceof KeyValueRead) {
-			log.info("Configuring {} with {}", reader.getName(), readerMemoryUsageArgs);
-			readerMemoryUsageArgs.configure(reader);
-		}
-	}
+    protected <K, V, R extends RedisItemReader<K, V>> R configureSource(R reader) {
+        sourceRedisContext.configure(reader);
+        readerArgs.configure(reader);
+        reader.setMemoryUsage(memoryUsageArgs.memoryUsage());
+        return reader;
+    }
 
-	protected void configureSourceRedisWriter(RedisItemWriter<?, ?, ?> writer) {
-		log.info("Configuring source writer with Redis context");
-		sourceRedisContext.configure(writer);
-	}
+    protected <K, V, T> RiotStep<KeyValue<K>, T> step(String name, RedisItemReader<K, V> reader,
+            ItemProcessor<KeyValue<K>, T> processor, ItemWriter<T> writer, String taskName) {
+        RiotStep<KeyValue<K>, T> step = new RiotStep<>(name, reader, writer);
+        step.flushInterval(flushInterval.getValue());
+        step.idleTimeout(idleTimeout.getValue());
+        configureSource(reader);
+        step.taskName(taskName);
+        step.processor(RiotUtils.processor(keyValueFilter(), processor));
+        if (reader instanceof RedisScanItemReader) {
+            step.maxItemCount(BatchUtils.scanSizeEstimator((RedisScanItemReader<K, V>) reader));
+        }
+        return step;
+    }
 
-	protected abstract RedisContext sourceRedisContext();
+    @Override
+    protected void teardown() {
+        if (sourceRedisContext != null) {
+            sourceRedisContext.close();
+        }
+        super.teardown();
+    }
 
-	protected <O> Step<KeyValue<String>, O> step(ItemWriter<O> writer) {
-		RedisItemReader<String, String> reader = RedisItemReader.struct();
-		configureSourceRedisReader(reader);
-		Step<KeyValue<String>, O> step = new ExportStepHelper(log).step(reader, writer);
-		step.taskName(TASK_NAME);
-		return step;
-	}
+    protected void configure(StandardEvaluationContext context) {
+        context.setVariable(VAR_SOURCE, sourceRedisContext.getConnection().sync());
+    }
 
-	public ReaderMode getMode() {
-		return mode;
-	}
+    protected <K, V, T> RedisItemWriter<K, V, T> configureSource(RedisItemWriter<K, V, T> writer) {
+        sourceRedisContext.configure(writer);
+        return writer;
+    }
 
-	public void setMode(ReaderMode mode) {
-		this.mode = mode;
-	}
+    protected abstract RedisContext sourceRedisContext();
 
-	public RedisReaderArgs getReaderArgs() {
-		return readerArgs;
-	}
+    public RedisReaderArgs getReaderArgs() {
+        return readerArgs;
+    }
 
-	public void setReaderArgs(RedisReaderArgs args) {
-		this.readerArgs = args;
-	}
+    public void setReaderArgs(RedisReaderArgs args) {
+        this.readerArgs = args;
+    }
 
-	public RedisReaderLiveArgs getReaderLiveArgs() {
-		return readerLiveArgs;
-	}
+    public MemoryUsageArgs getMemoryUsageArgs() {
+        return memoryUsageArgs;
+    }
 
-	public void setReaderLiveArgs(RedisReaderLiveArgs args) {
-		this.readerLiveArgs = args;
-	}
+    public void setMemoryUsageArgs(MemoryUsageArgs args) {
+        this.memoryUsageArgs = args;
+    }
 
-	public MemoryUsageArgs getReaderMemoryUsageArgs() {
-		return readerMemoryUsageArgs;
-	}
+    public RiotDuration getFlushInterval() {
+        return flushInterval;
+    }
 
-	public void setReaderMemoryUsageArgs(MemoryUsageArgs args) {
-		this.readerMemoryUsageArgs = args;
-	}
+    public void setFlushInterval(RiotDuration interval) {
+        this.flushInterval = interval;
+    }
+
+    public RiotDuration getIdleTimeout() {
+        return idleTimeout;
+    }
+
+    public void setIdleTimeout(RiotDuration idleTimeout) {
+        this.idleTimeout = idleTimeout;
+    }
 
 }

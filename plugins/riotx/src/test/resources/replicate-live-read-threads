@@ -1,1 +1,0 @@
-riotx replicate --mode live --read-threads 3 redis://source redis://target

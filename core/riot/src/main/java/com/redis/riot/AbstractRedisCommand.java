@@ -2,8 +2,8 @@ package com.redis.riot;
 
 import com.redis.lettucemod.api.sync.RedisModulesCommands;
 import com.redis.riot.core.AbstractJobCommand;
-import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 
 import picocli.CommandLine.ArgGroup;
 
@@ -37,8 +37,7 @@ public abstract class AbstractRedisCommand extends AbstractJobCommand {
         return redisContext.getConnection().sync();
     }
 
-    protected void configure(RedisItemReader<?, ?> reader) {
-        configureAsyncStreamSupport(reader);
+    protected void configure(RedisScanItemReader<?, ?> reader) {
         redisContext.configure(reader);
     }
 

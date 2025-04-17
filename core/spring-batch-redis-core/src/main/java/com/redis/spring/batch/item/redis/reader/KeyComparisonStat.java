@@ -4,40 +4,34 @@ import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
 
 public class KeyComparisonStat {
 
-	private Status status;
-	private String type;
-	private long count;
+    private Status status;
 
-	public Status getStatus() {
-		return status;
-	}
+    private String type;
 
-	public void setStatus(Status status) {
-		this.status = status;
-	}
+    private long count;
 
-	public String getType() {
-		return type;
-	}
+    public Status getStatus() {
+        return status;
+    }
 
-	public void setType(String type) {
-		this.type = type;
-	}
+    public void setStatus(Status status) {
+        this.status = status;
+    }
 
-	public long getCount() {
-		return count;
-	}
+    public String getType() {
+        return type;
+    }
 
-	public void setCount(long count) {
-		this.count = count;
-	}
+    public void setType(String type) {
+        this.type = type;
+    }
 
-	public static KeyComparisonStat of(Status status, String type, long count) {
-		KeyComparisonStat stat = new KeyComparisonStat();
-		stat.setStatus(status);
-		stat.setType(type);
-		stat.setCount(count);
-		return stat;
-	}
+    public long getCount() {
+        return count;
+    }
+
+    public void setCount(long count) {
+        this.count = count;
+    }
 
 }

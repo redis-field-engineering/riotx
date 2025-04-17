@@ -15,64 +15,54 @@ import picocli.CommandLine.Parameters;
 @Command(name = "faker", description = "Import Faker data.")
 public class FakerImport extends AbstractRedisImportCommand {
 
-	public static final int DEFAULT_COUNT = 1000;
-	public static final Locale DEFAULT_LOCALE = Locale.ENGLISH;
+    public static final int DEFAULT_COUNT = 1000;
 
-	@Parameters(arity = "1..*", description = "Faker expressions in the form field1=\"exp\" field2=\"exp\" etc. For details see http://www.datafaker.net/documentation/expressions", paramLabel = "EXPRESSION")
-	private Map<String, String> fields = new LinkedHashMap<>();
+    public static final Locale DEFAULT_LOCALE = Locale.ENGLISH;
 
-	@Option(names = "--count", description = "Number of items to generate (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
-	private int count = DEFAULT_COUNT;
+    @Parameters(arity = "1..*", description = "Faker expressions in the form field1=\"exp\" field2=\"exp\" etc. For details see http://www.datafaker.net/documentation/expressions", paramLabel = "EXPRESSION")
+    private Map<String, String> fields = new LinkedHashMap<>();
 
-	@Option(names = "--infer", description = "Introspect given RediSearch index to infer Faker fields.", paramLabel = "<name>")
-	private String searchIndex;
+    @Option(names = "--count", description = "Number of items to generate (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    private int count = DEFAULT_COUNT;
 
-	@Option(names = "--locale", description = "Faker locale (default: ${DEFAULT-VALUE}).", paramLabel = "<tag>")
-	private Locale locale = DEFAULT_LOCALE;
+    @Option(names = "--locale", description = "Faker locale (default: ${DEFAULT-VALUE}).", paramLabel = "<tag>")
+    private Locale locale = DEFAULT_LOCALE;
 
-	@Override
-	protected Job job() {
-		return job(step(reader()).maxItemCount(count));
-	}
+    @Override
+    protected Job job() {
+        return job(step(reader()).maxItemCount(this::getCount));
+    }
 
-	private FakerItemReader reader() {
-		FakerItemReader reader = new FakerItemReader();
-		reader.setMaxItemCount(count);
-		reader.setLocale(locale);
-		reader.setExpressions(fields);
-		return reader;
-	}
+    private FakerItemReader reader() {
+        FakerItemReader reader = new FakerItemReader();
+        reader.setMaxItemCount(count);
+        reader.setLocale(locale);
+        reader.setExpressions(fields);
+        return reader;
+    }
 
-	public String getSearchIndex() {
-		return searchIndex;
-	}
+    public Locale getLocale() {
+        return locale;
+    }
 
-	public void setSearchIndex(String index) {
-		this.searchIndex = index;
-	}
+    public void setLocale(Locale locale) {
+        this.locale = locale;
+    }
 
-	public Locale getLocale() {
-		return locale;
-	}
+    public Map<String, String> getFields() {
+        return fields;
+    }
 
-	public void setLocale(Locale locale) {
-		this.locale = locale;
-	}
+    public void setFields(Map<String, String> fields) {
+        this.fields = fields;
+    }
 
-	public Map<String, String> getFields() {
-		return fields;
-	}
+    public int getCount() {
+        return count;
+    }
 
-	public void setFields(Map<String, String> fields) {
-		this.fields = fields;
-	}
-
-	public int getCount() {
-		return count;
-	}
-
-	public void setCount(int count) {
-		this.count = count;
-	}
+    public void setCount(int count) {
+        this.count = count;
+    }
 
 }
