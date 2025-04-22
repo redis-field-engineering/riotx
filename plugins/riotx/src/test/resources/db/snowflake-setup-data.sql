@@ -1,6 +1,10 @@
 CREATE DATABASE IF NOT EXISTS tb_101;
 USE DATABASE tb_101;
 
+-- uncomment if running this directly (not along with or after snowflake-roles.sql)
+-- CREATE OR REPLACE SCHEMA tb_101.raw_pos;
+-- CREATE OR REPLACE SCHEMA tb_101.raw_pos_cdc;
+
 CREATE OR REPLACE FILE FORMAT tb_101.public.csv_ff
 type = 'csv';
 
