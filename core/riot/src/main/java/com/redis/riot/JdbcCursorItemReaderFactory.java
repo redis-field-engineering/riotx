@@ -10,7 +10,7 @@ public class JdbcCursorItemReaderFactory {
     public static JdbcCursorItemReaderBuilder<Map<String, Object>> create(DatabaseReaderArgs readerArgs) {
         JdbcCursorItemReaderBuilder<Map<String, Object>> reader = new JdbcCursorItemReaderBuilder<>();
         reader.saveState(false);
-        reader.rowMapper(new ColumnMapRowMapper());
+        reader.rowMapper(new VariantColumnMapRowMapper());
         reader.fetchSize(readerArgs.getFetchSize());
         reader.maxRows(readerArgs.getMaxRows());
         reader.queryTimeout(Math.toIntExact(readerArgs.getQueryTimeout().getValue().toMillis()));
