@@ -184,11 +184,9 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
 
     protected Job job(Flow flow) {
         FlowJobBuilder job = jobBuilder().start(flow).build();
-        if (repeatEvery != null) {
-            job.incrementer(new RunIdIncrementer());
-            job.preventRestart();
-            job.listener(new RepeatJobExecutionListener(job, flow));
-        }
+        job.incrementer(new RunIdIncrementer());
+        job.preventRestart();
+        job.listener(new JobSuccessExecutionListener(job, flow));
         return job.build();
     }
 
@@ -210,7 +208,7 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         return builder;
     }
 
-    private class RepeatJobExecutionListener implements JobExecutionListener {
+    private class JobSuccessExecutionListener implements JobExecutionListener {
 
         private final FlowJobBuilder job;
 
@@ -218,7 +216,7 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
 
         private Job lastJob;
 
-        public RepeatJobExecutionListener(FlowJobBuilder job, Flow flow) {
+        public JobSuccessExecutionListener(FlowJobBuilder job, Flow flow) {
             this.job = job;
             this.flow = flow;
         }
@@ -228,6 +226,10 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
             if (jobExecution.getStatus() == BatchStatus.COMPLETED) {
                 if (null != onJobSuccessCallback) {
                     onJobSuccessCallback.run();
+                }
+
+                if (repeatEvery == null) {
+                    return;
                 }
 
                 log.info("Finished job, will run again in {}", repeatEvery);
