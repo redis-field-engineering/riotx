@@ -24,3 +24,11 @@ jobs:
         shell: bash
         run: ./gradlew build -S
 
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            build/reports/aggregate-tests/
+
