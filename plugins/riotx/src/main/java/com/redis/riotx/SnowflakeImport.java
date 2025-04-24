@@ -12,15 +12,11 @@ import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
 
+import com.redis.riot.*;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.riot.AbstractRedisImportCommand;
-import com.redis.riot.DataSourceArgs;
-import com.redis.riot.DatabaseReaderArgs;
-import com.redis.riot.JdbcCursorItemReaderFactory;
-import com.redis.riot.RedisContext;
 import com.redis.riot.core.RiotException;
 
 import io.lettuce.core.api.sync.RedisCommands;
@@ -197,7 +193,8 @@ public class SnowflakeImport extends AbstractRedisImportCommand {
             dataSourceArgs.setDriver(JDBC_DRIVER);
             dataSource = new InitSqlDataSource(dataSourceArgs.dataSource(), initSqlStatements);
             reader = JdbcCursorItemReaderFactory.create(readerArgs).sql(sql).name(sql).dataSource(dataSource)
-                    .preparedStatementSetter(ps -> setValues(dataSource, ps)).build();
+                    .preparedStatementSetter(ps -> setValues(dataSource, ps))
+                    .build();
         } catch (Exception e) {
             throw new RiotException("Could not initialize data source", e);
         }
