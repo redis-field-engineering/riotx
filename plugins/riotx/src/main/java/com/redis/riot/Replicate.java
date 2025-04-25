@@ -11,9 +11,6 @@ import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.util.StringUtils;
 
-import com.redis.riot.core.RiotException;
-import com.redis.riot.core.RiotStep;
-import com.redis.riot.core.RiotUtils;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;

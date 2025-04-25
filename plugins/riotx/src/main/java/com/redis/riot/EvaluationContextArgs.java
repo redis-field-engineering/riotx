@@ -9,8 +9,6 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.CollectionUtils;
 
 import com.redis.lettucemod.search.GeoLocation;
-import com.redis.riot.core.Expression;
-import com.redis.riot.core.RiotUtils;
 
 import lombok.ToString;
 import net.datafaker.Faker;

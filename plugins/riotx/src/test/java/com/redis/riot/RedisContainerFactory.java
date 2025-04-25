@@ -12,7 +12,7 @@ public class RedisContainerFactory {
 	}
 
 	public static RedisStackContainer stack() {
-		return new RedisStackContainer(RedisStackContainer.DEFAULT_IMAGE_NAME.withTag("7.2.0-v11"));
+		return new RedisStackContainer(RedisStackContainer.DEFAULT_IMAGE_NAME.withTag(RedisStackContainer.DEFAULT_TAG));
 	}
 
 	@SuppressWarnings("resource")

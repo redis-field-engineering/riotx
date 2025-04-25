@@ -8,8 +8,6 @@ import java.util.Set;
 import java.util.function.Function;
 
 import com.redis.lettucemod.timeseries.Sample;
-import com.redis.riot.core.processor.CollectionToMapFunction;
-import com.redis.riot.core.processor.StringToMapFunction;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 
 import io.lettuce.core.ScoredValue;

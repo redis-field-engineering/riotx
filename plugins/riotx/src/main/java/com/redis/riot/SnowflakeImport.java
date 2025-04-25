@@ -16,7 +16,6 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.riot.core.RiotException;
 
 import io.lettuce.core.api.sync.RedisCommands;
 import picocli.CommandLine;

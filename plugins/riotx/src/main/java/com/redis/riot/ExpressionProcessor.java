@@ -5,8 +5,6 @@ import java.util.Map;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.expression.EvaluationContext;
 
-import com.redis.riot.core.Expression;
-
 public class ExpressionProcessor implements ItemProcessor<Map<String, Object>, Map<String, Object>> {
 
 	private final EvaluationContext context;

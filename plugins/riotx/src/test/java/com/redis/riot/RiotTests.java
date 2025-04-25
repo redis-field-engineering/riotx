@@ -14,7 +14,6 @@ import org.slf4j.simple.SimpleLogger;
 import org.testcontainers.shaded.org.bouncycastle.util.encoders.Hex;
 
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.riot.core.ProgressStyle;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.Range;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;

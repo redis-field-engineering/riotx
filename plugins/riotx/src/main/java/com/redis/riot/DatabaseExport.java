@@ -11,8 +11,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
-import com.redis.riot.core.RiotException;
-
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;

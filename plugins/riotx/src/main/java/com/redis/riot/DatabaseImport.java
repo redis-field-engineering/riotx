@@ -2,7 +2,6 @@ package com.redis.riot;
 
 import java.util.Map;
 
-import com.redis.riot.core.RiotException;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 

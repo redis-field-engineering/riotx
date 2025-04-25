@@ -2,7 +2,6 @@ package com.redis.riot;
 
 import java.time.temporal.ChronoUnit;
 
-import com.redis.riot.core.RiotDuration;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.Wait;
 import com.redis.spring.batch.item.redis.writer.KeyValueWrite.WriteMode;

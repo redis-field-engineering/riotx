@@ -6,11 +6,7 @@ import java.util.List;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.simple.SimpleLogger;
 
-import com.redis.riot.core.AbstractJobCommand;
-import com.redis.riot.core.MainCommand;
-import com.redis.riot.core.ProgressStyle;
 import com.redis.riot.operation.OperationCommand;
-import com.redis.riot.test.AbstractRiotTestBase;
 
 import picocli.CommandLine.IExecutionStrategy;
 import picocli.CommandLine.ParseResult;

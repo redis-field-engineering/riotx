@@ -8,10 +8,7 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.expression.EvaluationContext;
 
-import com.redis.riot.core.Expression;
-import com.redis.riot.core.RiotUtils;
-import com.redis.riot.core.TemplateExpression;
-import com.redis.riot.core.processor.ConsumerUnaryOperator;
+import com.redis.riot.function.ConsumerUnaryOperator;
 import com.redis.riot.function.StreamItemProcessor;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 

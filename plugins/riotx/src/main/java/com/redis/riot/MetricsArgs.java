@@ -6,8 +6,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import com.redis.riot.core.RiotDuration;
-
 import io.lettuce.core.metrics.MicrometerCommandLatencyRecorder;
 import io.lettuce.core.metrics.MicrometerOptions;
 import io.lettuce.core.resource.ClientResources;

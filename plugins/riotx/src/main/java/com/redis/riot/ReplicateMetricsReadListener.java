@@ -2,7 +2,6 @@ package com.redis.riot;
 
 import java.time.Duration;
 
-import com.redis.riot.core.RiotUtils;
 import org.springframework.batch.core.ItemReadListener;
 import org.springframework.batch.core.observability.BatchMetrics;
 

@@ -2,8 +2,6 @@ package com.redis.riot;
 
 import org.springframework.batch.item.database.AbstractCursorItemReader;
 
-import com.redis.riot.core.RiotDuration;
-
 import lombok.ToString;
 import picocli.CommandLine.Option;
 

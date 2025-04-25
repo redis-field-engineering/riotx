@@ -40,8 +40,6 @@ import com.redis.lettucemod.search.SuggetOptions;
 import com.redis.lettucemod.timeseries.MRangeOptions;
 import com.redis.lettucemod.timeseries.RangeResult;
 import com.redis.lettucemod.timeseries.TimeRange;
-import com.redis.riot.core.Expression;
-import com.redis.riot.core.QuietMapAccessor;
 import com.redis.riot.file.xml.XmlItemReader;
 import com.redis.riot.file.xml.XmlItemReaderBuilder;
 import com.redis.riot.file.xml.XmlObjectReader;

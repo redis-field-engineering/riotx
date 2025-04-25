@@ -8,7 +8,6 @@ import org.springframework.util.StringUtils;
 
 import com.redis.lettucemod.search.CreateOptions;
 import com.redis.lettucemod.search.Field;
-import com.redis.riot.core.RiotStep;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;

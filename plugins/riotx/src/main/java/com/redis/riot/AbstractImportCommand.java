@@ -14,11 +14,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
-import com.redis.riot.core.AbstractJobCommand;
-import com.redis.riot.core.QuietMapAccessor;
-import com.redis.riot.core.RiotStep;
-import com.redis.riot.core.RiotUtils;
-import com.redis.riot.core.processor.PredicateOperator;
+import com.redis.riot.function.PredicateOperator;
 import com.redis.riot.operation.DelCommand;
 import com.redis.riot.operation.ExpireCommand;
 import com.redis.riot.operation.GeoaddCommand;

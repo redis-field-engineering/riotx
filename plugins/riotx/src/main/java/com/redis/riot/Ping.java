@@ -15,9 +15,6 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
 
-import com.redis.riot.core.IO;
-import com.redis.riot.core.RiotStep;
-
 import io.lettuce.core.metrics.CommandMetrics.CommandLatency;
 import io.lettuce.core.metrics.DefaultCommandLatencyCollectorOptions;
 import picocli.CommandLine.Command;

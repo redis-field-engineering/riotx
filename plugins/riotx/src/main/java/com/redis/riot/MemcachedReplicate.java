@@ -5,9 +5,6 @@ import java.util.concurrent.TimeoutException;
 
 import org.springframework.batch.core.Job;
 
-import com.redis.riot.core.AbstractJobCommand;
-import com.redis.riot.core.RiotException;
-import com.redis.riot.core.RiotStep;
 import com.redis.spring.batch.memcached.MemcachedEntry;
 import com.redis.spring.batch.memcached.MemcachedItemReader;
 import com.redis.spring.batch.memcached.MemcachedItemWriter;

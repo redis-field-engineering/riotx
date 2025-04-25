@@ -1,6 +1,5 @@
 package com.redis.riot;
 
-import com.redis.riot.core.MainCommand;
 import com.redis.riot.operation.OperationCommand;
 import com.redis.spring.batch.item.redis.common.Range;
 

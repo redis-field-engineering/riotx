@@ -16,7 +16,6 @@ import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.support.AbstractItemStreamItemWriter;
 import org.springframework.util.unit.DataSize;
 
-import com.redis.riot.core.RiotStep;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.KeyEventListenerContainer;

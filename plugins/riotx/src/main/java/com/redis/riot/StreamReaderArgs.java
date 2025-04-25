@@ -2,7 +2,6 @@ package com.redis.riot;
 
 import java.time.temporal.ChronoUnit;
 
-import com.redis.riot.core.RiotDuration;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader.AckPolicy;
 

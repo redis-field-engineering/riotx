@@ -6,9 +6,9 @@ import java.util.function.Function;
 
 import org.springframework.util.ObjectUtils;
 
-import com.redis.riot.core.processor.MapFilteringFunction;
-import com.redis.riot.core.processor.MapFlatteningFunction;
-import com.redis.riot.core.processor.ObjectToStringFunction;
+import com.redis.riot.function.MapFilteringFunction;
+import com.redis.riot.function.MapFlatteningFunction;
+import com.redis.riot.function.ObjectToStringFunction;
 
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;

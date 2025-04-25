@@ -28,14 +28,13 @@ test {
 }
 
 dependencies {
-    implementation(project(':riot-core')) {
-        exclude group: 'commons-logging', module: 'commons-logging'
-    }
     implementation project(':spring-batch-redis-core')
     implementation project(':spring-batch-memcached')
     implementation project(':riot-file')
     implementation project(':riot-faker')
     implementation project(':riot-parquet')
+    implementation 'org.slf4j:slf4j-simple'
+    implementation group: 'me.tongfei', name: 'progressbar', version: progressbarVersion
     implementation group: 'org.latencyutils', name: 'LatencyUtils', version: latencyUtilsVersion
     implementation 'org.springframework.batch:spring-batch-infrastructure'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
@@ -56,18 +55,14 @@ dependencies {
     implementation 'com.ibm.db2:jcc'
     implementation group: 'net.snowflake', name: 'snowflake-jdbc', version: snowflakeVersion
 
-    testImplementation project(':riot-test') 
     testImplementation project(':spring-batch-redis-test')
     testImplementation 'io.micrometer:micrometer-core'
-    testImplementation 'org.awaitility:awaitility'
     testImplementation 'org.hsqldb:hsqldb'
-    testImplementation 'org.springframework.boot:spring-boot-autoconfigure'
+    testImplementation 'org.springframework.batch:spring-batch-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-jdbc'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.batch:spring-batch-test'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:oracle-xe'
-    testImplementation 'org.hsqldb:hsqldb'
     testImplementation group: 'com.redis', name: 'testcontainers-memcached', version: testcontainersRedisVersion
     testImplementation group: 'com.redis', name: 'lettucemod', version: lettucemodVersion, classifier: 'tests'
     

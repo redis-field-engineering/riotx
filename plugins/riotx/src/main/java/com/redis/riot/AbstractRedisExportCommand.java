@@ -7,8 +7,7 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 
-import com.redis.riot.core.RiotStep;
-import com.redis.riot.core.processor.RegexNamedGroupFunction;
+import com.redis.riot.function.RegexNamedGroupFunction;
 import com.redis.riot.function.KeyValueMap;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.common.KeyValue;

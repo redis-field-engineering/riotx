@@ -4,8 +4,6 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ResourceBundle;
 
-import com.redis.riot.core.RiotUtils;
-
 public class RiotVersion {
 
 	private static final ResourceBundle BUNDLE = ResourceBundle.getBundle(RiotVersion.class.getName());

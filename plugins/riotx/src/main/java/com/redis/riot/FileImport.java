@@ -22,10 +22,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.MimeType;
 
-import com.redis.riot.core.RiotException;
-import com.redis.riot.core.RiotStep;
-import com.redis.riot.core.RiotUtils;
-import com.redis.riot.core.processor.RegexNamedGroupFunction;
+import com.redis.riot.function.RegexNamedGroupFunction;
 import com.redis.riot.file.FileReaderRegistry;
 import com.redis.riot.file.ReadOptions;
 import com.redis.riot.file.ReaderFactory;

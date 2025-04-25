@@ -17,8 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.springframework.util.StreamUtils;
 
-import com.redis.riot.core.AbstractJobCommand;
-import com.redis.riot.core.ProgressStyle;
 import com.redis.riot.operation.HsetCommand;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;

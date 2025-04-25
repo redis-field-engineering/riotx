@@ -7,8 +7,6 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.util.Assert;
 
-import com.redis.riot.core.RiotStep;
-import com.redis.riot.core.RiotUtils;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader;
 
 import io.lettuce.core.StreamMessage;

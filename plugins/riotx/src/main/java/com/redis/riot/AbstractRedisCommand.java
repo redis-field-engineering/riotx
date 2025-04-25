@@ -1,7 +1,6 @@
 package com.redis.riot;
 
 import com.redis.lettucemod.api.sync.RedisModulesCommands;
-import com.redis.riot.core.AbstractJobCommand;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 

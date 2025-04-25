@@ -6,10 +6,6 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
-import com.redis.riot.core.AbstractJobCommand;
-import com.redis.riot.core.RiotDuration;
-import com.redis.riot.core.RiotStep;
-import com.redis.riot.core.RiotUtils;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.BatchUtils;

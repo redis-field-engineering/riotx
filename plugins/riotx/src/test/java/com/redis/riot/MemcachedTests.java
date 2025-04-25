@@ -27,7 +27,6 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.util.ClassUtils;
 import org.testcontainers.utility.DockerImageName;
 
-import com.redis.riot.core.ProgressStyle;
 import com.redis.spring.batch.JobUtils;
 import com.redis.spring.batch.memcached.MemcachedEntry;
 import com.redis.spring.batch.memcached.MemcachedGeneratorItemReader;

@@ -8,9 +8,6 @@ import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.Assert;
 
-import com.redis.riot.core.RiotDuration;
-import com.redis.riot.core.RiotStep;
-import com.redis.riot.core.RiotUtils;
 import com.redis.riot.function.StringKeyValue;
 import com.redis.riot.function.ToStringKeyValue;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
