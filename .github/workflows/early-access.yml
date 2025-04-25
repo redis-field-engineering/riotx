@@ -51,7 +51,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: jlink
-          path: out/jreleaser/assemble/riotx-standalone/jlink
+          path: out/jreleaser/assemble/riot-standalone/jlink
 
       - name: Release
         uses: jreleaser/release-action@v2
@@ -75,7 +75,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: riotx-release
+          name: riot-release
           path: |
             out/jreleaser/trace.log
             out/jreleaser/output.properties

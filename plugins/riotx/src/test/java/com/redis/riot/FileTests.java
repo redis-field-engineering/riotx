@@ -20,8 +20,6 @@ import org.springframework.util.StreamUtils;
 import com.redis.riot.core.AbstractJobCommand;
 import com.redis.riot.core.ProgressStyle;
 import com.redis.riot.operation.HsetCommand;
-import com.redis.riotx.FileExport;
-import com.redis.riotx.FileImport;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
 import com.redis.spring.batch.test.AbstractTargetTestBase;

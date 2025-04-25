@@ -22,7 +22,7 @@ project:
       groupId: com.redis
       version: '21'
       multiProject: true
-      mainClass: com.redis.riotx.Riotx
+      mainClass: com.redis.riot.Riotx
   tags: ['riot-x', 'riotx', 'redis', 'enterprise', 'cloud', 'input', 'output', 'tool', 'data', 'import', 'export']
   extraProperties:
     linkDownload: '{{projectLinkHomepage}}/releases/download'

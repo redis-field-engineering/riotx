@@ -15,7 +15,6 @@ import org.junit.jupiter.api.TestInfo;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 
-import com.redis.riotx.AbstractRiotxApplicationTestBase;
 import com.redis.testcontainers.RedisServer;
 import com.redis.testcontainers.RedisStackContainer;
 
