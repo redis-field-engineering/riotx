@@ -2,6 +2,7 @@ package com.redis.riot;
 
 import java.time.Duration;
 
+import com.redis.riot.core.RiotUtils;
 import org.springframework.batch.core.ItemWriteListener;
 import org.springframework.batch.core.observability.BatchMetrics;
 import org.springframework.batch.item.Chunk;
@@ -43,7 +44,7 @@ public class ReplicateMetricsWriteListener<K> implements ItemWriteListener<KeyVa
 	private void onItem(KeyValue<K> item, String status) {
 		Duration lag = Duration.ofMillis(System.currentTimeMillis() - item.getTimestamp());
 		Tags tags = BatchUtils.tags(item, status);
-		RiotxMetrics.latency(meterRegistry, LAG_TIMER_NAME, LAG_TIMER_DESCRIPTION, lag, tags);
+		RiotUtils.latencyTimer(meterRegistry, LAG_TIMER_NAME, LAG_TIMER_DESCRIPTION, lag, tags);
 		if (item.getMemoryUsage() > 0) {
 			Counter bytes = Counter.builder(BYTES_COUNTER_NAME).description(BYTES_COUNTER_DESCRIPTION).tags(tags)
 					.register(meterRegistry);

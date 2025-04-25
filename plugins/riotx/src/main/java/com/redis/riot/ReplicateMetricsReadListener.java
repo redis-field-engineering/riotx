@@ -2,6 +2,7 @@ package com.redis.riot;
 
 import java.time.Duration;
 
+import com.redis.riot.core.RiotUtils;
 import org.springframework.batch.core.ItemReadListener;
 import org.springframework.batch.core.observability.BatchMetrics;
 
@@ -28,7 +29,7 @@ public class ReplicateMetricsReadListener<K> implements ItemReadListener<KeyValu
     @Override
     public void afterRead(KeyValue<K> item) {
         Duration latency = Duration.ofMillis(System.currentTimeMillis() - item.getTimestamp());
-        RiotxMetrics.latency(meterRegistry, LAG_TIMER_NAME, LAG_TIMER_DESCRIPTION, latency,
+        RiotUtils.latencyTimer(meterRegistry, LAG_TIMER_NAME, LAG_TIMER_DESCRIPTION, latency,
                 BatchUtils.tags(item, BatchMetrics.STATUS_SUCCESS));
     }
 
