@@ -22,7 +22,7 @@ import com.redis.testcontainers.RedisStackContainer;
 import picocli.CommandLine;
 
 @EnabledIfEnvironmentVariable(named = "JDBC_ADMIN_PASSWORD", matches = ".+")
-class SnowflakeTests extends AbstractRiotxApplicationTestBase {
+class SnowflakeTests extends AbstractRiotApplicationTestBase {
 
     private static final RedisStackContainer redis = new RedisStackContainer(
             RedisStackContainer.DEFAULT_IMAGE_NAME.withTag(RedisStackContainer.DEFAULT_TAG));
