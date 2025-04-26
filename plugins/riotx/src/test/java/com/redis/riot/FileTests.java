@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import com.redis.riot.core.ContentType;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -96,12 +97,12 @@ abstract class FileTests extends AbstractTargetTestBase {
         }
     }
 
-    private void configure(TestInfo info, AbstractRedisImportCommand callable) {
+    private void configure(TestInfo info, AbstractRedisImport callable) {
         configure(callable.getRedisArgs());
         configureJobCommand(info, callable);
     }
 
-    private void configure(TestInfo info, AbstractRedisExportCommand callable) {
+    private void configure(TestInfo info, AbstractRedisExport callable) {
         configure(callable.getRedisArgs());
         configureJobCommand(info, callable);
     }

@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.redis.riot.function.ObjectMapperFunction;
+import com.redis.riot.core.function.ObjectMapperFunction;
 import com.redis.spring.batch.item.redis.writer.impl.Set;
 
 import picocli.CommandLine.Command;

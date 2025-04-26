@@ -3,7 +3,7 @@ package com.redis.riot.operation;
 import java.util.Arrays;
 import java.util.Map;
 
-import com.redis.riot.function.ToScoredValue;
+import com.redis.riot.core.function.ToScoredValue;
 import com.redis.spring.batch.item.redis.writer.impl.Zadd;
 
 import picocli.CommandLine.ArgGroup;

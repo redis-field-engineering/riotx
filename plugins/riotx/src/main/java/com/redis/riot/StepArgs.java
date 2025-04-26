@@ -1,9 +1,14 @@
 package com.redis.riot;
 
+import com.redis.riot.core.RetryPolicy;
+import com.redis.riot.core.SkipPolicy;
+import com.redis.riot.core.StepOptions;
 import org.springframework.retry.policy.MaxAttemptsRetryPolicy;
 
 import lombok.ToString;
 import picocli.CommandLine.Option;
+
+import java.time.Duration;
 
 @ToString
 public class StepArgs {
@@ -19,7 +24,7 @@ public class StepArgs {
     public static final int DEFAULT_RETRY_LIMIT = MaxAttemptsRetryPolicy.DEFAULT_MAX_ATTEMPTS;
 
     @Option(names = "--sleep", description = "Duration to wait after each batch write, e.g. 1ms or 3s (default: no sleep).", paramLabel = "<dur>")
-    private RiotDuration sleep;
+    private Duration sleep;
 
     @Option(names = "--threads", description = "Number of concurrent threads to use for batch processing (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
     private int threads = DEFAULT_THREADS;
@@ -42,11 +47,11 @@ public class StepArgs {
     @Option(names = "--retry-limit", description = "Number of times to try failed items (default: ${DEFAULT-VALUE}). 0 and 1 both mean no retry. Use with limit retry policy", paramLabel = "<int>")
     private int retryLimit = DEFAULT_RETRY_LIMIT;
 
-    public RiotDuration getSleep() {
+    public Duration getSleep() {
         return sleep;
     }
 
-    public void setSleep(RiotDuration sleep) {
+    public void setSleep(Duration sleep) {
         this.sleep = sleep;
     }
 
@@ -104,6 +109,19 @@ public class StepArgs {
 
     public void setRetryPolicy(RetryPolicy retryPolicy) {
         this.retryPolicy = retryPolicy;
+    }
+
+    public StepOptions stepOptions() {
+        StepOptions options = new StepOptions();
+        options.setChunkSize(chunkSize);
+        options.setDryRun(dryRun);
+        options.setRetryLimit(retryLimit);
+        options.setRetryPolicy(retryPolicy);
+        options.setSkipLimit(skipLimit);
+        options.setSkipPolicy(skipPolicy);
+        options.setSleep(sleep);
+        options.setThreads(threads);
+        return options;
     }
 
 }

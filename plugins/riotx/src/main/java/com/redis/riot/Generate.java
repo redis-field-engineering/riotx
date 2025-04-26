@@ -3,6 +3,7 @@ package com.redis.riot;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.redis.riot.core.RiotStep;
 import org.springframework.batch.core.Job;
 import org.springframework.util.StringUtils;
 

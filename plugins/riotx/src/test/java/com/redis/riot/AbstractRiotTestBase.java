@@ -2,6 +2,7 @@ package com.redis.riot;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
@@ -16,7 +17,7 @@ import picocli.CommandLine.ParseResult;
 
 public abstract class AbstractRiotTestBase extends AbstractTargetTestBase {
 
-	public static final RiotDuration DEFAULT_IDLE_TIMEOUT = RiotDuration.ofSeconds(1);
+	public static final Duration DEFAULT_IDLE_TIMEOUT = Duration.ofSeconds(1);
 	public static final int DEFAULT_EVENT_QUEUE_CAPACITY = 100000;
 
 	static {

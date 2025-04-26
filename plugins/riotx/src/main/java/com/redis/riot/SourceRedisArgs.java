@@ -1,7 +1,10 @@
 package com.redis.riot;
 
 import java.io.File;
+import java.time.Duration;
 
+import com.redis.riot.core.ReadFrom;
+import com.redis.riot.core.RedisClientArgs;
 import io.lettuce.core.protocol.ProtocolVersion;
 import lombok.ToString;
 import picocli.CommandLine.Option;
@@ -16,7 +19,7 @@ public class SourceRedisArgs implements RedisClientArgs {
 	private char[] password;
 
 	@Option(names = "--source-timeout", description = "Source Redis command timeout, e.g. 30s or 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
-	private RiotDuration timeout = DEFAULT_TIMEOUT;
+	private Duration timeout = DEFAULT_TIMEOUT;
 
 	@Option(names = "--source-tls", description = "Establish a secure TLS connection to source.")
 	private boolean tls;
@@ -118,11 +121,11 @@ public class SourceRedisArgs implements RedisClientArgs {
 	}
 
 	@Override
-	public RiotDuration getTimeout() {
+	public Duration getTimeout() {
 		return timeout;
 	}
 
-	public void setTimeout(RiotDuration timeout) {
+	public void setTimeout(Duration timeout) {
 		this.timeout = timeout;
 	}
 

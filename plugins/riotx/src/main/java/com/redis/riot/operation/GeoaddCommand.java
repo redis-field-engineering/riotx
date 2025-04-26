@@ -3,7 +3,7 @@ package com.redis.riot.operation;
 import java.util.Map;
 import java.util.function.ToDoubleFunction;
 
-import com.redis.riot.function.ToGeoValue;
+import com.redis.riot.core.function.ToGeoValue;
 import com.redis.spring.batch.item.redis.writer.impl.Geoadd;
 
 import picocli.CommandLine.Command;

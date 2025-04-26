@@ -2,6 +2,7 @@ package com.redis.riot;
 
 import java.util.Map;
 
+import com.redis.riot.core.Expression;
 import lombok.ToString;
 import picocli.CommandLine.Option;
 

@@ -1,6 +1,6 @@
 package com.redis.riot;
 
-import java.time.temporal.ChronoUnit;
+import java.time.Duration;
 
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.Wait;
@@ -12,7 +12,7 @@ import picocli.CommandLine.Option;
 @ToString
 public class RedisWriterArgs {
 
-    public static final RiotDuration DEFAULT_WAIT_TIMEOUT = RiotDuration.of(Wait.DEFAULT_TIMEOUT, ChronoUnit.SECONDS);
+    public static final Duration DEFAULT_WAIT_TIMEOUT = Wait.DEFAULT_TIMEOUT;
 
     public static final int DEFAULT_POOL_SIZE = RedisItemWriter.DEFAULT_POOL_SIZE;
 
@@ -23,7 +23,7 @@ public class RedisWriterArgs {
     private int waitReplicas;
 
     @Option(names = "--wait-timeout", description = "Timeout for WAIT command (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
-    private RiotDuration waitTimeout = DEFAULT_WAIT_TIMEOUT;
+    private Duration waitTimeout = DEFAULT_WAIT_TIMEOUT;
 
     @Option(names = "--merge", description = "Merge collection data structures (hash, list, ...) instead of overwriting them. Only used in `--struct` mode.")
     private boolean merge;
@@ -41,7 +41,7 @@ public class RedisWriterArgs {
     private Wait redisWait() {
         Wait wait = new Wait();
         wait.setReplicas(waitReplicas);
-        wait.setTimeout(waitTimeout.getValue());
+        wait.setTimeout(waitTimeout);
         return wait;
     }
 
@@ -61,11 +61,11 @@ public class RedisWriterArgs {
         this.waitReplicas = waitReplicas;
     }
 
-    public RiotDuration getWaitTimeout() {
+    public Duration getWaitTimeout() {
         return waitTimeout;
     }
 
-    public void setWaitTimeout(RiotDuration waitTimeout) {
+    public void setWaitTimeout(Duration waitTimeout) {
         this.waitTimeout = waitTimeout;
     }
 

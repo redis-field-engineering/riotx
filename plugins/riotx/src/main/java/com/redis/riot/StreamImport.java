@@ -2,6 +2,8 @@ package com.redis.riot;
 
 import java.util.Map;
 
+import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.RiotUtils;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
@@ -17,7 +19,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
 @Command(name = "stream-import", description = "Import data from a Redis stream.")
-public class StreamImport extends AbstractTargetRedisImportCommand {
+public class StreamImport extends AbstractTargetRedisImport {
 
     private static final String TASK_NAME = "Importing";
 

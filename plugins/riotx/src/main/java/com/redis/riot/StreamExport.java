@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.redis.riot.core.RiotStep;
 import org.springframework.batch.core.Job;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -22,7 +23,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @Command(name = "stream-export", description = "Export Redis data to a Redis stream.")
-public class StreamExport extends AbstractRedisTargetExportCommand {
+public class StreamExport extends AbstractRedisTargetExport {
 
     public static final String DEFAULT_STREAM = "stream:export";
 

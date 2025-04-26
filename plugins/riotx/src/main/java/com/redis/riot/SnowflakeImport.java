@@ -12,6 +12,10 @@ import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
 
+import com.redis.riot.core.RedisContext;
+import com.redis.riot.core.RiotException;
+import com.redis.riot.db.InitSqlDataSource;
+import com.redis.riot.db.JdbcReaderFactory;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 
@@ -24,7 +28,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @CommandLine.Command(name = "snowflake-import", description = "Import from a snowflake table (uses Snowflake Streams to track changes).")
-public class SnowflakeImport extends AbstractRedisImportCommand {
+public class SnowflakeImport extends AbstractRedisImport {
 
     public enum SnapshotMode {
         INITIAL, NEVER
@@ -92,7 +96,7 @@ public class SnowflakeImport extends AbstractRedisImportCommand {
     }
 
     private Runnable afterSuccess(DataSource dataSource, RedisContext redisContext, String fullStreamName, String offsetKey,
-            String tempTable, String newOffset) {
+                                  String tempTable, String newOffset) {
         RedisCommands<String, String> syncCommands = redisContext.getConnection().sync();
 
         return () -> {
@@ -190,7 +194,7 @@ public class SnowflakeImport extends AbstractRedisImportCommand {
         try {
             dataSourceArgs.setDriver(JDBC_DRIVER);
             dataSource = new InitSqlDataSource(dataSourceArgs.dataSource(), initSqlStatements);
-            reader = JdbcCursorItemReaderFactory.create(readerArgs).sql(sql).name(sql).dataSource(dataSource)
+            reader = JdbcReaderFactory.create(readerArgs.readerOptions()).sql(sql).name(sql).dataSource(dataSource)
                     .preparedStatementSetter(ps -> setValues(dataSource, ps))
                     .build();
         } catch (Exception e) {
@@ -219,12 +223,21 @@ public class SnowflakeImport extends AbstractRedisImportCommand {
             onJobSuccessCallback = afterSuccess(dataSource, redisContext, fullStreamName, offsetKey, tempTable, newOffset);
         }
     }
+
     public DataSourceArgs getDataSourceArgs() {
         return dataSourceArgs;
     }
 
     public void setDataSourceArgs(DataSourceArgs args) {
         this.dataSourceArgs = args;
+    }
+
+    public DatabaseReaderArgs getReaderArgs() {
+        return readerArgs;
+    }
+
+    public void setReaderArgs(DatabaseReaderArgs readerArgs) {
+        this.readerArgs = readerArgs;
     }
 }
 

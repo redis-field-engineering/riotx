@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import com.redis.lettucemod.search.Suggestion;
-import com.redis.riot.function.ToSuggestion;
+import com.redis.riot.core.function.ToSuggestion;
 import com.redis.spring.batch.item.redis.writer.impl.Sugadd;
 
 import picocli.CommandLine.ArgGroup;

@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.convert.DurationStyle;
 
-import com.redis.riot.function.FieldExtractorFactory.MissingFieldException;
-import com.redis.riot.function.IdFunctionBuilder;
+import com.redis.riot.core.function.FieldExtractorFactory.MissingFieldException;
+import com.redis.riot.core.function.IdFunctionBuilder;
 
 class ConverterTests {
 

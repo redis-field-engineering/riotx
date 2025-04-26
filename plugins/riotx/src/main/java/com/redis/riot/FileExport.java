@@ -7,6 +7,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.redis.riot.core.ContentType;
+import com.redis.riot.core.RiotException;
+import com.redis.riot.parquet.ParquetFieldType;
+import com.redis.riot.parquet.ParquetFileItemWriter;
+import com.redis.riot.core.RiotStep;
+import com.redis.riot.parquet.ParquetFileNameMap;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Types;
@@ -39,7 +45,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @Command(name = "file-export", description = "Export Redis data to files.")
-public class FileExport extends AbstractRedisExportCommand {
+public class FileExport extends AbstractRedisExport {
 
     @Parameters(arity = "0..1", description = "File path or URL. If omitted, export is written to stdout.", paramLabel = "FILE")
     private String file = StdOutProtocolResolver.DEFAULT_FILENAME;
@@ -99,8 +105,8 @@ public class FileExport extends AbstractRedisExportCommand {
         } catch (IOException e) {
             throw new RiotException(String.format("Could not create resource from file %s", file), e);
         }
-        MimeType type = writeOptions.getContentType() == null ? resourceMap.getContentTypeFor(resource)
-                : writeOptions.getContentType();
+        MimeType type =
+                writeOptions.getContentType() == null ? resourceMap.getContentTypeFor(resource) : writeOptions.getContentType();
         WriterFactory writerFactory = writerRegistry.getWriterFactory(type);
         Assert.notNull(writerFactory, String.format("No writer found for file %s", file));
         ItemWriter<?> writer = writerFactory.create(resource, writeOptions);
@@ -114,7 +120,7 @@ public class FileExport extends AbstractRedisExportCommand {
 
     protected boolean isFlatFile(MimeType type) {
         return ResourceMap.CSV.equals(type) || ResourceMap.PSV.equals(type) || ResourceMap.TSV.equals(type)
-                || ResourceMap.TEXT.equals(type) || FileImport.MIME_TYPE_PARQUET.equals(type);
+                || ResourceMap.TEXT.equals(type) || ParquetFileNameMap.MIME_TYPE_PARQUET.equals(type);
     }
 
     @SuppressWarnings("rawtypes")
@@ -174,7 +180,7 @@ public class FileExport extends AbstractRedisExportCommand {
 
     protected FileWriterRegistry writerRegistry() {
         FileWriterRegistry registry = FileWriterRegistry.defaultWriterRegistry();
-        registry.register(FileImport.MIME_TYPE_PARQUET, this::parquetFileWriter);
+        registry.register(ParquetFileNameMap.MIME_TYPE_PARQUET, this::parquetFileWriter);
         return registry;
     }
 

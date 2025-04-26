@@ -1,7 +1,10 @@
 package com.redis.riot;
 
 import java.io.File;
+import java.time.Duration;
 
+import com.redis.riot.core.ReadFrom;
+import com.redis.riot.core.RedisClientArgs;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.protocol.ProtocolVersion;
 import lombok.ToString;
@@ -33,7 +36,7 @@ public class RedisArgs implements RedisClientArgs {
 	private char[] password;
 
 	@Option(names = "--timeout", description = "Redis command timeout, e.g. 30s or 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
-	private RiotDuration timeout = DEFAULT_TIMEOUT;
+	private Duration timeout = DEFAULT_TIMEOUT;
 
 	@Option(names = { "-n", "--db" }, description = "Redis database number.", paramLabel = "<db>")
 	private int database = DEFAULT_DATABASE;
@@ -227,11 +230,11 @@ public class RedisArgs implements RedisClientArgs {
 	}
 
 	@Override
-	public RiotDuration getTimeout() {
+	public Duration getTimeout() {
 		return timeout;
 	}
 
-	public void setTimeout(RiotDuration timeout) {
+	public void setTimeout(Duration timeout) {
 		this.timeout = timeout;
 	}
 

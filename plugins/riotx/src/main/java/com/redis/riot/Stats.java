@@ -6,6 +6,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import com.redis.riot.core.RiotStep;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.StepExecution;
@@ -50,7 +51,7 @@ public class Stats extends AbstractRedisCommand {
     private DataSize rate = StatsPrinter.DEFAULT_WRITE_BANDWIDTH_THRESHOLD;
 
     @Option(names = "--keyspace", description = "Regular expression to extract the keyspace from a key (default: ${DEFAULT-VALUE}).", paramLabel = "<reg>")
-    private Pattern keyspacePattern = Pattern.compile(DatabaseStats.DEFAULT_KEYSPACE_REGEX);
+    private Pattern keyspacePattern = Pattern.compile(RedisStats.DEFAULT_KEYSPACE_REGEX);
 
     @Option(names = "--quantiles", description = "Key size percentiles to report (default: ${DEFAULT-VALUE}).", paramLabel = "<per>")
     private short[] quantiles = StatsPrinter.DEFAULT_QUANTILES;
@@ -60,7 +61,7 @@ public class Stats extends AbstractRedisCommand {
         RedisScanItemReader<String, String> reader = RedisItemReader.scanStruct();
         reader.setMemoryUsage(memoryUsage());
         configure(reader);
-        DatabaseStats stats = new DatabaseStats();
+        RedisStats stats = new RedisStats();
         stats.setKeyspacePattern(keyspacePattern);
         stats.setBigKeyPredicate(kv -> kv.getMemoryUsage() >= memUsage.toBytes());
         KeyEventListenerContainer<String, String> listenerContainer = KeyEventListenerContainer
@@ -83,7 +84,7 @@ public class Stats extends AbstractRedisCommand {
         return false;
     }
 
-    private StatsPrinter statsPrinter(DatabaseStats stats) {
+    private StatsPrinter statsPrinter(RedisStats stats) {
         StatsPrinter printer = new StatsPrinter(stats, System.out);
         printer.setWriteBandwidthThreshold(rate);
         printer.setQuantiles(quantiles);
@@ -100,7 +101,7 @@ public class Stats extends AbstractRedisCommand {
 
     private static class StatsWriter extends AbstractItemStreamItemWriter<KeyValue<String>> {
 
-        private final DatabaseStats stats;
+        private final RedisStats stats;
 
         private final KeyEventListenerContainer<String, String> listenerContainer;
 
@@ -108,8 +109,8 @@ public class Stats extends AbstractRedisCommand {
 
         private final String keyPattern;
 
-        public StatsWriter(DatabaseStats stats, KeyEventListenerContainer<String, String> listenerContainer, int database,
-                String keyPattern) {
+        public StatsWriter(RedisStats stats, KeyEventListenerContainer<String, String> listenerContainer, int database,
+                           String keyPattern) {
             this.stats = stats;
             this.listenerContainer = listenerContainer;
             this.database = database;

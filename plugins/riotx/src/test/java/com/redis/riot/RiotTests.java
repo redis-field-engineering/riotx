@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redis.lettucemod.Beers;
+import com.redis.riot.core.CompareMode;
+import com.redis.riot.core.ReplicationMode;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import io.lettuce.core.LettuceFutures;
 import io.lettuce.core.RedisFuture;

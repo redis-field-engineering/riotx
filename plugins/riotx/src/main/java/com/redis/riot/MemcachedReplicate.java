@@ -3,6 +3,10 @@ package com.redis.riot;
 import java.security.GeneralSecurityException;
 import java.util.concurrent.TimeoutException;
 
+import com.redis.riot.core.InetSocketAddressList;
+import com.redis.riot.core.MemcachedContext;
+import com.redis.riot.core.RiotException;
+import com.redis.riot.core.RiotStep;
 import org.springframework.batch.core.Job;
 
 import com.redis.spring.batch.memcached.MemcachedEntry;

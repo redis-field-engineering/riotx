@@ -13,7 +13,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @Command(name = "faker", description = "Import Faker data.")
-public class FakerImport extends AbstractRedisImportCommand {
+public class FakerImport extends AbstractRedisImport {
 
     public static final int DEFAULT_COUNT = 1000;
 

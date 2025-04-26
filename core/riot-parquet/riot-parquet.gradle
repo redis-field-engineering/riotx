@@ -1,4 +1,6 @@
 dependencies {
+    implementation project(':riot-core')
+    implementation project(':spring-batch-redis-common')
     implementation(group: 'org.apache.parquet', name: 'parquet-avro', version: parquetVersion) {
         exclude group: 'org.slf4j', module: 'slf4j-reload4j'
     }
@@ -11,6 +13,7 @@ dependencies {
     implementation(group: 'org.apache.hadoop', name: 'hadoop-mapreduce-client-core', version: hadoopVersion) {
         exclude group: 'org.slf4j', module: 'slf4j-reload4j'
     }
+
     testImplementation 'org.mockito:mockito-junit-jupiter'
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation 'org.slf4j:jcl-over-slf4j'

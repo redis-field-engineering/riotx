@@ -3,6 +3,7 @@ package com.redis.riot;
 import java.util.Arrays;
 import java.util.List;
 
+import com.redis.riot.core.CompareMode;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.simple.SimpleLogger;
 
@@ -60,25 +61,25 @@ public abstract class AbstractRiotApplicationTestBase extends AbstractRiotTestBa
                 if (command instanceof AbstractRedisCommand) {
                     configure(((AbstractRedisCommand) command).getRedisArgs());
                 }
-                if (command instanceof AbstractRedisExportCommand) {
-                    configure(((AbstractRedisExportCommand) command).getRedisArgs());
+                if (command instanceof AbstractRedisExport) {
+                    configure(((AbstractRedisExport) command).getRedisArgs());
                 }
-                if (command instanceof AbstractRedisImportCommand) {
-                    configure(((AbstractRedisImportCommand) command).getRedisArgs());
+                if (command instanceof AbstractRedisImport) {
+                    configure(((AbstractRedisImport) command).getRedisArgs());
                 }
-                if (command instanceof AbstractExportCommand) {
-                    ((AbstractExportCommand) command).setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
-                    ((AbstractExportCommand) command).getReaderArgs().setEventQueueCapacity(DEFAULT_EVENT_QUEUE_CAPACITY);
+                if (command instanceof AbstractExport) {
+                    ((AbstractExport) command).setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
+                    ((AbstractExport) command).getReaderArgs().setEventQueueCapacity(DEFAULT_EVENT_QUEUE_CAPACITY);
                 }
-                if (command instanceof AbstractRedisTargetExportCommand) {
-                    AbstractRedisTargetExportCommand targetCommand = (AbstractRedisTargetExportCommand) command;
+                if (command instanceof AbstractRedisTargetExport) {
+                    AbstractRedisTargetExport targetCommand = (AbstractRedisTargetExport) command;
                     targetCommand.setSourceRedisUri(redisURI);
                     targetCommand.getSourceRedisArgs().setCluster(getRedisServer().isRedisCluster());
                     targetCommand.setTargetRedisUri(targetRedisURI);
                     configure(targetCommand.getTargetRedisArgs());
                 }
-                if (command instanceof AbstractTargetRedisImportCommand) {
-                    AbstractTargetRedisImportCommand redisImport = (AbstractTargetRedisImportCommand) command;
+                if (command instanceof AbstractTargetRedisImport) {
+                    AbstractTargetRedisImport redisImport = (AbstractTargetRedisImport) command;
                     configure(redisImport.getSourceRedisArgs());
                     if (redisImport.getTargetRedisUri() != null) {
                         redisImport.setTargetRedisUri(targetRedisURI);

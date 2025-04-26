@@ -4,6 +4,7 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import com.redis.riot.core.RiotException;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
@@ -17,7 +18,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @Command(name = "db-export", description = "Export Redis data to a relational database.")
-public class DatabaseExport extends AbstractRedisExportCommand {
+public class DatabaseExport extends AbstractRedisExport {
 
     public static final boolean DEFAULT_ASSERT_UPDATES = true;
 

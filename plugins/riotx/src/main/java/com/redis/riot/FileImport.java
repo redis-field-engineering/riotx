@@ -13,6 +13,13 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.redis.riot.core.KeyValueDeserializer;
+import com.redis.riot.core.RiotException;
+import com.redis.riot.parquet.ParquetFileItemReader;
+import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.RiotUtils;
+import com.redis.riot.core.function.ToMapFunction;
+import com.redis.riot.parquet.ParquetFileNameMap;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
@@ -22,7 +29,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.MimeType;
 
-import com.redis.riot.function.RegexNamedGroupFunction;
+import com.redis.riot.core.function.RegexNamedGroupFunction;
 import com.redis.riot.file.FileReaderRegistry;
 import com.redis.riot.file.ReadOptions;
 import com.redis.riot.file.ReaderFactory;
@@ -30,7 +37,7 @@ import com.redis.riot.file.ResourceFactory;
 import com.redis.riot.file.ResourceMap;
 import com.redis.riot.file.RiotResourceMap;
 import com.redis.riot.file.StdInProtocolResolver;
-import com.redis.riot.function.MapToFieldFunction;
+import com.redis.riot.core.function.MapToFieldFunction;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 
@@ -40,9 +47,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @Command(name = "file-import", description = "Import data from files.")
-public class FileImport extends AbstractRedisImportCommand {
-
-    public static final MimeType MIME_TYPE_PARQUET = new MimeType("application", "x-parquet");
+public class FileImport extends AbstractRedisImport {
 
     public static final String STDIN_FILENAME = "-";
 
@@ -71,7 +76,7 @@ public class FileImport extends AbstractRedisImportCommand {
 
     private FileReaderRegistry readerRegistry() {
         FileReaderRegistry registry = FileReaderRegistry.defaultReaderRegistry();
-        registry.register(MIME_TYPE_PARQUET, this::parquetFileReader);
+        registry.register(ParquetFileNameMap.MIME_TYPE_PARQUET, this::parquetFileReader);
         return registry;
     }
 
@@ -124,8 +129,8 @@ public class FileImport extends AbstractRedisImportCommand {
         } catch (IOException e) {
             throw new RiotException(String.format("Could not create resource from %s", location), e);
         }
-        MimeType type = readOptions.getContentType() == null ? resourceMap.getContentTypeFor(resource)
-                : readOptions.getContentType();
+        MimeType type =
+                readOptions.getContentType() == null ? resourceMap.getContentTypeFor(resource) : readOptions.getContentType();
         ReaderFactory readerFactory = readerRegistry.getReaderFactory(type);
         Assert.notNull(readerFactory, () -> String.format("No reader found for file %s", location));
         ItemReader<?> reader = readerFactory.create(resource, readOptions);

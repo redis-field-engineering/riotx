@@ -1,10 +1,13 @@
 package com.redis.riot;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
+import com.redis.riot.core.RiotException;
+import com.redis.riot.core.RiotStep;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.ItemWriteListener;
@@ -53,7 +56,7 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
     private String jobName;
 
     @Option(names = "--repeat", description = "After the job completes keep repeating it on a fixed interval (ex 5m, 1h)", paramLabel = "<dur>")
-    private RiotDuration repeatEvery;
+    private Duration repeatEvery;
 
     @ArgGroup(exclusive = false, heading = "Job options%n")
     private StepArgs stepArgs = new StepArgs();
@@ -191,7 +194,7 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
     }
 
     protected <I, O> SimpleStepBuilder<I, O> step(RiotStep<I, O> step) {
-        step.stepArgs(stepArgs);
+        step.stepOptions(stepArgs.stepOptions());
         step.transactionManager(transactionManager);
         step.jobRepository(jobRepository);
         SimpleStepBuilder<I, O> builder = step.build();
@@ -201,7 +204,7 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
             listener.setInitialMax(step.getMaxItemCount());
             listener.setExtraMessage(step.getExtraMessage());
             listener.setProgressStyle(progressArgs.getStyle());
-            listener.setUpdateInterval(progressArgs.getUpdateInterval().getValue());
+            listener.setUpdateInterval(progressArgs.getUpdateInterval());
             builder.listener((StepExecutionListener) listener);
             builder.listener((ItemWriteListener<?>) listener);
         }
@@ -234,7 +237,7 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
 
                 log.info("Finished job, will run again in {}", repeatEvery);
                 try {
-                    Thread.sleep(repeatEvery.getValue().toMillis());
+                    Thread.sleep(repeatEvery.toMillis());
                     if (lastJob == null) {
                         lastJob = job.build();
                     }

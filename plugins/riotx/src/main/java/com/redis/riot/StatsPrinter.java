@@ -1,5 +1,12 @@
 package com.redis.riot;
 
+import com.github.freva.asciitable.AsciiTable;
+import com.github.freva.asciitable.Column;
+import com.github.freva.asciitable.ColumnData;
+import com.github.freva.asciitable.HorizontalAlign;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import org.springframework.util.unit.DataSize;
+
 import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -7,16 +14,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import org.springframework.util.unit.DataSize;
-
-import com.github.freva.asciitable.AsciiTable;
-import com.github.freva.asciitable.Column;
-import com.github.freva.asciitable.ColumnData;
-import com.github.freva.asciitable.HorizontalAlign;
-import com.redis.riot.DatabaseStats.BigKey;
-import com.redis.riot.DatabaseStats.Keyspace;
-import com.redis.spring.batch.item.redis.common.KeyValue;
 
 public class StatsPrinter {
 
@@ -30,7 +27,7 @@ public class StatsPrinter {
 
     private static final Object CURSOR_DOWN = "\033[K";
 
-    private static final Comparator<? super BigKey> DESC_BANDWIDTH = Comparator.comparing(BigKey::writeBandwidth).reversed();
+    private static final Comparator<? super RedisStats.BigKey> DESC_BANDWIDTH = Comparator.comparing(RedisStats.BigKey::writeBandwidth).reversed();
 
     private static final String NEWLINE = System.lineSeparator();
 
@@ -38,7 +35,7 @@ public class StatsPrinter {
 
     private final DecimalFormat longFormat = new DecimalFormat("###,###,###");
 
-    private final DatabaseStats stats;
+    private final RedisStats stats;
 
     private short[] quantiles = DEFAULT_QUANTILES;
 
@@ -50,7 +47,7 @@ public class StatsPrinter {
 
     private DataSize writeBandwidthThreshold = DEFAULT_WRITE_BANDWIDTH_THRESHOLD;
 
-    public StatsPrinter(DatabaseStats stats, PrintStream out) {
+    public StatsPrinter(RedisStats stats, PrintStream out) {
         this.stats = stats;
         this.out = out;
     }
@@ -68,12 +65,12 @@ public class StatsPrinter {
         }
 
         Printer printer = new Printer();
-        List<Keyspace> keyspaces = stats.keyspaces();
+        List<RedisStats.Keyspace> keyspaces = stats.keyspaces();
         printer.append(AsciiTable.builder().border(tableBorder.getBorder()).data(keyspaces, statsColumns()).toString());
 
         printer.append(" ");
 
-        List<BigKey> problemKeys = problemKeys();
+        List<RedisStats.BigKey> problemKeys = problemKeys();
         if (problemKeys.isEmpty()) {
             printer.append("No problematic keys detected");
         } else {
@@ -90,11 +87,11 @@ public class StatsPrinter {
         out.flush();
     }
 
-    private List<BigKey> problemKeys() {
+    private List<RedisStats.BigKey> problemKeys() {
         return stats.bigKeys().stream().filter(this::aboveBandwidth).sorted(DESC_BANDWIDTH).collect(Collectors.toList());
     }
 
-    private boolean aboveBandwidth(BigKey key) {
+    private boolean aboveBandwidth(RedisStats.BigKey key) {
         return key.writeBandwidth().compareTo(writeBandwidthThreshold) >= 0;
     }
 
@@ -116,9 +113,9 @@ public class StatsPrinter {
 
     }
 
-    private List<ColumnData<Keyspace>> statsColumns() {
-        List<ColumnData<Keyspace>> columns = new ArrayList<>();
-        columns.add(string("keyspace", Keyspace::getPrefix));
+    private List<ColumnData<RedisStats.Keyspace>> statsColumns() {
+        List<ColumnData<RedisStats.Keyspace>> columns = new ArrayList<>();
+        columns.add(string("keyspace", RedisStats.Keyspace::getPrefix));
         columns.add(number("hash", typeCount(KeyValue.TYPE_HASH)));
         columns.add(number("json", typeCount(KeyValue.TYPE_JSON)));
         columns.add(number("list", typeCount(KeyValue.TYPE_LIST)));
@@ -134,18 +131,18 @@ public class StatsPrinter {
         return columns;
     }
 
-    private Function<Keyspace, String> typeCount(String type) {
+    private Function<RedisStats.Keyspace, String> typeCount(String type) {
         return row -> format(row.getTypeCounts().getOrDefault(type, 0));
     }
 
-    private ColumnData<Keyspace> quantileColumn(short quantile) {
+    private ColumnData<RedisStats.Keyspace> quantileColumn(short quantile) {
         return number(String.format("p%s", quantile),
                 row -> toString(DataSize.ofBytes(Math.round(row.getMemoryUsage().quantile(quantile / 100)))));
     }
 
-    private List<ColumnData<BigKey>> problemKeyColumns() {
-        List<ColumnData<BigKey>> columns = new ArrayList<>();
-        columns.add(string("Problem Key", BigKey::getKey));
+    private List<ColumnData<RedisStats.BigKey>> problemKeyColumns() {
+        List<ColumnData<RedisStats.BigKey>> columns = new ArrayList<>();
+        columns.add(string("Problem Key", RedisStats.BigKey::getKey));
         columns.add(string("Type", r -> type(r.getType())));
         columns.add(number("Size", k -> toString(k.getMemoryUsage())));
         columns.add(number("Ops/s", k -> format(k.getWriteThroughput())));

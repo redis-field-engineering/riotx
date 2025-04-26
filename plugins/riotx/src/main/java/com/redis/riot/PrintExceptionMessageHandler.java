@@ -1,5 +1,6 @@
 package com.redis.riot;
 
+import com.redis.riot.core.RiotException;
 import picocli.CommandLine;
 import picocli.CommandLine.IExecutionExceptionHandler;
 import picocli.CommandLine.ParseResult;

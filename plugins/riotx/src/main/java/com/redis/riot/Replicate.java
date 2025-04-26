@@ -2,6 +2,7 @@ package com.redis.riot;
 
 import java.io.IOException;
 
+import com.redis.riot.core.*;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.flow.support.SimpleFlow;

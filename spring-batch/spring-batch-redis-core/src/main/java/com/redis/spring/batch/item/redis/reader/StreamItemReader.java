@@ -196,10 +196,8 @@ public class StreamItemReader<K, V> extends AbstractItemCountingItemStreamItemRe
         /**
          * Reads messages from a stream
          * 
-         * @param redisCommands Synchronous executed commands for Streams
-         * @param args Stream read command args
+         * @param blockMillis number of millis to block for in XREAD
          * @return list of messages retrieved from the stream or empty list if no messages available
-         * @throws MessageReadException
          */
         List<StreamMessage<K, V>> read(long blockMillis);
 

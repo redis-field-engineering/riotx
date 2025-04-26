@@ -1,6 +1,8 @@
 package com.redis.riot;
 
 import com.redis.lettucemod.api.sync.RedisModulesCommands;
+import com.redis.riot.core.RedisContext;
+import com.redis.riot.core.RedisContextFactory;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 
@@ -16,7 +18,7 @@ public abstract class AbstractRedisCommand extends AbstractJobCommand {
     @Override
     protected void initialize() {
         super.initialize();
-        redisContext = RedisContext.of(redisArgs);
+        redisContext = RedisContextFactory.create(redisArgs.getUri(), redisArgs);
         redisContext.afterPropertiesSet();
     }
 

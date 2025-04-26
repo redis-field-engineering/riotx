@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.item.ExecutionContext;
 
-import com.redis.riot.DatabaseStats.Keyspace;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
 
@@ -20,7 +19,7 @@ public class DatabaseStatsTests {
 		GeneratorItemReader reader = new GeneratorItemReader();
 		reader.setMaxItemCount(10000);
 		reader.open(new ExecutionContext());
-		DatabaseStats stats = new DatabaseStats();
+		RedisStats stats = new RedisStats();
 		Random random = new Random();
 		KeyValue<String> item;
 		while ((item = reader.read()) != null) {
@@ -29,8 +28,8 @@ public class DatabaseStatsTests {
 		}
 		reader.close();
 		long memorySpread = maxMemory - minMemory;
-		List<Keyspace> keyspaces = stats.keyspaces();
-		for (Keyspace keyspace : keyspaces) {
+		List<RedisStats.Keyspace> keyspaces = stats.keyspaces();
+		for (RedisStats.Keyspace keyspace : keyspaces) {
 			Assertions.assertEquals(memorySpread / 2, keyspace.getMemoryUsage().quantile(.5), memorySpread / 10);
 		}
 

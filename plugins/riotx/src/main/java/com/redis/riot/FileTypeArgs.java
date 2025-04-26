@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.redis.riot.parquet.ParquetFileNameMap;
 import org.springframework.util.MimeType;
 
 import com.redis.riot.file.ResourceMap;
@@ -36,7 +37,7 @@ public class FileTypeArgs {
         map.put("json", ResourceMap.JSON);
         map.put("jsonl", ResourceMap.JSON_LINES);
         map.put("xml", ResourceMap.XML);
-        map.put("parquet", FileImport.MIME_TYPE_PARQUET);
+        map.put("parquet", ParquetFileNameMap.MIME_TYPE_PARQUET);
         return map;
     }
 
