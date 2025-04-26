@@ -1,4 +1,4 @@
-package com.redis.spring.batch.resource;
+package com.redis.spring.batch.common;
 
 
 import java.io.FilterOutputStream;
