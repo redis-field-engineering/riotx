@@ -46,7 +46,7 @@ public class KeyValueRead<K, V> implements InitializingOperation<K, V, KeyEvent<
 
     private MemoryUsage memoryUsage = MemoryUsage.of(MemoryUsage.DISABLED);
 
-    public KeyValueRead(RedisCodec<K, V> codec, ValueType mode) {
+    private KeyValueRead(RedisCodec<K, V> codec, ValueType mode) {
         this.mode = mode;
         this.evalsha = new Evalsha<>(codec, KeyEvent::getKey, this::convert);
         this.toStringValueFunction = BatchUtils.toStringValueFunction(codec);

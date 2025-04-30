@@ -80,7 +80,6 @@ abstract class DbTests extends AbstractRiotApplicationTestBase {
 
 	protected int executeDatabaseExport(ParseResult parseResult, TestInfo info) {
 		DatabaseExport command = command(parseResult);
-		command.setJobName(name(info));
 		configureDatabase(command.getDataSourceArgs());
 		return ExitCode.OK;
 	}

@@ -58,7 +58,7 @@ public class IdFunctionBuilder {
             if (prefix != null) {
                 return s -> prefix + separator + extractor.apply(s);
             }
-            return extractor::apply;
+            return extractor;
         }
         List<Function<Map<String, Object>, String>> toStringFunctions = new ArrayList<>();
         if (prefix != null) {

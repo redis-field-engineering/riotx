@@ -19,12 +19,11 @@ import me.tongfei.progressbar.ProgressBarStyle;
 
 /**
  * Listener tracking writer or step progress with by a progress bar.
- * 
+ *
  * @author Julien Ruaux
  * @since 3.1.2
  */
-@SuppressWarnings("rawtypes")
-public class ProgressStepExecutionListener implements StepExecutionListener, ItemWriteListener {
+public class ProgressStepExecutionListener<S> implements StepExecutionListener, ItemWriteListener<S> {
 
     private String taskName;
 
@@ -71,7 +70,7 @@ public class ProgressStepExecutionListener implements StepExecutionListener, Ite
     }
 
     @Override
-    public void afterWrite(Chunk items) {
+    public void afterWrite(Chunk<? extends S> items) {
         if (progressBar != null) {
             progressBar.stepBy(items.size());
             if (extraMessage != null) {

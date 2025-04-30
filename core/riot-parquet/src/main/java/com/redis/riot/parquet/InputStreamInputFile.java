@@ -66,7 +66,7 @@ public class InputStreamInputFile implements InputFile {
 		}
 
 		@Override
-		public int read(long position, byte[] buffer, int offset, int length) throws IOException {
+		public int read(long position, byte[] buffer, int offset, int length) {
 
 			if (position >= buf.length || position + length > buf.length || length > buffer.length)
 				throw new IllegalArgumentException();

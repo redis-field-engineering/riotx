@@ -10,7 +10,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
-import com.redis.riot.core.ContentType;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -61,7 +60,6 @@ abstract class FileTests extends AbstractTargetTestBase {
         hset.setKeyspace(KEYSPACE);
         hset.setKeyFields(ID);
         executable.setImportOperationCommands(hset);
-        executable.setJobName(name(info));
         executable.call();
 
         List<String> keys = redisCommands.keys("*");
@@ -82,7 +80,6 @@ abstract class FileTests extends AbstractTargetTestBase {
         configure(info, executable);
         executable.setFiles("https://storage.googleapis.com/jrx/beers.csv");
         executable.getFileReaderArgs().setHeader(true);
-        executable.setJobName(name(info));
         HsetCommand hset = new HsetCommand();
         hset.setKeyspace(KEYSPACE);
         hset.setKeyFields(ID);
@@ -108,7 +105,6 @@ abstract class FileTests extends AbstractTargetTestBase {
     }
 
     private void configureJobCommand(TestInfo info, AbstractJobCommand callable) {
-        callable.setJobName(name(info));
         callable.getProgressArgs().setStyle(ProgressStyle.NONE);
     }
 
@@ -126,7 +122,6 @@ abstract class FileTests extends AbstractTargetTestBase {
         configure(info, executable);
         executable.setFiles(file1.getPath());
         executable.getFileReaderArgs().setHeader(true);
-        executable.setJobName(name(info));
         HsetCommand operationBuilder = new HsetCommand();
         operationBuilder.setKeyspace(KEYSPACE);
         operationBuilder.setKeyFields(ID);
@@ -148,7 +143,6 @@ abstract class FileTests extends AbstractTargetTestBase {
         executable.setFiles("https://storage.googleapis.com/jrx/beers.csv");
         executable.getFileReaderArgs().setHeader(true);
         executable.getJobArgs().setThreads(3);
-        executable.setJobName(name(info));
         HsetCommand operationBuilder = new HsetCommand();
         operationBuilder.setKeyspace(KEYSPACE);
         operationBuilder.setKeyFields(ID);
@@ -172,7 +166,6 @@ abstract class FileTests extends AbstractTargetTestBase {
         hset.setKeyspace(KEYSPACE);
         hset.setKeyFields(ID);
         executable.setImportOperationCommands(hset);
-        executable.setJobName(name(info));
         executable.call();
         List<String> keys = redisCommands.keys("*");
         assertEquals(6, keys.size());
@@ -207,7 +200,7 @@ abstract class FileTests extends AbstractTargetTestBase {
         String file = dir.resolve(filename).toFile().getPath();
         FileExport fileExport = new FileExport();
         configure(info, fileExport);
-        fileExport.setContentType(ContentType.STRUCT);
+        fileExport.setContentType(FileExport.ContentType.STRUCT);
         fileExport.setFile(file);
         fileExport.call();
         FileImport fileImport = new FileImport();

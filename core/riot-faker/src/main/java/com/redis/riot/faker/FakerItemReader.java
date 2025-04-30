@@ -27,6 +27,8 @@ public class FakerItemReader extends AbstractItemCountingItemStreamItemReader<Ma
 	private Map<String, String> expressions = new LinkedHashMap<>();
 	private Locale locale = DEFAULT_LOCALE;
 
+	private final Object lock = new Object();
+
 	private Faker faker;
 	private Map<String, String> fields;
 
@@ -43,7 +45,7 @@ public class FakerItemReader extends AbstractItemCountingItemStreamItemReader<Ma
 	}
 
 	@Override
-	protected synchronized void doOpen() throws Exception {
+	protected synchronized void doOpen() {
 		Assert.notEmpty(expressions, "No field specified");
 		if (fields == null) {
 			fields = expressions.entrySet().stream().map(this::normalizeField)
@@ -60,11 +62,11 @@ public class FakerItemReader extends AbstractItemCountingItemStreamItemReader<Ma
 	}
 
 	@Override
-	protected Map<String, Object> doRead() throws Exception {
+	protected Map<String, Object> doRead() {
 		Map<String, Object> map = new HashMap<>();
 		for (Entry<String, String> field : fields.entrySet()) {
 			String value;
-			synchronized (faker) {
+			synchronized (lock) {
 				value = faker.expression(field.getValue());
 			}
 			map.put(field.getKey(), value);

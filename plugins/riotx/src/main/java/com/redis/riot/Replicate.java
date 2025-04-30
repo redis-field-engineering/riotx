@@ -1,17 +1,10 @@
 package com.redis.riot;
 
-import java.io.IOException;
-
 import com.redis.riot.core.*;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.job.builder.FlowBuilder;
-import org.springframework.batch.core.job.flow.support.SimpleFlow;
-import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.support.CompositeItemWriter;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
-import org.springframework.util.StringUtils;
-
+import com.redis.riot.core.job.CompositeFlow;
+import com.redis.riot.core.job.RiotFlow;
+import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.core.job.StepFlow;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
@@ -23,13 +16,24 @@ import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.spring.batch.item.redis.writer.KeyValueRestore;
 import com.redis.spring.batch.item.redis.writer.KeyValueWrite;
 import com.redis.spring.batch.item.redis.writer.impl.Del;
-
+import org.springframework.batch.core.Job;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.support.CompositeItemWriter;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.util.StringUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
+import java.io.IOException;
+
 @Command(name = "replicate", aliases = "sync", description = "Replicate a Redis database into another Redis database.")
 public class Replicate extends AbstractCompareCommand {
+
+    private static final String SCAN_STEP = "scanStep";
+
+    private static final String LIVE_STEP = "liveStep";
 
     public enum Type {
         STRUCT, DUMP
@@ -70,19 +74,42 @@ public class Replicate extends AbstractCompareCommand {
         return compareMode == CompareMode.QUICK;
     }
 
+    @ArgGroup(exclusive = false, heading = "Metrics options%n")
+    private MetricsArgs metricsArgs = new MetricsArgs();
+
+    @Option(names = "--remove-source-keys", description = "Delete keys from source after they have been successfully replicated.")
+    private boolean removeSourceKeys;
+
     @Override
     protected Job job() {
-        FlowBuilder<SimpleFlow> flow = flow();
-        if (shouldCompare()) {
-            flow.next(step(compareStep()).build());
-        }
-        return job(flow.build());
+        return job(flow());
     }
 
-    public FlowBuilder<SimpleFlow> flow() {
+    @Override
+    protected String taskName(RiotStep<?, ?> step) {
+        switch (step.getName()) {
+            case SCAN_STEP:
+                return SCAN_TASK_NAME;
+            case LIVE_STEP:
+                return LIVE_TASK_NAME;
+            default:
+                return super.taskName(step);
+        }
+    }
+
+    private RiotFlow flow() {
+        RiotFlow replicateFlow = replicateFlow();
+        if (shouldCompare()) {
+            StepFlow compareFlow = StepFlow.of("compareFlow", compareStep());
+            return CompositeFlow.sequential("replicateCompareFlow", replicateFlow, compareFlow);
+        }
+        return replicateFlow;
+    }
+
+    public RiotFlow replicateFlow() {
         switch (mode) {
             case LIVE:
-                return flow("replicationFlow").split(asyncTaskExecutor()).add(scanFlow().build(), liveFlow().build());
+                return CompositeFlow.parrallel("scanLiveFlow", scanFlow(), liveFlow());
             case LIVEONLY:
                 return liveFlow();
             default:
@@ -90,16 +117,12 @@ public class Replicate extends AbstractCompareCommand {
         }
     }
 
-    private FlowBuilder<SimpleFlow> scanFlow() {
-        return flow("scanFlow").start(step(scanStep()).build());
+    private RiotFlow scanFlow() {
+        return StepFlow.of("scanFlow", scanStep());
     }
 
-    private FlowBuilder<SimpleFlow> liveFlow() {
-        return flow("liveFlow").start(step(liveStep()).build());
-    }
-
-    private FlowBuilder<SimpleFlow> flow(String name) {
-        return new FlowBuilder<>(name);
+    private RiotFlow liveFlow() {
+        return StepFlow.of("liveFlow", liveStep());
     }
 
     private TaskExecutor asyncTaskExecutor() {
@@ -115,17 +138,9 @@ public class Replicate extends AbstractCompareCommand {
         return writer;
     }
 
-    protected RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> scanStep() {
-        return step("scan", scanReader(), SCAN_TASK_NAME);
-    }
-
-    private RedisItemReader<byte[], byte[]> scanReader() {
-        return configureSource(new RedisScanItemReader<>(CODEC, readOperation()));
-    }
-
-    private RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> step(String name, RedisItemReader<byte[], byte[]> reader,
-            String taskName) {
-        RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> step = step(name, reader, keyValueFilter(), targetWriter(), taskName);
+    private RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> step(String name, RedisItemReader<byte[], byte[]> reader) {
+        RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> step = step(name, reader, targetWriter());
+        step.processor(keyValueFilter());
         step.addReadListener(new ReplicateMetricsReadListener<>());
         if (logKeys) {
             log.info("Adding key logger");
@@ -136,8 +151,12 @@ public class Replicate extends AbstractCompareCommand {
         return step;
     }
 
+    protected RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> scanStep() {
+        return step(SCAN_STEP, new RedisScanItemReader<>(CODEC, readOperation()));
+    }
+
     protected RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> liveStep() {
-        return step("live", new RedisLiveItemReader<>(CODEC, readOperation()), LIVE_TASK_NAME);
+        return step(LIVE_STEP, new RedisLiveItemReader<>(CODEC, readOperation()));
     }
 
     protected ItemWriter<KeyValue<byte[]>> targetWriter() {
@@ -181,14 +200,8 @@ public class Replicate extends AbstractCompareCommand {
         return type == Type.STRUCT;
     }
 
-    @ArgGroup(exclusive = false, heading = "Metrics options%n")
-    private MetricsArgs metricsArgs = new MetricsArgs();
-
-    @Option(names = "--remove-source-keys", description = "Delete keys from source after they have been successfully replicated.")
-    private boolean removeSourceKeys;
-
     @Override
-    protected void initialize() {
+    protected void initialize() throws Exception {
         super.initialize();
         try {
             metricsArgs.configureMetrics();
@@ -260,6 +273,22 @@ public class Replicate extends AbstractCompareCommand {
 
     public void setMode(ReplicationMode mode) {
         this.mode = mode;
+    }
+
+    public MetricsArgs getMetricsArgs() {
+        return metricsArgs;
+    }
+
+    public void setMetricsArgs(MetricsArgs metricsArgs) {
+        this.metricsArgs = metricsArgs;
+    }
+
+    public boolean isRemoveSourceKeys() {
+        return removeSourceKeys;
+    }
+
+    public void setRemoveSourceKeys(boolean removeSourceKeys) {
+        this.removeSourceKeys = removeSourceKeys;
     }
 
 }

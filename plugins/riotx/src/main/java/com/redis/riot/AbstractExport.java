@@ -1,24 +1,19 @@
 package com.redis.riot;
 
-import java.time.Duration;
-
 import com.redis.riot.core.KeyValueFilter;
 import com.redis.riot.core.RedisContext;
-import com.redis.riot.core.RiotStep;
-import com.redis.riot.core.RiotUtils;
+import com.redis.riot.core.job.RiotStep;
+import com.redis.spring.batch.item.redis.RedisItemReader;
+import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.step.FlushingChunkProvider;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-
-import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-import com.redis.spring.batch.step.FlushingChunkProvider;
-
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
+
+import java.time.Duration;
 
 public abstract class AbstractExport extends AbstractJobCommand {
 
@@ -49,7 +44,7 @@ public abstract class AbstractExport extends AbstractJobCommand {
     }
 
     @Override
-    protected void initialize() {
+    protected void initialize() throws Exception {
         super.initialize();
         sourceRedisContext = sourceRedisContext();
         sourceRedisContext.afterPropertiesSet();
@@ -62,17 +57,11 @@ public abstract class AbstractExport extends AbstractJobCommand {
         return reader;
     }
 
-    protected <K, V, T> RiotStep<KeyValue<K>, T> step(String name, RedisItemReader<K, V> reader,
-            ItemProcessor<KeyValue<K>, T> processor, ItemWriter<T> writer, String taskName) {
-        RiotStep<KeyValue<K>, T> step = new RiotStep<>(name, reader, writer);
+    protected <K, V, T> RiotStep<KeyValue<K>, T> step(String name, RedisItemReader<K, V> reader, ItemWriter<T> writer) {
+        RiotStep<KeyValue<K>, T> step = super.step(name, reader, writer);
         step.flushInterval(flushInterval);
         step.idleTimeout(idleTimeout);
         configureSource(reader);
-        step.taskName(taskName);
-        step.processor(RiotUtils.processor(keyValueFilter(), processor));
-        if (reader instanceof RedisScanItemReader) {
-            step.maxItemCount(BatchUtils.scanSizeEstimator((RedisScanItemReader<K, V>) reader));
-        }
         return step;
     }
 

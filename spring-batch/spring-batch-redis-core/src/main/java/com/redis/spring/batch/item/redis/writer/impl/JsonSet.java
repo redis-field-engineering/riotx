@@ -40,8 +40,7 @@ public class JsonSet<K, V, T> extends AbstractValueWriteOperation<K, V, V, T> {
 
     @SuppressWarnings("rawtypes")
     private RedisFuture execute(RedisAsyncCommands<K, V> commands, T item) {
-        return ((RedisModulesAsyncCommands<K, V>) commands).jsonSet(key(item), path(item),
-                jsonValue(commands.getJsonParser(), value(item)));
+        return commands.jsonSet(key(item), path(item), jsonValue(commands.getJsonParser(), value(item)));
     }
 
     private JsonValue jsonValue(JsonParser parser, V value) {

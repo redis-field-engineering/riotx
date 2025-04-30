@@ -1,11 +1,9 @@
 package com.redis.riot;
 
-import com.redis.riot.core.RetryPolicy;
-import com.redis.riot.core.SkipPolicy;
-import com.redis.riot.core.StepOptions;
-import org.springframework.retry.policy.MaxAttemptsRetryPolicy;
-
+import com.redis.riot.core.job.RetryPolicy;
+import com.redis.riot.core.job.SkipPolicy;
 import lombok.ToString;
+import org.springframework.retry.policy.MaxAttemptsRetryPolicy;
 import picocli.CommandLine.Option;
 
 import java.time.Duration;
@@ -109,19 +107,6 @@ public class StepArgs {
 
     public void setRetryPolicy(RetryPolicy retryPolicy) {
         this.retryPolicy = retryPolicy;
-    }
-
-    public StepOptions stepOptions() {
-        StepOptions options = new StepOptions();
-        options.setChunkSize(chunkSize);
-        options.setDryRun(dryRun);
-        options.setRetryLimit(retryLimit);
-        options.setRetryPolicy(retryPolicy);
-        options.setSkipLimit(skipLimit);
-        options.setSkipPolicy(skipPolicy);
-        options.setSleep(sleep);
-        options.setThreads(threads);
-        return options;
     }
 
 }

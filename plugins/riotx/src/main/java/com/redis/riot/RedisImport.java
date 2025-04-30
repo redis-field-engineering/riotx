@@ -1,9 +1,10 @@
 package com.redis.riot;
 
 import java.util.Map;
+import java.util.function.LongSupplier;
 import java.util.regex.Pattern;
 
-import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.RiotUtils;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
@@ -42,11 +43,14 @@ public class RedisImport extends AbstractTargetRedisImport {
     protected Job job() {
         Assert.isTrue(hasOperations(), "No Redis command specified");
         RedisScanItemReader<String, String> reader = reader();
-        RiotStep<KeyValue<String>, Map<String, Object>> step = new RiotStep<>("redis-import", reader, operationWriter());
+        RiotStep<KeyValue<String>, Map<String, Object>> step = step("redis-import", reader, operationWriter());
         step.processor(RiotUtils.processor(mapProcessor(), processor()));
-        step.taskName(TASK_NAME);
-        step.maxItemCount(BatchUtils.scanSizeEstimator(reader));
         return job(step);
+    }
+
+    @Override
+    protected <I, O> LongSupplier maxItemCount(RiotStep<I, O> step) {
+        return BatchUtils.scanSizeEstimator((RedisScanItemReader<?, ?>) step.getReader());
     }
 
     private RedisScanItemReader<String, String> reader() {
@@ -62,6 +66,22 @@ public class RedisImport extends AbstractTargetRedisImport {
             mapFunction.setKey(new RegexNamedGroupFunction(keyRegex));
         }
         return new FunctionItemProcessor<>(mapFunction);
+    }
+
+    public RedisReaderArgs getSourceRedisReaderArgs() {
+        return sourceRedisReaderArgs;
+    }
+
+    public void setSourceRedisReaderArgs(RedisReaderArgs sourceRedisReaderArgs) {
+        this.sourceRedisReaderArgs = sourceRedisReaderArgs;
+    }
+
+    public Pattern getKeyRegex() {
+        return keyRegex;
+    }
+
+    public void setKeyRegex(Pattern keyRegex) {
+        this.keyRegex = keyRegex;
     }
 
 }

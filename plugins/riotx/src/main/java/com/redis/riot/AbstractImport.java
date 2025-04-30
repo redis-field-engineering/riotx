@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.redis.riot.core.*;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.function.FunctionItemProcessor;
@@ -41,7 +42,7 @@ import picocli.CommandLine.Command;
         RpushCommand.class, SaddCommand.class, SetCommand.class, XaddCommand.class, ZaddCommand.class, SugaddCommand.class,
         JsonSetCommand.class,
         TsAddCommand.class }, subcommandsRepeatable = true, synopsisSubcommandLabel = "[REDIS COMMAND...]", commandListHeading = "Redis commands:%n")
-public abstract class AbstractImpor extends AbstractJobCommand {
+public abstract class AbstractImport extends AbstractJobCommand {
 
     private static final String TASK_NAME = "Importing";
 
@@ -64,7 +65,12 @@ public abstract class AbstractImpor extends AbstractJobCommand {
     private List<OperationCommand> importOperationCommands = new ArrayList<>();
 
     @Override
-    protected void initialize() {
+    protected String taskName(RiotStep<?, ?> step) {
+        return TASK_NAME;
+    }
+
+    @Override
+    protected void initialize() throws Exception {
         super.initialize();
         targetRedisContext = targetRedisContext();
         targetRedisContext.afterPropertiesSet();
@@ -90,7 +96,7 @@ public abstract class AbstractImpor extends AbstractJobCommand {
         Assert.isTrue(hasOperations(), "No Redis command specified");
         RedisItemWriter<String, String, Map<String, Object>> writer = operationWriter();
         configureTargetRedisWriter(writer);
-        return new RiotStep<>("import", reader, writer).processor(processor()).taskName(TASK_NAME);
+        return step("import", reader, writer).processor(processor());
     }
 
     protected ItemProcessor<Map<String, Object>, Map<String, Object>> processor() {

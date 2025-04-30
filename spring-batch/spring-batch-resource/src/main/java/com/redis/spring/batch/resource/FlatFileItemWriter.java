@@ -52,7 +52,7 @@ public class FlatFileItemWriter<T> extends AbstractFileItemWriter<T> {
 	 * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet()
 	 */
 	@Override
-	public void afterPropertiesSet() throws Exception {
+	public void afterPropertiesSet() {
 		Assert.state(lineAggregator != null, "A LineAggregator must be provided.");
 		if (append) {
 			shouldDeleteIfExists = false;

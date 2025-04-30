@@ -154,7 +154,6 @@ class StackRiotTests extends RiotTests {
 
     private int executeFileDumpExport(ParseResult parseResult, TestInfo info) {
         FileExport command = command(parseResult);
-        command.setJobName(name(info));
         command.setFile(replace(command.getFile()));
         return ExitCode.OK;
     }
@@ -733,7 +732,7 @@ class StackRiotTests extends RiotTests {
         expressions.put("field1", Expression.parse("'test:1'"));
         ImportProcessorArgs args = new ImportProcessorArgs();
         args.setExpressions(expressions);
-        ItemProcessor<Map<String, Object>, Map<String, Object>> processor = AbstractImpor.processor(evaluationContext(),
+        ItemProcessor<Map<String, Object>, Map<String, Object>> processor = AbstractImport.processor(evaluationContext(),
                 args);
         Map<String, Object> map = processor.process(new HashMap<>());
         Assertions.assertEquals("test:1", map.get("field1"));
@@ -750,7 +749,7 @@ class StackRiotTests extends RiotTests {
         expressions.put("field5", Expression.parse("field3+field4"));
         ImportProcessorArgs args = new ImportProcessorArgs();
         args.setExpressions(expressions);
-        ItemProcessor<Map<String, Object>, Map<String, Object>> processor = AbstractImpor.processor(evaluationContext(),
+        ItemProcessor<Map<String, Object>, Map<String, Object>> processor = AbstractImport.processor(evaluationContext(),
                 args);
         for (int index = 0; index < 10; index++) {
             Map<String, Object> result = processor.process(new HashMap<>());
@@ -771,7 +770,7 @@ class StackRiotTests extends RiotTests {
     void processorFilter() throws Exception {
         ImportProcessorArgs args = new ImportProcessorArgs();
         args.setFilter(Expression.parse("index<10"));
-        ItemProcessor<Map<String, Object>, Map<String, Object>> processor = AbstractImpor.processor(evaluationContext(),
+        ItemProcessor<Map<String, Object>, Map<String, Object>> processor = AbstractImport.processor(evaluationContext(),
                 args);
         for (int index = 0; index < 100; index++) {
             Map<String, Object> map = new HashMap<>();

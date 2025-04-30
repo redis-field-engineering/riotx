@@ -44,7 +44,7 @@ public class FileTypeArgs {
     static class FileTypeConverter implements ITypeConverter<MimeType> {
 
         @Override
-        public MimeType convert(String value) throws Exception {
+        public MimeType convert(String value) {
             return typeMap.get(value.toLowerCase());
         }
 

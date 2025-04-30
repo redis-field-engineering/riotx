@@ -53,7 +53,7 @@ public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStrea
     }
 
     @Override
-    protected void doOpen() throws Exception {
+    protected void doOpen() {
         // Do nothing
     }
 
@@ -65,7 +65,7 @@ public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStrea
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose() {
         // Do nothing
     }
 
@@ -109,6 +109,14 @@ public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStrea
 
     public void setProcessor(ItemProcessor<KeyValue<K>, KeyValue<K>> processor) {
         this.processor = processor;
+    }
+
+    public int getBatchSize() {
+        return batchSize;
+    }
+
+    public void setBatchSize(int batchSize) {
+        this.batchSize = batchSize;
     }
 
 }

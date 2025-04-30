@@ -69,11 +69,7 @@ public class GeneratorItemReader extends AbstractItemCountingItemStreamItemReade
 	}
 
 	public String key(int index) {
-		StringBuilder builder = new StringBuilder();
-		builder.append(keyspace);
-		builder.append(keySeparator);
-		builder.append(index);
-		return builder.toString();
+        return keyspace + keySeparator + index;
 	}
 
 	private Object value(String key, ItemType type) throws JsonProcessingException {
@@ -192,12 +188,12 @@ public class GeneratorItemReader extends AbstractItemCountingItemStreamItemReade
 	}
 
 	@Override
-	protected void doOpen() throws Exception {
+	protected void doOpen() {
 		// do nothing
 	}
 
 	@Override
-	protected void doClose() throws Exception {
+	protected void doClose() {
 		// do nothing
 	}
 

@@ -2,8 +2,9 @@ package com.redis.riot;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.LongSupplier;
 
-import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 import org.springframework.util.StringUtils;
 
@@ -33,10 +34,17 @@ public class Generate extends AbstractRedisCommand {
         if (StringUtils.hasLength(generateArgs.getIndex())) {
             commands().ftCreate(generateArgs.getIndex(), indexCreateOptions(), indexFields());
         }
-        RiotStep<KeyValue<String>, KeyValue<String>> step = new RiotStep<>("generate", reader(), writer());
-        step.taskName(TASK_NAME);
-        step.maxItemCount(generateArgs::getCount);
-        return job(step);
+        return job(step("generate", reader(), writer()));
+    }
+
+    @Override
+    protected String taskName(RiotStep<?, ?> step) {
+        return TASK_NAME;
+    }
+
+    @Override
+    protected <I, O> LongSupplier maxItemCount(RiotStep<I, O> step) {
+        return generateArgs::getCount;
     }
 
     private RedisItemWriter<String, String, KeyValue<String>> writer() {

@@ -6,7 +6,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.StepExecution;
@@ -57,6 +57,11 @@ public class Stats extends AbstractRedisCommand {
     private short[] quantiles = StatsPrinter.DEFAULT_QUANTILES;
 
     @Override
+    protected String taskName(RiotStep<?, ?> step) {
+        return TASK_NAME;
+    }
+
+    @Override
     protected Job job() {
         RedisScanItemReader<String, String> reader = RedisItemReader.scanStruct();
         reader.setMemoryUsage(memoryUsage());
@@ -68,8 +73,7 @@ public class Stats extends AbstractRedisCommand {
                 .create(getRedisContext().getClient(), StringCodec.UTF8);
         int database = getRedisContext().getUri().getDatabase();
         StatsWriter writer = new StatsWriter(stats, listenerContainer, database, readerArgs.getKeyPattern());
-        RiotStep<KeyValue<String>, KeyValue<String>> step = new RiotStep<>("stats", reader, writer);
-        step.taskName(TASK_NAME);
+        RiotStep<KeyValue<String>, KeyValue<String>> step = step("stats", reader, writer);
         step.addExecutionListener(new ExecutionListener(statsPrinter(stats)));
         return job(step);
     }
@@ -216,6 +220,18 @@ public class Stats extends AbstractRedisCommand {
 
     public void setQuantiles(short[] quantiles) {
         this.quantiles = quantiles;
+    }
+
+    public void setReaderArgs(RedisReaderArgs readerArgs) {
+        this.readerArgs = readerArgs;
+    }
+
+    public DataSize getRate() {
+        return rate;
+    }
+
+    public void setRate(DataSize rate) {
+        this.rate = rate;
     }
 
 }

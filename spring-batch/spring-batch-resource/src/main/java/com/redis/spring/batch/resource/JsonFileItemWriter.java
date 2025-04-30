@@ -81,7 +81,7 @@ public class JsonFileItemWriter<T> extends AbstractFileItemWriter<T> {
 	 * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet()
 	 */
 	@Override
-	public void afterPropertiesSet() throws Exception {
+	public void afterPropertiesSet() {
 		if (this.append) {
 			this.shouldDeleteIfExists = false;
 		}

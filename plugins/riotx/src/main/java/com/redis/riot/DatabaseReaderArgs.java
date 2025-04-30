@@ -1,8 +1,6 @@
 package com.redis.riot;
 
 import com.redis.riot.db.JdbcReaderOptions;
-import org.springframework.batch.item.database.AbstractCursorItemReader;
-
 import lombok.ToString;
 import picocli.CommandLine.Option;
 

@@ -30,8 +30,8 @@ public class Riotx extends MainCommand {
 	protected int executionStrategy(CommandLine.ParseResult parseResult) {
 		for (CommandLine.ParseResult subcommand : parseResult.subcommands()) {
 			Object command = subcommand.commandSpec().userObject();
-			if (AbstractImpor.class.isAssignableFrom(command.getClass())) {
-				AbstractImpor importCommand = (AbstractImpor) command;
+			if (AbstractImport.class.isAssignableFrom(command.getClass())) {
+				AbstractImport importCommand = (AbstractImport) command;
 				for (CommandLine.ParseResult redisCommand : subcommand.subcommands()) {
 					if (redisCommand.isUsageHelpRequested()) {
 						return new CommandLine.RunLast().execute(redisCommand);

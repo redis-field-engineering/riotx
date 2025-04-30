@@ -9,29 +9,20 @@ import org.apache.parquet.schema.MessageType;
 
 public class MapRecordConverter extends RecordMaterializer<Map<String, Object>> {
 
-	private MapGroupConverter root;
+    private final MapGroupConverter root;
 
-	public MapRecordConverter(MessageType schema) {
-		this.root = new MapGroupConverter(null, schema) {
-			@Override
-			public void start() {
-				this.current = new LinkedHashMap<>();
-			}
+    public MapRecordConverter(MessageType schema) {
+        this.root = new MapGroupConverter(null, schema);
+    }
 
-			@Override
-			public void end() {
-			}
-		};
-	}
+    @Override
+    public Map<String, Object> getCurrentRecord() {
+        return root.getCurrentRecord();
+    }
 
-	@Override
-	public Map<String, Object> getCurrentRecord() {
-		return root.getCurrentRecord();
-	}
-
-	@Override
-	public GroupConverter getRootConverter() {
-		return root;
-	}
+    @Override
+    public GroupConverter getRootConverter() {
+        return root;
+    }
 
 }

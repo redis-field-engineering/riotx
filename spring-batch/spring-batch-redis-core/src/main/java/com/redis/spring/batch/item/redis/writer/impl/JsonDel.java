@@ -37,7 +37,7 @@ public class JsonDel<K, V, T> extends AbstractWriteOperation<K, V, T> {
 
     @SuppressWarnings("rawtypes")
     private RedisFuture execute(RedisAsyncCommands<K, V> commands, T item) {
-        return ((RedisModulesAsyncCommands<K, V>) commands).jsonDel(key(item), path(item));
+        return commands.jsonDel(key(item), path(item));
     }
 
 }

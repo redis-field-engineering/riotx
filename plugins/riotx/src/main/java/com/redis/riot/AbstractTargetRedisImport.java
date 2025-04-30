@@ -10,7 +10,7 @@ import io.lettuce.core.RedisURI;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
-public abstract class AbstractTargetRedisImport extends AbstractImpor {
+public abstract class AbstractTargetRedisImport extends AbstractImport {
 
     @ArgGroup(exclusive = false)
     private RedisArgs sourceRedisArgs = new RedisArgs();
@@ -24,7 +24,7 @@ public abstract class AbstractTargetRedisImport extends AbstractImpor {
     protected RedisContext sourceRedisContext;
 
     @Override
-    protected void initialize() {
+    protected void initialize() throws Exception {
         super.initialize();
         sourceRedisContext = sourceRedisContext();
         sourceRedisContext.afterPropertiesSet();

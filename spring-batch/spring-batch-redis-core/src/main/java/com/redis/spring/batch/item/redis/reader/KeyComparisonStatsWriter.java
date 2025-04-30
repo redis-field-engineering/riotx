@@ -16,7 +16,7 @@ public class KeyComparisonStatsWriter<K> implements ItemWriter<KeyComparison<K>>
     private final Map<Status, Map<String, AtomicLong>> counts = new HashMap<>();
 
     @Override
-    public void write(Chunk<? extends KeyComparison<K>> chunk) throws Exception {
+    public void write(Chunk<? extends KeyComparison<K>> chunk) {
         chunk.forEach(this::add);
     }
 

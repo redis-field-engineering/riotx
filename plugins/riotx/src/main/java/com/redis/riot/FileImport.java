@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 import com.redis.riot.core.KeyValueDeserializer;
 import com.redis.riot.core.RiotException;
 import com.redis.riot.parquet.ParquetFileItemReader;
-import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.ToMapFunction;
 import com.redis.riot.parquet.ParquetFileNameMap;
@@ -100,7 +100,7 @@ public class FileImport extends AbstractRedisImport {
     }
 
     @Override
-    protected void initialize() {
+    protected void initialize() throws Exception {
         super.initialize();
         Assert.notEmpty(files, "No file specified");
         readerRegistry = readerRegistry();
@@ -147,8 +147,12 @@ public class FileImport extends AbstractRedisImport {
         step.skip(org.springframework.batch.item.ParseException.class);
         step.noRetry(ParseException.class);
         step.noRetry(org.springframework.batch.item.ParseException.class);
-        step.taskName(String.format("Importing %s", resource.getFilename()));
         return step;
+    }
+
+    @Override
+    protected String taskName(RiotStep<?, ?> step) {
+        return String.format("Importing %s", step.getName());
     }
 
     private ReadOptions readOptions() {

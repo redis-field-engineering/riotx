@@ -7,11 +7,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import com.redis.riot.core.ContentType;
 import com.redis.riot.core.RiotException;
 import com.redis.riot.parquet.ParquetFieldType;
 import com.redis.riot.parquet.ParquetFileItemWriter;
-import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.parquet.ParquetFileNameMap;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
@@ -47,6 +46,10 @@ import picocli.CommandLine.Parameters;
 @Command(name = "file-export", description = "Export Redis data to files.")
 public class FileExport extends AbstractRedisExport {
 
+    public enum ContentType {
+        STRUCT, MAP
+    }
+
     @Parameters(arity = "0..1", description = "File path or URL. If omitted, export is written to stdout.", paramLabel = "FILE")
     private String file = StdOutProtocolResolver.DEFAULT_FILENAME;
 
@@ -71,7 +74,7 @@ public class FileExport extends AbstractRedisExport {
     private WriteOptions writeOptions;
 
     @Override
-    protected void initialize() {
+    protected void initialize() throws Exception {
         super.initialize();
         writerRegistry = writerRegistry();
         resourceFactory = resourceFactory();
@@ -141,7 +144,7 @@ public class FileExport extends AbstractRedisExport {
                 if (keyValue == null) {
                     return Collections.emptyMap();
                 }
-                return ((ItemProcessor<KeyValue<String>, Map<String, Object>>) mapProcessor()).process(keyValue);
+                return mapProcessor().process(keyValue);
             } catch (Exception e) {
                 throw new ItemStreamException("Could not read header record", e);
             }

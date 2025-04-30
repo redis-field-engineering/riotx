@@ -1,33 +1,23 @@
 package com.redis.riot;
 
-import java.time.Duration;
-import java.util.stream.Collectors;
-
 import com.redis.riot.core.CompareStepListener;
-import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.RiotUtils;
+import com.redis.riot.core.function.StringKeyValue;
+import com.redis.riot.core.function.ToStringKeyValue;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.reader.*;
+import io.lettuce.core.codec.ByteArrayCodec;
+import io.lettuce.core.codec.RedisCodec;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.Assert;
-
-import com.redis.riot.core.function.StringKeyValue;
-import com.redis.riot.core.function.ToStringKeyValue;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
-import com.redis.spring.batch.item.redis.reader.KeyComparator;
-import com.redis.spring.batch.item.redis.reader.KeyComparison;
-import com.redis.spring.batch.item.redis.reader.KeyComparisonItemReader;
-import com.redis.spring.batch.item.redis.reader.KeyComparisonStat;
-import com.redis.spring.batch.item.redis.reader.KeyComparisonStatsWriter;
-import com.redis.spring.batch.item.redis.reader.KeyValueRead;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-
-import io.lettuce.core.codec.ByteArrayCodec;
-import io.lettuce.core.codec.RedisCodec;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
+
+import java.time.Duration;
+import java.util.stream.Collectors;
 
 public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
 
@@ -52,6 +42,14 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
 
     @ArgGroup(exclusive = false, heading = "Processor options%n")
     private KeyValueProcessorArgs processorArgs = new KeyValueProcessorArgs();
+
+    @Override
+    protected String taskName(RiotStep<?, ?> step) {
+        if (step.getName().equals(COMPARE_STEP_NAME)) {
+            return COMPARE_TASK_NAME;
+        }
+        return null;
+    }
 
     protected abstract boolean isStruct();
 
@@ -78,8 +76,7 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
     }
 
     private <K> String compareMessage(KeyComparisonStatsWriter<K> stats) {
-        return CompareStepListener.statsByStatus(stats).stream()
-                .map(e -> String.format("%s %d", e.getKey(),
+        return CompareStepListener.statsByStatus(stats).stream().map(e -> String.format("%s %d", e.getKey(),
                         e.getValue().stream().collect(Collectors.summingLong(KeyComparisonStat::getCount))))
                 .collect(Collectors.joining(" | "));
     }
@@ -88,18 +85,16 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
         RedisScanItemReader<byte[], byte[]> sourceReader = configureSource(compareReader());
         RedisScanItemReader<byte[], byte[]> targetReader = configureTarget(compareReader());
         KeyComparisonItemReader<byte[], byte[]> reader = new KeyComparisonItemReader<>(sourceReader, targetReader);
+        reader.setBatchSize(getStepArgs().getChunkSize());
         reader.setComparator(keyComparator());
         reader.setProcessor(RiotUtils.processor(keyValueFilter(), processor()));
-        KeyComparisonStatsWriter<byte[]> stats = new KeyComparisonStatsWriter<>();
-        RiotStep<KeyComparison<byte[]>, KeyComparison<byte[]>> step = new RiotStep<>(COMPARE_STEP_NAME, reader, stats);
+        KeyComparisonStatsWriter<byte[]> writer = new KeyComparisonStatsWriter<>();
+        RiotStep<KeyComparison<byte[]>, KeyComparison<byte[]>> step = step(COMPARE_STEP_NAME, reader, writer);
         if (showDiffs) {
             log.info("Adding key diff logger");
             step.addWriteListener(new CompareLoggingWriteListener<>(CODEC));
         }
-        step.taskName(COMPARE_TASK_NAME);
-        step.extraMessage(() -> compareMessage(stats));
-        step.maxItemCount(BatchUtils.scanSizeEstimator(sourceReader));
-        step.addExecutionListener(new CompareStepListener(stats));
+        step.addExecutionListener(new CompareStepListener(writer));
         return step;
     }
 
@@ -153,6 +148,14 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
 
     public void setProcessorArgs(KeyValueProcessorArgs args) {
         this.processorArgs = args;
+    }
+
+    public EvaluationContextArgs getEvaluationContextArgs() {
+        return evaluationContextArgs;
+    }
+
+    public void setEvaluationContextArgs(EvaluationContextArgs evaluationContextArgs) {
+        this.evaluationContextArgs = evaluationContextArgs;
     }
 
 }

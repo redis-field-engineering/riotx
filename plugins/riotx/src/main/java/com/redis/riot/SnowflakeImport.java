@@ -138,7 +138,7 @@ public class SnowflakeImport extends AbstractRedisImport {
     }
 
     @Override
-    protected void initialize() {
+    protected void initialize() throws Exception {
         super.initialize();
 
         String objectRegex = "^(?<database>[a-zA-Z0-9_$]+)\\." + "(?<schema>[a-zA-Z0-9_$]+)\\." + "(?<table>[a-zA-Z0-9_$]+)$";
@@ -220,7 +220,7 @@ public class SnowflakeImport extends AbstractRedisImport {
             // now that data has been copied from temp table get the new current offset
             // don't commit it to redis until the job is successful
             String newOffset = getCurrentOffset(dbConnection, fullStreamName);
-            onJobSuccessCallback = afterSuccess(dataSource, redisContext, fullStreamName, offsetKey, tempTable, newOffset);
+//            onJobSuccessCallback = afterSuccess(dataSource, redisContext, fullStreamName, offsetKey, tempTable, newOffset);
         }
     }
 

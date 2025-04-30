@@ -72,7 +72,7 @@ public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements 
     }
 
     @Override
-    public synchronized KeyValue<K> poll(long timeout, TimeUnit unit) throws InterruptedException, Exception {
+    public synchronized KeyValue<K> poll(long timeout, TimeUnit unit) throws Exception {
         if (iterator.hasNext()) {
             return iterator.next();
         }

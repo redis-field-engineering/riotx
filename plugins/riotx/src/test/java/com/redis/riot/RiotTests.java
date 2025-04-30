@@ -70,8 +70,7 @@ abstract class RiotTests extends AbstractRiotApplicationTestBase {
     protected void execute(Replicate replicate, TestInfo info) throws Exception {
         System.setProperty(SimpleLogger.LOG_KEY_PREFIX + ReplicateWriteLogger.class.getName(), "error");
         replicate.getProgressArgs().setStyle(ProgressStyle.NONE);
-        replicate.setJobName(name(info));
-        replicate.setJobRepository(jobRepository);
+        replicate.getJobExecutor().setJobRepository(jobRepository);
         replicate.setSourceRedisUri(redisURI);
         replicate.getSourceRedisArgs().setCluster(getRedisServer().isRedisCluster());
         replicate.setTargetRedisUri(targetRedisURI);
@@ -140,7 +139,7 @@ abstract class RiotTests extends AbstractRiotApplicationTestBase {
     }
 
     private Predicate<Integer> between(int start, int end) {
-        return i -> i >= 0 && i <= end;
+        return i -> i >= start && i <= end;
     }
 
     @Test

@@ -3,7 +3,9 @@ package com.redis.riot;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.LongSupplier;
 
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 
 import com.redis.riot.faker.FakerItemReader;
@@ -30,7 +32,12 @@ public class FakerImport extends AbstractRedisImport {
 
     @Override
     protected Job job() {
-        return job(step(reader()).maxItemCount(this::getCount));
+        return job(step(reader()));
+    }
+
+    @Override
+    protected <I, O> LongSupplier maxItemCount(RiotStep<I, O> step) {
+        return this::getCount;
     }
 
     private FakerItemReader reader() {

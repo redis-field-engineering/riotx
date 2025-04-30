@@ -6,12 +6,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 
 import com.redis.riot.core.PingExecution;
 import com.redis.riot.core.PingExecutionItemReader;
-import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.job.RiotStep;
 import org.HdrHistogram.Histogram;
 import org.LatencyUtils.LatencyStats;
 import org.springframework.batch.core.Job;
@@ -49,13 +50,21 @@ public class Ping extends AbstractRedisCommand {
     private int count = DEFAULT_COUNT;
 
     @Override
+    protected String taskName(RiotStep<?, ?> step) {
+        return TASK_NAME;
+    }
+
+    @Override
+    protected <I, O> LongSupplier maxItemCount(RiotStep<I, O> step) {
+        return this::getCount;
+    }
+
+    @Override
     protected Job job() {
         PingExecutionItemReader reader = new PingExecutionItemReader(commands());
         reader.setMaxItemCount(count);
         PingLatencyItemWriter writer = new PingLatencyItemWriter();
-        RiotStep<PingExecution, PingExecution> step = new RiotStep<>("ping", reader, writer);
-        step.taskName(TASK_NAME);
-        step.maxItemCount(this::getCount);
+        RiotStep<PingExecution, PingExecution> step = step("ping", reader, writer);
         return job(step);
     }
 

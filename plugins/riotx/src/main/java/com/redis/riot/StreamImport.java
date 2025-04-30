@@ -2,7 +2,7 @@ package com.redis.riot;
 
 import java.util.Map;
 
-import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.RiotUtils;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
@@ -21,8 +21,6 @@ import picocli.CommandLine.Parameters;
 @Command(name = "stream-import", description = "Import data from a Redis stream.")
 public class StreamImport extends AbstractTargetRedisImport {
 
-    private static final String TASK_NAME = "Importing";
-
     @Parameters(arity = "1..*", mapFallbackValue = "0", description = "Stream(s) and corresponding offsets to import, in the form key=offset. If not specified offset defaults to ${MAP-FALLBACK-VALUE}.", paramLabel = "STREAM")
     private Map<String, String> streams;
 
@@ -33,12 +31,10 @@ public class StreamImport extends AbstractTargetRedisImport {
     protected Job job() {
         Assert.isTrue(hasOperations(), "No Redis command specified");
         StreamItemReader<String, String> reader = reader();
-        RiotStep<StreamMessage<String, String>, Map<String, Object>> step = new RiotStep<>("stream-import", reader,
-                operationWriter());
+        RiotStep<StreamMessage<String, String>, Map<String, Object>> step = step("stream-import", reader, operationWriter());
         step.processor(streamMessageProcessor());
         step.flushInterval(reader.getBlock());
         step.idleTimeout(reader.getPollTimeout());
-        step.taskName(TASK_NAME);
         return job(step);
     }
 

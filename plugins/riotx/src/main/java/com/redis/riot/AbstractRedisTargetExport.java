@@ -2,19 +2,14 @@ package com.redis.riot;
 
 import com.redis.riot.core.RedisContext;
 import com.redis.riot.core.RedisContextFactory;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
-
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-
 import io.lettuce.core.RedisURI;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Parameters;
 
 public abstract class AbstractRedisTargetExport extends AbstractExport {
-
-    public static final int DEFAULT_TARGET_POOL_SIZE = RedisScanItemReader.DEFAULT_POOL_SIZE;
 
     private static final String VAR_TARGET = "target";
 
@@ -33,7 +28,7 @@ public abstract class AbstractRedisTargetExport extends AbstractExport {
     private RedisContext targetRedisContext;
 
     @Override
-    protected void initialize() {
+    protected void initialize() throws Exception {
         super.initialize();
         targetRedisContext = targetRedisContext();
         targetRedisContext.afterPropertiesSet();

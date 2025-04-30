@@ -101,7 +101,7 @@ public class KeyEventItemReader<K, V> extends AbstractItemCountingItemStreamItem
     }
 
     @Override
-    public KeyEvent<K> poll(long timeout, TimeUnit unit) throws InterruptedException, Exception {
+    public KeyEvent<K> poll(long timeout, TimeUnit unit) throws Exception {
         return queue.poll(timeout, unit);
     }
 

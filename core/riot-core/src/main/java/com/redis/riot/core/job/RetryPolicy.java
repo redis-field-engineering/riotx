@@ -1,4 +1,4 @@
-package com.redis.riot.core;
+package com.redis.riot.core.job;
 
 public enum RetryPolicy {
 	ALWAYS, NEVER, LIMIT

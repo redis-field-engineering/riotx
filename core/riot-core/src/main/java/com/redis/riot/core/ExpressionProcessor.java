@@ -16,7 +16,7 @@ public class ExpressionProcessor implements ItemProcessor<Map<String, Object>, M
 	}
 
 	@Override
-	public Map<String, Object> process(Map<String, Object> item) throws Exception {
+	public Map<String, Object> process(Map<String, Object> item) {
 		expressions.forEach((k, v) -> item.put(k, v.getValue(context, item)));
 		return item;
 	}

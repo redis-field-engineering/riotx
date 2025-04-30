@@ -4,7 +4,7 @@ import com.redis.riot.core.RedisContext;
 import com.redis.riot.core.RedisContextFactory;
 import picocli.CommandLine.ArgGroup;
 
-public abstract class AbstractRedisImport extends AbstractImpor {
+public abstract class AbstractRedisImport extends AbstractImport {
 
 	@ArgGroup(exclusive = false, heading = "Redis options%n")
 	private RedisArgs redisArgs = new RedisArgs();

@@ -1,14 +1,13 @@
 package com.redis.riot;
 
-import java.io.File;
-import java.time.Duration;
-import java.util.concurrent.TimeUnit;
-
 import com.redis.riot.core.ReadFrom;
 import com.redis.riot.core.RedisClientArgs;
 import io.lettuce.core.protocol.ProtocolVersion;
 import lombok.ToString;
 import picocli.CommandLine.Option;
+
+import java.io.File;
+import java.time.Duration;
 
 @ToString
 public class TargetRedisArgs implements RedisClientArgs {

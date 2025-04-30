@@ -27,13 +27,13 @@ public abstract class AbstractCallableCommand extends BaseCommand implements Cal
 		return 0;
 	}
 
-	protected void initialize() {
+	protected void initialize() throws Exception {
 		if (log == null) {
 			log = LoggerFactory.getLogger(getClass());
 		}
 	}
 
-	protected abstract void execute();
+	protected abstract void execute() throws Exception;
 
 	protected void teardown() {
 		// do nothing

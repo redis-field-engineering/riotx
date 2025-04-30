@@ -6,7 +6,7 @@ import java.util.concurrent.TimeoutException;
 import com.redis.riot.core.InetSocketAddressList;
 import com.redis.riot.core.MemcachedContext;
 import com.redis.riot.core.RiotException;
-import com.redis.riot.core.RiotStep;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 
 import com.redis.spring.batch.memcached.MemcachedEntry;
@@ -51,7 +51,12 @@ public class MemcachedReplicate extends AbstractJobCommand {
     private MemcachedContext targetMemcachedContext;
 
     @Override
-    protected void initialize() {
+    protected String taskName(RiotStep<?, ?> step) {
+        return TASK_NAME;
+    }
+
+    @Override
+    protected void initialize() throws Exception {
         super.initialize();
         try {
             sourceMemcachedContext = sourceMemcachedContext();
@@ -85,9 +90,8 @@ public class MemcachedReplicate extends AbstractJobCommand {
     protected Job job() {
         MemcachedItemReader reader = new MemcachedItemReader(sourceMemcachedContext::safeMemcachedClient);
         MemcachedItemWriter writer = new MemcachedItemWriter(targetMemcachedContext::safeMemcachedClient);
-        RiotStep<MemcachedEntry, MemcachedEntry> step = new RiotStep<>("memcached-replicate", reader, writer);
+        RiotStep<MemcachedEntry, MemcachedEntry> step = step("memcached-replicate", reader, writer);
         step.processor(this::process);
-        step.taskName(TASK_NAME);
         step.noSkip(TimeoutException.class);
         step.retry(TimeoutException.class);
         return job(step);

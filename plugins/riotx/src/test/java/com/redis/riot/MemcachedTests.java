@@ -175,8 +175,7 @@ public class MemcachedTests {
         write(entries(count));
         MemcachedReplicate replication = new MemcachedReplicate();
         replication.getProgressArgs().setStyle(ProgressStyle.NONE);
-        replication.setJobName(name(info));
-        replication.setJobRepository(jobRepository);
+        replication.getJobExecutor().setJobRepository(jobRepository);
         replication.setSourceAddressList(new InetSocketAddressList(inetSocketAddress(source)));
         replication.setTargetAddressList(new InetSocketAddressList(inetSocketAddress(target)));
         replication.call();

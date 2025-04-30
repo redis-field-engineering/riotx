@@ -56,7 +56,6 @@ public abstract class AbstractRiotApplicationTestBase extends AbstractRiotTestBa
                 if (command instanceof AbstractJobCommand) {
                     AbstractJobCommand jobCommand = ((AbstractJobCommand) command);
                     jobCommand.getProgressArgs().setStyle(ProgressStyle.NONE);
-                    jobCommand.setJobName(name(info));
                 }
                 if (command instanceof AbstractRedisCommand) {
                     configure(((AbstractRedisCommand) command).getRedisArgs());

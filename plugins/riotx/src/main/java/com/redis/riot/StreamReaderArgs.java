@@ -1,14 +1,12 @@
 package com.redis.riot;
 
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-
 import com.redis.riot.core.RiotVersion;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader.AckPolicy;
-
 import io.lettuce.core.Consumer;
 import picocli.CommandLine.Option;
+
+import java.time.Duration;
 
 public class StreamReaderArgs {
 
