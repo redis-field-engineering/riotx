@@ -10,8 +10,6 @@ import java.time.Duration;
 
 public class StreamReaderArgs {
 
-    public static final String DEFAULT_OFFSET = StreamItemReader.DEFAULT_OFFSET;
-
     public static final String DEFAULT_CONSUMER_GROUP = "riotx-" + RiotVersion.getVersion();
 
     public static final AckPolicy DEFAULT_ACK_POLICY = StreamItemReader.DEFAULT_ACK_POLICY;

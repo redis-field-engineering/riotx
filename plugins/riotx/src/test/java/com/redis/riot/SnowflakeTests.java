@@ -8,6 +8,7 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import com.redis.riot.db.SnowflakeStreamItemReader;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -51,7 +52,7 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
         properties.setUrl(getenv("JDBC_URL", DEFAULT_URL));
         properties.setUsername(getenv("JDBC_ADMIN_USERNAME", "jplichta"));
         properties.setPassword(getenv("JDBC_ADMIN_PASSWORD", null));
-        properties.setDriverClassName(SnowflakeImport.JDBC_DRIVER);
+        properties.setDriverClassName(SnowflakeStreamItemReader.JDBC_DRIVER);
         return properties;
     }
 
@@ -60,7 +61,7 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
         properties.setUrl(getenv("JDBC_URL", DEFAULT_URL));
         properties.setUsername(getenv("JDBC_USERNAME", "riotx_cdc"));
         properties.setPassword(getenv("JDBC_PASSWORD", null));
-        properties.setDriverClassName(SnowflakeImport.JDBC_DRIVER);
+        properties.setDriverClassName(SnowflakeStreamItemReader.JDBC_DRIVER);
         return properties;
     }
 

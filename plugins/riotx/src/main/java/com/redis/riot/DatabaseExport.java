@@ -1,6 +1,7 @@
 package com.redis.riot;
 
 import com.redis.riot.core.RiotException;
+import com.redis.riot.db.DataSourceFactory;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
@@ -37,22 +38,17 @@ public class DatabaseExport extends AbstractRedisExport {
     private JdbcBatchItemWriter<Map<String, Object>> writer() {
         Assert.hasLength(sql, "No SQL statement specified");
         log.info("Creating data source with {}", dataSourceArgs);
-        DataSource dataSource;
-        try {
-            dataSource = dataSourceArgs.dataSource();
-        } catch (Exception e) {
-            throw new RiotException(e);
-        }
         log.info("Creating JDBC writer with sql=\"{}\" assertUpdates={}", sql, assertUpdates);
         JdbcBatchItemWriterBuilder<Map<String, Object>> builder = new JdbcBatchItemWriterBuilder<>();
         builder.itemSqlParameterSourceProvider(NullableSqlParameterSource::new);
-        builder.dataSource(dataSource);
+        builder.dataSource(dataSourceArgs.dataSource());
         builder.sql(sql);
         builder.assertUpdates(assertUpdates);
         JdbcBatchItemWriter<Map<String, Object>> writer = builder.build();
         writer.afterPropertiesSet();
         return writer;
     }
+
 
     private static class NullableSqlParameterSource extends MapSqlParameterSource {
 

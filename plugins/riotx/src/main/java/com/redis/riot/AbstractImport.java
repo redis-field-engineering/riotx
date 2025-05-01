@@ -57,7 +57,7 @@ public abstract class AbstractImport extends AbstractJobCommand {
     @ArgGroup(exclusive = false)
     private ImportProcessorArgs processorArgs = new ImportProcessorArgs();
 
-    private RedisContext targetRedisContext;
+    protected RedisContext targetRedisContext;
 
     /**
      * Initialized manually during command parsing

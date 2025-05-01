@@ -1,38 +1,16 @@
 package com.redis.riot;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.sql.DataSource;
-
-import com.redis.riot.core.RedisContext;
-import com.redis.riot.core.RiotException;
-import com.redis.riot.db.InitSqlDataSource;
-import com.redis.riot.db.JdbcReaderFactory;
+import com.redis.riot.db.SnowflakeStreamItemReader;
 import org.springframework.batch.core.Job;
-import org.springframework.batch.item.database.JdbcCursorItemReader;
-
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-
-import io.lettuce.core.api.sync.RedisCommands;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+import java.time.Duration;
+
 @CommandLine.Command(name = "snowflake-import", description = "Import from a snowflake table (uses Snowflake Streams to track changes).")
 public class SnowflakeImport extends AbstractRedisImport {
-
-    public enum SnapshotMode {
-        INITIAL, NEVER
-    }
 
     @ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
@@ -43,193 +21,91 @@ public class SnowflakeImport extends AbstractRedisImport {
     @ArgGroup(exclusive = false)
     private DatabaseReaderArgs readerArgs = new DatabaseReaderArgs();
 
-    public static final String JDBC_DRIVER = "net.snowflake.client.jdbc.SnowflakeDriver";
-
-    private String cdcObject;
-
-    private String fullStreamName;
-
-    private String tempTable;
-
-    private String offsetKey;
-
-    private RedisContext redisContext;
-
-    private String sql;
-
     @Option(names = "--snapshot-mode", description = "Snapshot mode: ${COMPLETION-CANDIDATES} . INITIAL is the default and will set the Snowflake Stream SHOW_INITIAL_ROWS=TRUE option", defaultValue = "INITIAL")
-    private SnapshotMode snapshotMode;
+    private SnowflakeStreamItemReader.SnapshotMode snapshotMode;
 
-    @Option(names = "--role", description = "Snowflake role to use")
+    @Option(names = "--role", description = "Snowflake role to use", paramLabel = "<str>")
     private String role;
 
-    @Option(names = "--warehouse", description = "Snowflake warehouse to use")
+    @Option(names = "--warehouse", description = "Snowflake warehouse to use", paramLabel = "<str>")
     private String warehouse;
 
-    @Option(names = "--cdc-database", description = "Snowflake CDC database to use for stream and temp table")
+    @Option(names = "--cdc-database", description = "Snowflake CDC database to use for stream and temp table", paramLabel = "<str>")
     private String cdcDatabase;
 
-    @Option(names = "--cdc-schema", description = "Snowflake CDC schema to use for stream and temp table")
+    @Option(names = "--cdc-schema", description = "Snowflake CDC schema to use for stream and temp table", paramLabel = "<str>")
     private String cdcSchema;
 
-    private String getCurrentOffset(Connection sqlConnection, String fullStreamName) throws SQLException {
-        String offsetSql = "SELECT SYSTEM$STREAM_GET_TABLE_TIMESTAMP(?)";
-
-        try {
-            PreparedStatement stmt = sqlConnection.prepareStatement(offsetSql);
-            stmt.setString(1, fullStreamName);
-            ResultSet results = stmt.executeQuery();
-            if (results.next()) {
-                return results.getString(1);
-            } else {
-                throw new RiotException(
-                        String.format("Could not retrieve current offset of Snowflake stream: %s", fullStreamName));
-            }
-        } catch (SQLException ex) {
-            if (ex.getMessage().contains("must be a valid stream name")) {
-                // the stream doesn't exist yet
-                return null;
-            } else {
-                throw ex;
-            }
-        }
-    }
-
-    private Runnable afterSuccess(DataSource dataSource, RedisContext redisContext, String fullStreamName, String offsetKey,
-                                  String tempTable, String newOffset) {
-        RedisCommands<String, String> syncCommands = redisContext.getConnection().sync();
-
-        return () -> {
-            syncCommands.set(offsetKey, newOffset);
-            log.debug("in snowflake import after success: stored offset {}={}", offsetKey, newOffset);
-
-            try (Connection sqlConnection = dataSource.getConnection()) {
-                sqlConnection.prepareStatement(String.format("DROP TABLE %s", tempTable)).execute();
-            } catch (SQLException e) {
-                throw new RiotException(String.format("Unable to drop temp table: %s", tempTable), e);
-            }
-        };
-    }
-
-    private PreparedStatement initStatement(Connection connection, String currentOffset, String fullStreamName)
-            throws SQLException {
-        String initStatement = null;
-        boolean setParam = false;
-
-        if (currentOffset != null && !currentOffset.equals("0")) {
-            initStatement = String.format("CREATE OR REPLACE STREAM %s ON TABLE %s AT (TIMESTAMP => TO_TIMESTAMP(?))",
-                    fullStreamName, cdcObject);
-            setParam = true;
-        } else {
-            initStatement = String.format("CREATE OR REPLACE STREAM %s ON TABLE %s", fullStreamName, cdcObject);
-
-            if (snapshotMode == SnapshotMode.INITIAL) {
-                initStatement += " SHOW_INITIAL_ROWS=TRUE";
-            }
-        }
-
-        PreparedStatement preparedInitStatement = connection.prepareStatement(initStatement);
-        log.debug("initStatement: {}", initStatement);
-        if (setParam) {
-            preparedInitStatement.setString(1, currentOffset);
-        }
-
-        return preparedInitStatement;
-    }
-
-    @Override
-    protected void initialize() throws Exception {
-        super.initialize();
-
-        String objectRegex = "^(?<database>[a-zA-Z0-9_$]+)\\." + "(?<schema>[a-zA-Z0-9_$]+)\\." + "(?<table>[a-zA-Z0-9_$]+)$";
-        Pattern objectPattern = Pattern.compile(objectRegex);
-        Matcher objectMatcher = objectPattern.matcher(tableOrView);
-
-        if (objectMatcher.matches()) {
-            String database = objectMatcher.group("database");
-            String schema = objectMatcher.group("schema");
-            String simpleTable = objectMatcher.group("table");
-
-            String useDatabase = cdcDatabase != null ? cdcDatabase : database;
-            String useSchema = cdcSchema != null ? cdcSchema : schema;
-
-            String streamName = String.format("%s_changestream", simpleTable);
-            fullStreamName = String.format("%s.%s.%s", useDatabase, useSchema, streamName);
-            tempTable = String.format("%s_temp", fullStreamName);
-
-            offsetKey = String.format("riotx:offset:%s", fullStreamName);
-
-            redisContext = this.targetRedisContext();
-            redisContext.afterPropertiesSet();
-
-            cdcObject = tableOrView;
-            sql = String.format("SELECT * FROM %s", tempTable);
-        } else {
-            throw new RiotException(
-                    String.format("Must provide table or view in format: DATABASE.SCHEMA.TABLE, found %s", tableOrView));
-        }
-    }
+    @Option(names = "--poll", description = "Poll interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
+    private Duration pollInterval = SnowflakeStreamItemReader.DEFAULT_POLL_INTERVAL;
 
     @Override
     protected Job job() {
         return job(step(reader()));
     }
 
-    private String sanitize(String value) {
-        return value.replaceAll("[^a-zA-Z0-9]", "_");
-    }
-
-    protected JdbcCursorItemReader<Map<String, Object>> reader() {
-        DataSource dataSource;
-        List<String> initSqlStatements = new ArrayList<>();
-        JdbcCursorItemReader<Map<String, Object>> reader;
-
-        if (role != null) {
-            initSqlStatements.add(String.format("USE ROLE %s", sanitize(role)));
-        }
-        if (warehouse != null) {
-            initSqlStatements.add(String.format("USE WAREHOUSE %s", sanitize(warehouse)));
-        }
-
-        try {
-            dataSourceArgs.setDriver(JDBC_DRIVER);
-            dataSource = new InitSqlDataSource(dataSourceArgs.dataSource(), initSqlStatements);
-            reader = JdbcReaderFactory.create(readerArgs.readerOptions()).sql(sql).name(sql).dataSource(dataSource)
-                    .preparedStatementSetter(ps -> setValues(dataSource, ps))
-                    .build();
-        } catch (Exception e) {
-            throw new RiotException("Could not initialize data source", e);
-        }
-
+    protected SnowflakeStreamItemReader reader() {
+        SnowflakeStreamItemReader reader = new SnowflakeStreamItemReader();
+        reader.setRedisClient(targetRedisContext.getClient());
+        reader.setReaderOptions(readerArgs.readerOptions());
+        reader.setCdcDatabase(cdcDatabase);
+        reader.setCdcSchema(cdcSchema);
+        reader.setPassword(dataSourceArgs.getPassword());
+        reader.setUrl(dataSourceArgs.getUrl());
+        reader.setUsername(dataSourceArgs.getUsername());
+        reader.setPollInterval(pollInterval);
+        reader.setRole(role);
+        reader.setWarehouse(warehouse);
+        reader.setSnapshotMode(snapshotMode);
         return reader;
     }
 
-    private void setValues(DataSource dataSource, PreparedStatement ps) throws SQLException {
-        try (Connection dbConnection = dataSource.getConnection()) {
-            StatefulRedisModulesConnection<String, String> connection = redisContext.getConnection();
-            RedisCommands<String, String> syncCommands = connection.sync();
-            String currentOffset = syncCommands.get(offsetKey);
-
-            PreparedStatement preparedInitStatement = initStatement(dbConnection, currentOffset, fullStreamName);
-            preparedInitStatement.execute();
-
-            String initTempTable = String.format("CREATE OR REPLACE TABLE %s AS SELECT * FROM %s", tempTable, fullStreamName);
-            dbConnection.prepareStatement(initTempTable).execute();
-            log.debug("initialized temp table: {}", initTempTable);
-
-            // now that data has been copied from temp table get the new current offset
-            // don't commit it to redis until the job is successful
-            String newOffset = getCurrentOffset(dbConnection, fullStreamName);
-//            onJobSuccessCallback = afterSuccess(dataSource, redisContext, fullStreamName, offsetKey, tempTable, newOffset);
-        }
+    public Duration getPollInterval() {
+        return pollInterval;
     }
 
-    public DataSourceArgs getDataSourceArgs() {
-        return dataSourceArgs;
+    public void setPollInterval(Duration pollInterval) {
+        this.pollInterval = pollInterval;
     }
 
-    public void setDataSourceArgs(DataSourceArgs args) {
-        this.dataSourceArgs = args;
+    public String getCdcSchema() {
+        return cdcSchema;
+    }
+
+    public void setCdcSchema(String cdcSchema) {
+        this.cdcSchema = cdcSchema;
+    }
+
+    public String getCdcDatabase() {
+        return cdcDatabase;
+    }
+
+    public void setCdcDatabase(String cdcDatabase) {
+        this.cdcDatabase = cdcDatabase;
+    }
+
+    public String getWarehouse() {
+        return warehouse;
+    }
+
+    public void setWarehouse(String warehouse) {
+        this.warehouse = warehouse;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public SnowflakeStreamItemReader.SnapshotMode getSnapshotMode() {
+        return snapshotMode;
+    }
+
+    public void setSnapshotMode(SnowflakeStreamItemReader.SnapshotMode snapshotMode) {
+        this.snapshotMode = snapshotMode;
     }
 
     public DatabaseReaderArgs getReaderArgs() {
@@ -239,5 +115,22 @@ public class SnowflakeImport extends AbstractRedisImport {
     public void setReaderArgs(DatabaseReaderArgs readerArgs) {
         this.readerArgs = readerArgs;
     }
+
+    public String getTableOrView() {
+        return tableOrView;
+    }
+
+    public void setTableOrView(String tableOrView) {
+        this.tableOrView = tableOrView;
+    }
+
+    public DataSourceArgs getDataSourceArgs() {
+        return dataSourceArgs;
+    }
+
+    public void setDataSourceArgs(DataSourceArgs dataSourceArgs) {
+        this.dataSourceArgs = dataSourceArgs;
+    }
+
 }
 
