@@ -19,6 +19,8 @@ public class MainCommand extends BaseCommand implements Callable<Integer>, IO {
 
     private PrintWriter err;
 
+    private boolean disableExceptionMessageHandling;
+
     @Override
     public Integer call() throws Exception {
         commandSpec.commandLine().usage(out);
@@ -35,7 +37,9 @@ public class MainCommand extends BaseCommand implements Callable<Integer>, IO {
         setErr(commandLine.getErr());
         commandLine.setCaseInsensitiveEnumValuesAllowed(true);
         commandLine.setUnmatchedOptionsAllowedAsOptionParameters(false);
-        commandLine.setExecutionExceptionHandler(new PrintExceptionMessageHandler());
+        if (!disableExceptionMessageHandling) {
+            commandLine.setExecutionExceptionHandler(new PrintExceptionMessageHandler());
+        }
         commandLine.registerConverter(Duration.class, DurationStyle.SIMPLE::parse);
         commandLine.registerConverter(DataSize.class, MainCommand::parseDataSize);
         commandLine.registerConverter(Expression.class, Expression::parse);
@@ -71,6 +75,14 @@ public class MainCommand extends BaseCommand implements Callable<Integer>, IO {
     @Override
     public void setErr(PrintWriter err) {
         this.err = err;
+    }
+
+    public boolean isDisableExceptionMessageHandling() {
+        return disableExceptionMessageHandling;
+    }
+
+    public void setDisableExceptionMessageHandling(boolean disableExceptionMessageHandling) {
+        this.disableExceptionMessageHandling = disableExceptionMessageHandling;
     }
 
 }

@@ -1,17 +1,13 @@
 package com.redis.riot;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
-
-import com.redis.riot.core.RiotException;
+import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.file.*;
 import com.redis.riot.parquet.ParquetFieldType;
 import com.redis.riot.parquet.ParquetFileItemWriter;
-import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.parquet.ParquetFileNameMap;
+import com.redis.spring.batch.item.redis.RedisItemReader;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Types;
@@ -26,22 +22,13 @@ import org.springframework.core.io.WritableResource;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.MimeType;
-
-import com.redis.riot.file.FileWriterRegistry;
-import com.redis.riot.file.ResourceFactory;
-import com.redis.riot.file.ResourceMap;
-import com.redis.riot.file.RiotResourceMap;
-import com.redis.riot.file.StdOutProtocolResolver;
-import com.redis.riot.file.WriteOptions;
-import com.redis.riot.file.WriterFactory;
-import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+
+import java.io.IOException;
+import java.util.*;
 
 @Command(name = "file-export", description = "Export Redis data to files.")
 public class FileExport extends AbstractRedisExport {
@@ -96,18 +83,13 @@ public class FileExport extends AbstractRedisExport {
     }
 
     @Override
-    protected Job job() {
+    protected Job job() throws IOException {
         return job(step());
     }
 
     @SuppressWarnings("unchecked")
-    private RiotStep<KeyValue<String>, ?> step() {
-        WritableResource resource;
-        try {
-            resource = resourceFactory.writableResource(file, writeOptions);
-        } catch (IOException e) {
-            throw new RiotException(String.format("Could not create resource from file %s", file), e);
-        }
+    private RiotStep<KeyValue<String>, ?> step() throws IOException {
+        WritableResource resource = resourceFactory.writableResource(file, writeOptions);
         MimeType type =
                 writeOptions.getContentType() == null ? resourceMap.getContentTypeFor(resource) : writeOptions.getContentType();
         WriterFactory writerFactory = writerRegistry.getWriterFactory(type);

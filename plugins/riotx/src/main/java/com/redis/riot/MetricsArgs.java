@@ -1,11 +1,5 @@
 package com.redis.riot;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-
 import com.redis.riot.core.RedisContext;
 import com.redis.riot.core.RiotVersion;
 import io.lettuce.core.metrics.MicrometerCommandLatencyRecorder;
@@ -23,6 +17,12 @@ import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.prometheus.metrics.exporter.httpserver.HTTPServer;
 import io.prometheus.metrics.model.registry.PrometheusRegistry;
 import picocli.CommandLine.Option;
+
+import java.io.IOException;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 public class MetricsArgs {
 
@@ -164,8 +164,8 @@ public class MetricsArgs {
         return Tags.of("application", name);
     }
 
-    private void startHttpServer(PrometheusRegistry registry) throws IOException {
-        HTTPServer.builder().port(8080).registry(registry).buildAndStart();
+    private HTTPServer startHttpServer(PrometheusRegistry registry) throws IOException {
+        return HTTPServer.builder().port(8080).registry(registry).buildAndStart();
     }
 
     private MicrometerOptions micrometerOptions() {

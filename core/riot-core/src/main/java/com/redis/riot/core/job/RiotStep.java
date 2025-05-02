@@ -1,5 +1,6 @@
 package com.redis.riot.core.job;
 
+import com.redis.spring.batch.step.FlushingChunkProvider;
 import lombok.ToString;
 import org.springframework.batch.core.ItemProcessListener;
 import org.springframework.batch.core.ItemReadListener;
@@ -45,9 +46,9 @@ public class RiotStep<I, O> {
 
     private final Set<ItemWriteListener<O>> writeListeners = new LinkedHashSet<>();
 
-    private Duration flushInterval;
+    private Duration flushInterval = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
 
-    private Duration idleTimeout;
+    private Duration idleTimeout = FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT;
 
     private final Set<Class<? extends Throwable>> skip = new HashSet<>();
 

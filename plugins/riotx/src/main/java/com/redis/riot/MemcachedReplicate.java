@@ -1,21 +1,18 @@
 package com.redis.riot;
 
-import java.security.GeneralSecurityException;
-import java.util.concurrent.TimeoutException;
-
 import com.redis.riot.core.InetSocketAddressList;
 import com.redis.riot.core.MemcachedContext;
-import com.redis.riot.core.RiotException;
 import com.redis.riot.core.job.RiotStep;
-import org.springframework.batch.core.Job;
-
 import com.redis.spring.batch.memcached.MemcachedEntry;
 import com.redis.spring.batch.memcached.MemcachedItemReader;
 import com.redis.spring.batch.memcached.MemcachedItemWriter;
-
+import org.springframework.batch.core.Job;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+
+import java.security.GeneralSecurityException;
+import java.util.concurrent.TimeoutException;
 
 @Command(name = "memcached-replicate", description = "Replicate a Memcached database into another Memcached database.")
 public class MemcachedReplicate extends AbstractJobCommand {
@@ -58,16 +55,8 @@ public class MemcachedReplicate extends AbstractJobCommand {
     @Override
     protected void initialize() throws Exception {
         super.initialize();
-        try {
-            sourceMemcachedContext = sourceMemcachedContext();
-        } catch (GeneralSecurityException e) {
-            throw new RiotException("Could not initialize source memcached client", e);
-        }
-        try {
-            targetMemcachedContext = targetMemcachedContext();
-        } catch (GeneralSecurityException e) {
-            throw new RiotException("Could not initialized target memcached client", e);
-        }
+        sourceMemcachedContext = sourceMemcachedContext();
+        targetMemcachedContext = targetMemcachedContext();
     }
 
     private MemcachedContext sourceMemcachedContext() throws GeneralSecurityException {

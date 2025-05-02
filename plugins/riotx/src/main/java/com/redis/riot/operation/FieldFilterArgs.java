@@ -57,10 +57,4 @@ public class FieldFilterArgs {
         this.includeFields = includes;
     }
 
-    public static void main(String[] args) {
-        RedisClient client = RedisClient.create(RedisURI.create("localhost", 6379));
-        StatefulRedisConnection<String, String> connection = client.connect();
-        connection.sync().hset("myhash", "test", null);
-    }
-
 }

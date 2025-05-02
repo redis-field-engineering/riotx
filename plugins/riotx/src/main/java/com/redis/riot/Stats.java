@@ -69,8 +69,8 @@ public class Stats extends AbstractRedisCommand {
         RedisStats stats = new RedisStats();
         stats.setKeyspacePattern(keyspacePattern);
         stats.setBigKeyPredicate(kv -> kv.getMemoryUsage() >= memUsage.toBytes());
-        KeyEventListenerContainer<String, String> listenerContainer = KeyEventListenerContainer
-                .create(getRedisContext().getClient(), StringCodec.UTF8);
+        KeyEventListenerContainer<String, String> listenerContainer = KeyEventListenerContainer.create(
+                getRedisContext().getClient(), StringCodec.UTF8);
         int database = getRedisContext().getUri().getDatabase();
         StatsWriter writer = new StatsWriter(stats, listenerContainer, database, readerArgs.getKeyPattern());
         RiotStep<KeyValue<String>, KeyValue<String>> step = step("stats", reader, writer);
@@ -114,7 +114,7 @@ public class Stats extends AbstractRedisCommand {
         private final String keyPattern;
 
         public StatsWriter(RedisStats stats, KeyEventListenerContainer<String, String> listenerContainer, int database,
-                           String keyPattern) {
+                String keyPattern) {
             this.stats = stats;
             this.listenerContainer = listenerContainer;
             this.database = database;
@@ -143,6 +143,8 @@ public class Stats extends AbstractRedisCommand {
 
     private class ExecutionListener implements StepExecutionListener {
 
+        private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+
         private final StatsPrinter printer;
 
         private ScheduledFuture<?> scheduledTask;
@@ -153,7 +155,6 @@ public class Stats extends AbstractRedisCommand {
 
         @Override
         public void beforeStep(StepExecution stepExecution) {
-            ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
             scheduledTask = executor.scheduleAtFixedRate(this::refresh, 0, 1, TimeUnit.SECONDS);
         }
 

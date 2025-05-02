@@ -1,13 +1,12 @@
 package com.redis.riot;
 
-import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.job.CompositeFlow;
 import com.redis.riot.core.job.JobExecutor;
 import com.redis.riot.core.job.RiotFlow;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecutionException;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.util.ClassUtils;
@@ -91,7 +90,7 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
     protected abstract String taskName(RiotStep<?, ?> step);
 
     @Override
-    protected void execute() throws JobExecutionException {
+    protected void execute() throws Exception {
         jobExecutor.execute(job());
     }
 
@@ -99,7 +98,7 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         return progressArgs.getStyle() != ProgressStyle.NONE;
     }
 
-    protected abstract Job job();
+    protected abstract Job job() throws Exception;
 
     public StepArgs getJobArgs() {
         return stepArgs;

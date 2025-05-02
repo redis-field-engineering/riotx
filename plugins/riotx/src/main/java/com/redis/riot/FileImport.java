@@ -1,25 +1,16 @@
 package com.redis.riot;
 
-import java.io.IOException;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import com.redis.riot.core.KeyValueDeserializer;
-import com.redis.riot.core.RiotException;
-import com.redis.riot.parquet.ParquetFileItemReader;
-import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.RiotUtils;
+import com.redis.riot.core.function.MapToFieldFunction;
+import com.redis.riot.core.function.RegexNamedGroupFunction;
 import com.redis.riot.core.function.ToMapFunction;
+import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.file.*;
+import com.redis.riot.parquet.ParquetFileItemReader;
 import com.redis.riot.parquet.ParquetFileNameMap;
+import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.spring.batch.item.redis.common.KeyValue;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
@@ -28,23 +19,17 @@ import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.MimeType;
-
-import com.redis.riot.core.function.RegexNamedGroupFunction;
-import com.redis.riot.file.FileReaderRegistry;
-import com.redis.riot.file.ReadOptions;
-import com.redis.riot.file.ReaderFactory;
-import com.redis.riot.file.ResourceFactory;
-import com.redis.riot.file.ResourceMap;
-import com.redis.riot.file.RiotResourceMap;
-import com.redis.riot.file.StdInProtocolResolver;
-import com.redis.riot.core.function.MapToFieldFunction;
-import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.*;
+import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Command(name = "file-import", description = "Import data from files.")
 public class FileImport extends AbstractRedisImport {
@@ -127,7 +112,7 @@ public class FileImport extends AbstractRedisImport {
         try {
             resource = resourceFactory.resource(location, readOptions);
         } catch (IOException e) {
-            throw new RiotException(String.format("Could not create resource from %s", location), e);
+            throw new RuntimeIOException(String.format("Could not create resource from %s", location), e);
         }
         MimeType type =
                 readOptions.getContentType() == null ? resourceMap.getContentTypeFor(resource) : readOptions.getContentType();

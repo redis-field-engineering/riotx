@@ -1,32 +1,32 @@
 package com.redis.riot;
 
+import com.redis.riot.db.DataSourceBuilder;
+import com.redis.testcontainers.RedisServer;
+import com.redis.testcontainers.RedisStackContainer;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.slf4j.bridge.SLF4JBridgeHandler;
+import picocli.CommandLine;
+
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
 import java.util.Map;
 
-import javax.sql.DataSource;
-
-import com.redis.riot.db.SnowflakeStreamItemReader;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-
-import com.redis.testcontainers.RedisServer;
-import com.redis.testcontainers.RedisStackContainer;
-
-import picocli.CommandLine;
-
-@EnabledIfEnvironmentVariable(named = "JDBC_ADMIN_PASSWORD", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "JDBC_URL", matches = ".+")
 class SnowflakeTests extends AbstractRiotApplicationTestBase {
 
     private static final RedisStackContainer redis = new RedisStackContainer(
             RedisStackContainer.DEFAULT_IMAGE_NAME.withTag(RedisStackContainer.DEFAULT_TAG));
+
+    private static final String ENV_URL = "JDBC_URL";
+
+    private static final String ENV_USERNAME = "JDBC_USERNAME";
+
+    private static final String ENV_PASSWORD = "JDBC_PASSWORD";
 
     protected Connection dbConnection;
 
@@ -34,44 +34,31 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
 
     private SqlScriptRunner sqlRunner;
 
-    private static final String DEFAULT_URL = "jdbc:snowflake://NYENSDO-XR16179.snowflakecomputing.com";
-
-    private String getenv(String name, String defaultVal) {
-        String val = System.getenv(name);
-        if (val != null) {
-            return val;
-        } else if (defaultVal != null) {
-            return defaultVal;
-        } else {
-            throw new RuntimeException(String.format("Required Environment variable %s not set", name));
-        }
+    private DataSourceBuilder getUnitTestDbDataSourceBuilder() {
+        DataSourceBuilder builder = new DataSourceBuilder();
+        builder.url(System.getenv(ENV_URL));
+        builder.username(System.getenv(ENV_USERNAME));
+        builder.password(System.getenv(ENV_PASSWORD));
+        builder.driver(SnowflakeImport.SNOWFLAKE_DRIVER);
+        builder.minimumIdle(1);
+        builder.maximumPoolSize(3);
+        return builder;
     }
 
-    private DataSourceProperties getUnitTestDbProperties() {
-        DataSourceProperties properties = new DataSourceProperties();
-        properties.setUrl(getenv("JDBC_URL", DEFAULT_URL));
-        properties.setUsername(getenv("JDBC_ADMIN_USERNAME", "jplichta"));
-        properties.setPassword(getenv("JDBC_ADMIN_PASSWORD", null));
-        properties.setDriverClassName(SnowflakeStreamItemReader.JDBC_DRIVER);
-        return properties;
-    }
+    @BeforeAll
+    void setupLogging() {
+        // Remove existing handlers
+        SLF4JBridgeHandler.removeHandlersForRootLogger();
 
-    private DataSourceProperties getRiotDbProperties() {
-        DataSourceProperties properties = new DataSourceProperties();
-        properties.setUrl(getenv("JDBC_URL", DEFAULT_URL));
-        properties.setUsername(getenv("JDBC_USERNAME", "riotx_cdc"));
-        properties.setPassword(getenv("JDBC_PASSWORD", null));
-        properties.setDriverClassName(SnowflakeStreamItemReader.JDBC_DRIVER);
-        return properties;
+        // Install SLF4J bridge
+        SLF4JBridgeHandler.install();
     }
 
     @BeforeAll
     public void setupConnection() throws Exception {
-        DataSourceProperties properties = getUnitTestDbProperties();
-        properties.afterPropertiesSet();
-        dataSource = properties.initializeDataSourceBuilder().build();
+        dataSource = getUnitTestDbDataSourceBuilder().build();
         dbConnection = dataSource.getConnection();
-        sqlRunner = new SqlScriptRunner(dbConnection, Map.of("{{PASSWORD}}", getenv("JDBC_PASSWORD", null)));
+        sqlRunner = new SqlScriptRunner(dbConnection, Map.of("{{PASSWORD}}", System.getenv(ENV_PASSWORD)));
     }
 
     @AfterAll
@@ -129,15 +116,18 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
 
     protected int executeSnowflakeImport(CommandLine.ParseResult parseResult) {
         SnowflakeImport command = command(parseResult);
+        command.setIdleTimeout(Duration.ofSeconds(10));
         configureDatabase(command.getDataSourceArgs());
         return CommandLine.ExitCode.OK;
     }
 
     private void configureDatabase(DataSourceArgs args) {
-        DataSourceProperties properties = getUnitTestDbProperties();
-        args.setUrl(properties.getUrl());
-        args.setUsername(properties.getUsername());
-        args.setPassword(properties.getPassword());
+        DataSourceBuilder builder = getUnitTestDbDataSourceBuilder();
+        args.setUrl(builder.url());
+        args.setUsername(builder.username());
+        args.setPassword(builder.password());
+        args.setMaxPoolSize(builder.maximumPoolSize());
+        args.setMinIdle(builder.minimumIdle());
     }
 
 }

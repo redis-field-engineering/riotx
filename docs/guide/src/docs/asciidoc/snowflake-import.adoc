@@ -82,7 +82,7 @@ riotx snowflake-import \
       --jdbc-url "jdbc:snowflake://abcdefg.abc12345.snowflakecomputing.com" \
       --jdbc-user databaseuser \
       --jdbc-pass databasepassword \
-      --repeat 10s # sleep 10s after each cdc import and then repeat \
+      --poll 10s # sleep 10s after each cdc import and then repeat \
       hset \
       --keyspace orderheader \
       --key order_id # column name to use as id

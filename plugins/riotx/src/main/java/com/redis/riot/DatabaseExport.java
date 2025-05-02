@@ -1,7 +1,5 @@
 package com.redis.riot;
 
-import com.redis.riot.core.RiotException;
-import com.redis.riot.db.DataSourceFactory;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
@@ -13,7 +11,6 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-import javax.sql.DataSource;
 import java.util.Map;
 
 @Command(name = "db-export", description = "Export Redis data to a relational database.")
@@ -41,7 +38,7 @@ public class DatabaseExport extends AbstractRedisExport {
         log.info("Creating JDBC writer with sql=\"{}\" assertUpdates={}", sql, assertUpdates);
         JdbcBatchItemWriterBuilder<Map<String, Object>> builder = new JdbcBatchItemWriterBuilder<>();
         builder.itemSqlParameterSourceProvider(NullableSqlParameterSource::new);
-        builder.dataSource(dataSourceArgs.dataSource());
+        builder.dataSource(dataSourceArgs.dataSourceBuilder().build());
         builder.sql(sql);
         builder.assertUpdates(assertUpdates);
         JdbcBatchItemWriter<Map<String, Object>> writer = builder.build();

@@ -1,6 +1,9 @@
 package com.redis.riot;
 
-import com.redis.riot.core.*;
+import com.redis.riot.core.CompareMode;
+import com.redis.riot.core.RedisContext;
+import com.redis.riot.core.ReplicationMode;
+import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.job.CompositeFlow;
 import com.redis.riot.core.job.RiotFlow;
 import com.redis.riot.core.job.RiotStep;
@@ -25,8 +28,6 @@ import org.springframework.util.StringUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-
-import java.io.IOException;
 
 @Command(name = "replicate", aliases = "sync", description = "Replicate a Redis database into another Redis database.")
 public class Replicate extends AbstractCompareCommand {
@@ -203,11 +204,7 @@ public class Replicate extends AbstractCompareCommand {
     @Override
     protected void initialize() throws Exception {
         super.initialize();
-        try {
-            metricsArgs.configureMetrics();
-        } catch (IOException e) {
-            throw new RiotException("Could not initialize metrics", e);
-        }
+        metricsArgs.configureMetrics();
     }
 
     private void unsupportedRedis(RedisInfo info) {

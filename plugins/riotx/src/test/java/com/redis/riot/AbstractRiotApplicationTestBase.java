@@ -39,6 +39,7 @@ public abstract class AbstractRiotApplicationTestBase extends AbstractRiotTestBa
         public TestRiot(TestInfo info, IExecutionStrategy... configs) {
             this.info = info;
             this.configs = Arrays.asList(configs);
+            setDisableExceptionMessageHandling(true);
         }
 
         private void configure(RedisArgs redisArgs) {
