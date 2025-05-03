@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.redis.lettucemod.utils.ConnectionBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -19,7 +20,6 @@ import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.sync.RedisModulesCommands;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.common.Range;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
@@ -91,7 +91,7 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
     }
 
     protected <K, V> StatefulRedisModulesConnection<K, V> targetRedisConnection(RedisCodec<K, V> codec) {
-        return BatchUtils.connection(targetRedisClient, codec);
+        return ConnectionBuilder.client(targetRedisClient).connection(codec);
     }
 
     protected void assertTtlEquals(long expected, long actual) {

@@ -40,10 +40,10 @@ public class StreamImport extends AbstractTargetRedisImport {
 
     private StreamItemReader<String, String> reader() {
         log.info("Creating stream reader with streams {} {}", streams, streamReaderArgs);
-        StreamItemReader<String, String> reader = new StreamItemReader<>(sourceRedisContext.getClient(), StringCodec.UTF8,
+        StreamItemReader<String, String> reader = new StreamItemReader<>(sourceRedisContext.client(), StringCodec.UTF8,
                 streamOffsets());
-        log.info("Configuring stream reader with read-from {}", sourceRedisContext.getReadFrom());
-        reader.setReadFrom(sourceRedisContext.getReadFrom());
+        log.info("Configuring stream reader with read-from {}", sourceRedisContext.readFrom());
+        reader.setReadFrom(sourceRedisContext.readFrom());
         streamReaderArgs.configure(reader);
         return reader;
     }

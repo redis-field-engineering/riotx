@@ -6,6 +6,7 @@ import java.util.Properties;
 
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 
+import com.redis.lettucemod.utils.ConnectionBuilder;
 import io.lettuce.core.AbstractRedisClient;
 
 public class RedisInfo {
@@ -39,7 +40,7 @@ public class RedisInfo {
 
     public static RedisInfo from(AbstractRedisClient client) {
         Properties properties = new Properties();
-        try (StatefulRedisModulesConnection<String, String> connection = BatchUtils.connection(client)) {
+        try (StatefulRedisModulesConnection<String, String> connection = ConnectionBuilder.client(client).connection()) {
             try {
                 properties.load(new StringReader(connection.sync().info("server")));
             } catch (IOException e) {

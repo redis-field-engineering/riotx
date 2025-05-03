@@ -20,6 +20,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import com.redis.lettucemod.utils.ConnectionBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -36,7 +37,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redis.lettucemod.Beers;
-import com.redis.lettucemod.RedisModulesUtils;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.sync.RedisModulesCommands;
 import com.redis.lettucemod.search.IndexInfo;
@@ -200,8 +200,9 @@ abstract class BatchTests extends AbstractTargetTestBase {
     }
 
     private Entry<String, List<String>> xadd(Entry<String, List<StreamMessage<String, String>>> entry) {
-        return new SimpleEntry<>(entry.getKey(), entry.getValue().stream()
-                .map(m -> redisCommands.xadd(entry.getKey(), m.getBody())).collect(Collectors.toList()));
+        return new SimpleEntry<>(entry.getKey(),
+                entry.getValue().stream().map(m -> redisCommands.xadd(entry.getKey(), m.getBody()))
+                        .collect(Collectors.toList()));
     }
 
     @Test
@@ -712,25 +713,29 @@ abstract class BatchTests extends AbstractTargetTestBase {
         }
         byte[] hashKey = randomBytes();
         Map<byte[], byte[]> hashValue = byteArrayMap();
-        StatefulRedisModulesConnection<byte[], byte[]> connection = BatchUtils.connection(redisClient, ByteArrayCodec.INSTANCE);
-        RedisModulesCommands<byte[], byte[]> source = connection.sync();
-        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = targetRedisConnection(ByteArrayCodec.INSTANCE);
-        RedisModulesCommands<byte[], byte[]> target = targetConnection.sync();
-        source.sadd(setKey, setValue.toArray(new byte[0][]));
-        target.sadd(setKey, setValue.toArray(new byte[0][]));
-        source.hset(hashKey, hashValue);
-        target.hset(hashKey, hashValue);
-        source.lpush(listKey, listValue.toArray(new byte[0][]));
-        target.lpush(listKey, listValue.toArray(new byte[0][]));
-        source.zadd(zsetKey, zsetValue.toArray(new ScoredValue[0]));
-        target.zadd(zsetKey, zsetValue.toArray(new ScoredValue[0]));
-        byte[] streamKey = randomBytes();
-        for (int index = 0; index < 10; index++) {
-            Map<byte[], byte[]> body = byteArrayMap();
-            String id = source.xadd(streamKey, body);
-            XAddArgs args = new XAddArgs();
-            args.id(id);
-            target.xadd(streamKey, args, body);
+        try (StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
+                .connection(ByteArrayCodec.INSTANCE)) {
+            RedisModulesCommands<byte[], byte[]> source = connection.sync();
+            try (StatefulRedisModulesConnection<byte[], byte[]> targetConnection = targetRedisConnection(
+                    ByteArrayCodec.INSTANCE)) {
+                RedisModulesCommands<byte[], byte[]> target = targetConnection.sync();
+                source.sadd(setKey, setValue.toArray(new byte[0][]));
+                target.sadd(setKey, setValue.toArray(new byte[0][]));
+                source.hset(hashKey, hashValue);
+                target.hset(hashKey, hashValue);
+                source.lpush(listKey, listValue.toArray(new byte[0][]));
+                target.lpush(listKey, listValue.toArray(new byte[0][]));
+                source.zadd(zsetKey, zsetValue.toArray(new ScoredValue[0]));
+                target.zadd(zsetKey, zsetValue.toArray(new ScoredValue[0]));
+                byte[] streamKey = randomBytes();
+                for (int index = 0; index < 10; index++) {
+                    Map<byte[], byte[]> body = byteArrayMap();
+                    String id = source.xadd(streamKey, body);
+                    XAddArgs args = new XAddArgs();
+                    args.id(id);
+                    target.xadd(streamKey, args, body);
+                }
+            }
         }
         List<KeyComparison<byte[]>> stats = compare(info, ByteArrayCodec.INSTANCE);
         Assertions.assertFalse(stats.isEmpty());
@@ -762,7 +767,7 @@ abstract class BatchTests extends AbstractTargetTestBase {
     @Test
     void beerIndex() throws Exception {
         Beers.populateIndex(redisConnection);
-        IndexInfo indexInfo = RedisModulesUtils.indexInfo(redisCommands.ftInfo(Beers.INDEX));
+        IndexInfo indexInfo = IndexInfo.parse(redisCommands.ftInfo(Beers.INDEX));
         Assertions.assertEquals(BEER_COUNT, indexInfo.getNumDocs());
     }
 

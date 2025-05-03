@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.redis.lettucemod.utils.ConnectionBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.context.SmartLifecycle;
@@ -200,7 +201,7 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
 
     private void checkNotifyConfig() {
         Map<String, String> valueMap;
-        try (StatefulRedisModulesConnection<String, String> connection = BatchUtils.connection(client)) {
+        try (StatefulRedisModulesConnection<String, String> connection = ConnectionBuilder.client(client).connection()) {
             try {
                 valueMap = connection.sync().configGet(NOTIFY_CONFIG);
             } catch (RedisException e) {

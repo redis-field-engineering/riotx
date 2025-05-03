@@ -24,7 +24,7 @@ public class DatabaseReaderArgs {
     @Option(names = "--shared-connection", description = "Use same connection for cursor and other processing.", hidden = true)
     private boolean useSharedExtendedConnection;
 
-    @Option(names = "--verify", description = "Verify position of result set after row mapper.", hidden = true)
+    @Option(names = "--verify-cursor", description = "Verify position of result set after row mapper.", hidden = true)
     private boolean verifyCursorPosition;
 
     public int getMaxItemCount() {
@@ -46,7 +46,7 @@ public class DatabaseReaderArgs {
     /**
      * The max number of rows the {@link java.sql.ResultSet} can contain
      *
-     * @return
+     * @return max rows
      */
     public int getMaxRows() {
         return maxRows;

@@ -1,295 +1,165 @@
 package com.redis.riot;
 
+import com.redis.lettucemod.utils.SslOptionsBuilder;
+import com.redis.lettucemod.utils.URIBuilder;
+import com.redis.riot.core.ReadFrom;
+import com.redis.riot.core.RedisContext;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.SslOptions;
+import io.lettuce.core.SslVerifyMode;
+import io.lettuce.core.protocol.ProtocolVersion;
+
 import java.io.File;
 import java.time.Duration;
 
-import com.redis.riot.core.ReadFrom;
-import com.redis.riot.core.RedisClientArgs;
-import io.lettuce.core.RedisURI;
-import io.lettuce.core.protocol.ProtocolVersion;
-import lombok.ToString;
-import picocli.CommandLine.Option;
+public interface RedisArgs {
 
-@ToString
-public class RedisArgs implements RedisClientArgs {
+    ProtocolVersion DEFAULT_PROTOCOL_VERSION = ProtocolVersion.RESP2;
 
-	@Option(names = { "-u", "--uri" }, description = "Redis server URI.", paramLabel = "<uri>")
-	private RedisURI uri;
+    int DEFAULT_POOL_SIZE = RedisContext.DEFAULT_POOL_SIZE;
 
-	@Option(names = { "-h",
-			"--host" }, description = "Redis server hostname (default: ${DEFAULT-VALUE}).", paramLabel = "<host>")
-	private String host = DEFAULT_HOST;
+    ReadFrom DEFAULT_READ_FROM = ReadFrom.UPSTREAM;
 
-	@Option(names = { "-p",
-			"--port" }, description = "Redis server port (default: ${DEFAULT-VALUE}).", paramLabel = "<port>")
-	private int port = DEFAULT_PORT;
+    String DEFAULT_HOST = URIBuilder.DEFAULT_HOST;
 
-	@Option(names = { "-s",
-			"--socket" }, description = "Redis server socket (overrides hostname and port).", paramLabel = "<socket>")
-	private String socket;
+    int DEFAULT_PORT = URIBuilder.DEFAULT_PORT;
 
-	@Option(names = "--user", description = "ACL style 'AUTH username pass'. Needs password.", paramLabel = "<name>")
-	private String username;
+    int DEFAULT_DATABASE = 0;
 
-	@Option(names = { "-a",
-			"--pass" }, arity = "0..1", interactive = true, description = "Password to use when connecting to the Redis server.", paramLabel = "<password>")
-	private char[] password;
+    Duration DEFAULT_TIMEOUT = RedisURI.DEFAULT_TIMEOUT_DURATION;
 
-	@Option(names = "--timeout", description = "Redis command timeout, e.g. 30s or 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
-	private Duration timeout = DEFAULT_TIMEOUT;
+    SslVerifyMode DEFAULT_SSL_VERIFY_MODE = URIBuilder.DEFAULT_VERIFY_MODE;
 
-	@Option(names = { "-n", "--db" }, description = "Redis database number.", paramLabel = "<db>")
-	private int database = DEFAULT_DATABASE;
-
-	@Option(names = "--tls", description = "Establish a secure TLS connection.")
-	private boolean tls;
-
-	@Option(names = "--insecure", description = "Allow insecure TLS connection by skipping cert validation.")
-	private boolean insecure;
-
-	@Option(names = "--client", description = "Client name used to connect to Redis.", paramLabel = "<name>")
-	private String clientName;
-
-	@Option(names = { "-c", "--cluster" }, description = "Enable Redis cluster mode.")
-	private boolean cluster;
-
-	@Option(names = "--resp", description = "Redis protocol version used to connect to Redis: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<ver>")
-	private ProtocolVersion protocolVersion = DEFAULT_PROTOCOL_VERSION;
-
-	@Option(names = "--pool", description = "Max number of Redis connections (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
-	private int poolSize = DEFAULT_POOL_SIZE;
-
-	@Option(names = "--read-from", description = "Which Redis cluster nodes to read from: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<name>")
-	private ReadFrom readFrom = DEFAULT_READ_FROM;
-
-	@Option(names = "--keystore", description = "Path to keystore.", paramLabel = "<file>", hidden = true)
-	private File keystore;
-
-	@Option(names = "--keystore-pass", arity = "0..1", interactive = true, description = "Keystore password.", paramLabel = "<password>", hidden = true)
-	private char[] keystorePassword;
-
-	@Option(names = "--trust", description = "Path to truststore.", paramLabel = "<file>", hidden = true)
-	private File truststore;
-
-	@Option(names = "--trust-pass", arity = "0..1", interactive = true, description = "Truststore password.", paramLabel = "<password>", hidden = true)
-	private char[] truststorePassword;
-
-	@Option(names = "--cert", description = "Client certificate to authenticate with (X.509 PEM).", paramLabel = "<file>")
-	private File keyCert;
-
-	@Option(names = "--key", description = "Private key file to authenticate with (PKCS#8 PEM).", paramLabel = "<file>")
-	private File key;
-
-	@Option(names = "--key-pass", arity = "0..1", interactive = true, description = "Private key password.", paramLabel = "<pwd>")
-	private char[] keyPassword;
-
-	@Option(names = "--cacert", description = "CA Certificate file to verify with (X.509).", paramLabel = "<file>")
-	private File trustedCerts;
-
-	@Override
-	public File getKeystore() {
-		return keystore;
-	}
-
-	public void setKeystore(File keystore) {
-		this.keystore = keystore;
-	}
-
-	@Override
-	public char[] getKeystorePassword() {
-		return keystorePassword;
-	}
-
-	public void setKeystorePassword(char[] keystorePassword) {
-		this.keystorePassword = keystorePassword;
-	}
-
-	@Override
-	public File getTruststore() {
-		return truststore;
-	}
-
-	public void setTruststore(File truststore) {
-		this.truststore = truststore;
-	}
-
-	@Override
-	public char[] getTruststorePassword() {
-		return truststorePassword;
-	}
-
-	public void setTruststorePassword(char[] truststorePassword) {
-		this.truststorePassword = truststorePassword;
-	}
-
-	@Override
-	public File getKeyCert() {
-		return keyCert;
-	}
-
-	public void setKeyCert(File keyCert) {
-		this.keyCert = keyCert;
-	}
-
-	@Override
-	public File getKey() {
-		return key;
-	}
-
-	public void setKey(File key) {
-		this.key = key;
-	}
-
-	@Override
-	public char[] getKeyPassword() {
-		return keyPassword;
-	}
-
-	public void setKeyPassword(char[] keyPassword) {
-		this.keyPassword = keyPassword;
-	}
-
-	@Override
-	public File getTrustedCerts() {
-		return trustedCerts;
-	}
-
-	public void setTrustedCerts(File trustedCerts) {
-		this.trustedCerts = trustedCerts;
-	}
-
-	@Override
-	public boolean isCluster() {
-		return cluster;
-	}
-
-	public void setCluster(boolean cluster) {
-		this.cluster = cluster;
-	}
-
-	@Override
-	public ProtocolVersion getProtocolVersion() {
-		return protocolVersion;
-	}
-
-	public void setProtocolVersion(ProtocolVersion version) {
-		this.protocolVersion = version;
-	}
-
-	public RedisURI getUri() {
-		return uri;
-	}
-
-	public void setUri(RedisURI uri) {
-		this.uri = uri;
-	}
-
-	@Override
-	public String getHost() {
-		return host;
-	}
-
-	public void setHost(String host) {
-		this.host = host;
-	}
-
-	@Override
-	public int getPort() {
-		return port;
-	}
-
-	public void setPort(int port) {
-		this.port = port;
-	}
-
-	@Override
-	public String getSocket() {
-		return socket;
-	}
-
-	public void setSocket(String socket) {
-		this.socket = socket;
-	}
-
-	@Override
-	public String getUsername() {
-		return username;
-	}
-
-	public void setUsername(String username) {
-		this.username = username;
-	}
-
-	@Override
-	public char[] getPassword() {
-		return password;
-	}
-
-	public void setPassword(char[] password) {
-		this.password = password;
-	}
-
-	@Override
-	public Duration getTimeout() {
-		return timeout;
-	}
-
-	public void setTimeout(Duration timeout) {
-		this.timeout = timeout;
-	}
-
-	@Override
-	public int getDatabase() {
-		return database;
-	}
-
-	public void setDatabase(int database) {
-		this.database = database;
-	}
-
-	@Override
-	public boolean isTls() {
-		return tls;
-	}
-
-	public void setTls(boolean tls) {
-		this.tls = tls;
-	}
-
-	@Override
-	public boolean isInsecure() {
-		return insecure;
-	}
-
-	public void setInsecure(boolean insecure) {
-		this.insecure = insecure;
-	}
-
-	@Override
-	public String getClientName() {
-		return clientName;
-	}
-
-	public void setClientName(String clientName) {
-		this.clientName = clientName;
-	}
-
-	@Override
-	public int getPoolSize() {
-		return poolSize;
-	}
-
-	public void setPoolSize(int poolSize) {
-		this.poolSize = poolSize;
-	}
-
-	@Override
-	public ReadFrom getReadFrom() {
-		return readFrom;
-	}
-
-	public void setReadFrom(ReadFrom readFrom) {
-		this.readFrom = readFrom;
-	}
+    default RedisURI redisURI(RedisURI uri) {
+        URIBuilder builder = new URIBuilder();
+        builder.clientName(getClientName());
+        builder.database(getDatabase());
+        builder.host(getHost());
+        builder.password(getPassword());
+        builder.port(getPort());
+        builder.socket(getSocket());
+        builder.timeout(getTimeout());
+        builder.tls(isTls());
+        builder.uri(uri);
+        builder.username(getUsername());
+        builder.verifyMode(isInsecure() ? SslVerifyMode.NONE : getSslVerifyMode());
+        return builder.build();
+    }
+
+    default ReadFrom getReadFrom() {
+        return DEFAULT_READ_FROM;
+    }
+
+    default String getHost() {
+        return DEFAULT_HOST;
+    }
+
+    default int getPort() {
+        return DEFAULT_PORT;
+    }
+
+    default String getSocket() {
+        return null;
+    }
+
+    default String getUsername() {
+        return null;
+    }
+
+    default char[] getPassword() {
+        return null;
+    }
+
+    default boolean isInsecure() {
+        return false;
+    }
+
+    default Duration getTimeout() {
+        return DEFAULT_TIMEOUT;
+    }
+
+    default boolean isTls() {
+        return false;
+    }
+
+    default SslVerifyMode getSslVerifyMode() {
+        return DEFAULT_SSL_VERIFY_MODE;
+    }
+
+    default String getClientName() {
+        return null;
+    }
+
+    default int getDatabase() {
+        return DEFAULT_DATABASE;
+    }
+
+    default boolean isCluster() {
+        return false;
+    }
+
+    default ProtocolVersion getProtocolVersion() {
+        return DEFAULT_PROTOCOL_VERSION;
+    }
+
+    default int getPoolSize() {
+        return DEFAULT_POOL_SIZE;
+    }
+
+    default File getKeystore() {
+        return null;
+    }
+
+    default char[] getKeystorePassword() {
+        return null;
+    }
+
+    default File getTruststore() {
+        return null;
+    }
+
+    default char[] getTruststorePassword() {
+        return null;
+    }
+
+    default File getKeyCert() {
+        return null;
+    }
+
+    default File getKey() {
+        return null;
+    }
+
+    default char[] getKeyPassword() {
+        return null;
+    }
+
+    default File getTrustedCerts() {
+        return null;
+    }
+
+    default SslOptions sslOptions() {
+        SslOptionsBuilder builder = new SslOptionsBuilder();
+        builder.key(getKey());
+        builder.keyCert(getKeyCert());
+        builder.keyPassword(getKeyPassword());
+        builder.keystore(getKeystore());
+        builder.keystorePassword(getKeystorePassword());
+        builder.trustedCerts(getTrustedCerts());
+        builder.truststore(getTruststore());
+        builder.truststorePassword(getTruststorePassword());
+        return builder.build();
+    }
+
+    default RedisContext redisContext(RedisURI uri) {
+        RedisContext context = new RedisContext();
+        context.cluster(isCluster());
+        context.poolSize(getPoolSize());
+        context.protocolVersion(getProtocolVersion());
+        context.readFrom(getReadFrom().getReadFrom());
+        context.sslOptions(sslOptions());
+        context.uri(redisURI(uri));
+        return context;
+    }
 
 }

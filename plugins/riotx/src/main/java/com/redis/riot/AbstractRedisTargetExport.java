@@ -1,7 +1,6 @@
 package com.redis.riot;
 
 import com.redis.riot.core.RedisContext;
-import com.redis.riot.core.RedisContextFactory;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import io.lettuce.core.RedisURI;
@@ -45,12 +44,12 @@ public abstract class AbstractRedisTargetExport extends AbstractExport {
     @Override
     protected RedisContext sourceRedisContext() {
         log.info("Creating source Redis context with {} {}", sourceRedisUri, sourceRedisArgs);
-        return RedisContextFactory.create(sourceRedisUri, sourceRedisArgs);
+        return sourceRedisArgs.redisContext(sourceRedisUri);
     }
 
     protected RedisContext targetRedisContext() {
         log.info("Creating target Redis context with {} {}", targetRedisUri, targetRedisArgs);
-        return RedisContextFactory.create(targetRedisUri, targetRedisArgs);
+        return targetRedisArgs.redisContext(targetRedisUri);
     }
 
     @Override

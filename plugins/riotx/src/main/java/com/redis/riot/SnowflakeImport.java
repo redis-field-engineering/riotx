@@ -70,7 +70,7 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     protected SnowflakeStreamItemReader reader() {
         SnowflakeStreamItemReader reader = new SnowflakeStreamItemReader();
-        reader.setRedisClient(targetRedisContext.getClient());
+        reader.setRedisClient(targetRedisContext.client());
         reader.setReaderOptions(readerArgs.readerOptions());
         reader.setCdcDatabase(cdcDatabase);
         reader.setCdcSchema(cdcSchema);

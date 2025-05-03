@@ -1,26 +1,23 @@
 package com.redis.riot.core;
 
-import org.springframework.beans.factory.InitializingBean;
-
-import com.redis.lettucemod.RedisModulesClientBuilder;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
+import com.redis.lettucemod.utils.ClientBuilder;
+import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
-
-import io.lettuce.core.AbstractRedisClient;
-import io.lettuce.core.ClientOptions;
+import io.lettuce.core.*;
 import io.lettuce.core.ReadFrom;
-import io.lettuce.core.RedisURI;
-import io.lettuce.core.SslOptions;
 import io.lettuce.core.cluster.ClusterClientOptions;
 import io.lettuce.core.protocol.ProtocolVersion;
 import io.lettuce.core.resource.ClientResources;
 import lombok.ToString;
+import org.springframework.beans.factory.InitializingBean;
 
 @ToString
 public class RedisContext implements InitializingBean, AutoCloseable {
+
+    public static int DEFAULT_POOL_SIZE = 8;
 
     private RedisURI uri;
 
@@ -28,9 +25,9 @@ public class RedisContext implements InitializingBean, AutoCloseable {
 
     private ProtocolVersion protocolVersion;
 
-    private SslOptions sslOptions = ClientOptions.DEFAULT_SSL_OPTIONS;
+    private SslOptions sslOptions;
 
-    private int poolSize = RedisItemReader.DEFAULT_POOL_SIZE;
+    private int poolSize = DEFAULT_POOL_SIZE;
 
     private ClientResources clientResources;
 
@@ -42,19 +39,22 @@ public class RedisContext implements InitializingBean, AutoCloseable {
 
     @Override
     public void afterPropertiesSet() {
-        RedisModulesClientBuilder clientBuilder = new RedisModulesClientBuilder();
+        ClientBuilder clientBuilder = ClientBuilder.of(uri);
         clientBuilder.cluster(cluster);
         clientBuilder.options(clientOptions());
-        clientBuilder.uri(uri);
         clientBuilder.resources(clientResources);
         this.client = clientBuilder.build();
-        this.connection = BatchUtils.connection(client);
+        this.connection = ConnectionBuilder.client(client).readFrom(readFrom).connection();
     }
 
     private ClientOptions clientOptions() {
         ClientOptions.Builder options = cluster ? ClusterClientOptions.builder() : ClientOptions.builder();
-        options.protocolVersion(protocolVersion);
-        options.sslOptions(sslOptions);
+        if (protocolVersion != null) {
+            options.protocolVersion(protocolVersion);
+        }
+        if (sslOptions != null) {
+            options.sslOptions(sslOptions);
+        }
         return options.build();
     }
 
@@ -83,7 +83,7 @@ public class RedisContext implements InitializingBean, AutoCloseable {
         }
     }
 
-    public AbstractRedisClient getClient() {
+    public AbstractRedisClient client() {
         return client;
     }
 
@@ -91,7 +91,7 @@ public class RedisContext implements InitializingBean, AutoCloseable {
         return connection;
     }
 
-    public RedisURI getUri() {
+    public RedisURI uri() {
         return uri;
     }
 
@@ -100,7 +100,7 @@ public class RedisContext implements InitializingBean, AutoCloseable {
         return this;
     }
 
-    public boolean isCluster() {
+    public boolean cluster() {
         return cluster;
     }
 
@@ -109,7 +109,7 @@ public class RedisContext implements InitializingBean, AutoCloseable {
         return this;
     }
 
-    public ProtocolVersion getProtocolVersion() {
+    public ProtocolVersion protocolVersion() {
         return protocolVersion;
     }
 
@@ -118,7 +118,7 @@ public class RedisContext implements InitializingBean, AutoCloseable {
         return this;
     }
 
-    public SslOptions getSslOptions() {
+    public SslOptions sslOptions() {
         return sslOptions;
     }
 
@@ -127,7 +127,7 @@ public class RedisContext implements InitializingBean, AutoCloseable {
         return this;
     }
 
-    public int getPoolSize() {
+    public int poolSize() {
         return poolSize;
     }
 
@@ -136,7 +136,7 @@ public class RedisContext implements InitializingBean, AutoCloseable {
         return this;
     }
 
-    public ReadFrom getReadFrom() {
+    public ReadFrom readFrom() {
         return readFrom;
     }
 
@@ -145,7 +145,7 @@ public class RedisContext implements InitializingBean, AutoCloseable {
         return this;
     }
 
-    public ClientResources getClientResources() {
+    public ClientResources clientResources() {
         return clientResources;
     }
 

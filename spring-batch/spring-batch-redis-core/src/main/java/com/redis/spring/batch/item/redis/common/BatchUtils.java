@@ -1,5 +1,26 @@
 package com.redis.spring.batch.item.redis.common;
 
+import com.hrakaroo.glob.GlobPattern;
+import com.redis.spring.batch.BatchRedisMetrics;
+import com.redis.spring.batch.item.redis.reader.KeyEvent;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
+import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
+import io.lettuce.core.RedisFuture;
+import io.lettuce.core.ScanArgs;
+import io.lettuce.core.ScanIterator;
+import io.lettuce.core.ScanStream;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.async.RedisAsyncCommands;
+import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
+import io.lettuce.core.cluster.models.partitions.RedisClusterNode;
+import io.lettuce.core.codec.ByteArrayCodec;
+import io.lettuce.core.codec.RedisCodec;
+import io.lettuce.core.codec.StringCodec;
+import io.micrometer.core.instrument.Tags;
+import org.springframework.util.FileCopyUtils;
+import org.springframework.util.StringUtils;
+import reactor.core.publisher.Flux;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -17,40 +38,9 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-
-import org.springframework.util.FileCopyUtils;
-import org.springframework.util.StringUtils;
-
-import com.hrakaroo.glob.GlobPattern;
-import com.redis.lettucemod.RedisModulesClient;
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.lettucemod.cluster.RedisModulesClusterClient;
-import com.redis.lettucemod.cluster.api.StatefulRedisModulesClusterConnection;
-import com.redis.spring.batch.BatchRedisMetrics;
-import com.redis.spring.batch.item.redis.reader.KeyEvent;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
-
-import io.lettuce.core.AbstractRedisClient;
-import io.lettuce.core.ReadFrom;
-import io.lettuce.core.RedisFuture;
-import io.lettuce.core.ScanArgs;
-import io.lettuce.core.ScanIterator;
-import io.lettuce.core.ScanStream;
-import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.async.RedisAsyncCommands;
-import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
-import io.lettuce.core.cluster.models.partitions.RedisClusterNode;
-import io.lettuce.core.codec.ByteArrayCodec;
-import io.lettuce.core.codec.RedisCodec;
-import io.lettuce.core.codec.StringCodec;
-import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
-import io.micrometer.core.instrument.Tags;
-import reactor.core.publisher.Flux;
 
 public abstract class BatchUtils {
 
@@ -164,56 +154,6 @@ public abstract class BatchUtils {
             }
         }
         return items;
-    }
-
-    public static StatefulRedisModulesConnection<String, String> connection(AbstractRedisClient client) {
-        return connection(client, StringCodec.UTF8);
-    }
-
-    public static <K, V> StatefulRedisModulesConnection<K, V> connection(AbstractRedisClient client, RedisCodec<K, V> codec) {
-        if (client instanceof RedisModulesClusterClient) {
-            return ((RedisModulesClusterClient) client).connect(codec);
-        }
-        return ((RedisModulesClient) client).connect(codec);
-    }
-
-    public static StatefulRedisPubSubConnection<String, String> pubSubConnection(AbstractRedisClient client) {
-        return pubSubConnection(client, StringCodec.UTF8);
-    }
-
-    public static <K, V> StatefulRedisPubSubConnection<K, V> pubSubConnection(AbstractRedisClient client,
-            RedisCodec<K, V> codec) {
-        if (client instanceof RedisModulesClusterClient) {
-            return ((RedisModulesClusterClient) client).connectPubSub(codec);
-        }
-        return ((RedisModulesClient) client).connectPubSub(codec);
-    }
-
-    public static <K, V> Supplier<StatefulRedisModulesConnection<K, V>> supplier(AbstractRedisClient client,
-            RedisCodec<K, V> codec, ReadFrom readFrom) {
-        if (client instanceof RedisModulesClusterClient) {
-            RedisModulesClusterClient clusterClient = (RedisModulesClusterClient) client;
-            return () -> connection(clusterClient, codec, readFrom);
-        }
-        RedisModulesClient redisClient = (RedisModulesClient) client;
-        return () -> redisClient.connect(codec);
-    }
-
-    public static <K, V> StatefulRedisModulesConnection<K, V> connection(AbstractRedisClient client, RedisCodec<K, V> codec,
-            ReadFrom readFrom) {
-        if (client instanceof RedisModulesClusterClient) {
-            return connection((RedisModulesClusterClient) client, codec, readFrom);
-        }
-        return ((RedisModulesClient) client).connect(codec);
-    }
-
-    public static <K, V> StatefulRedisModulesClusterConnection<K, V> connection(RedisModulesClusterClient client,
-            RedisCodec<K, V> codec, ReadFrom readFrom) {
-        StatefulRedisModulesClusterConnection<K, V> connection = client.connect(codec);
-        if (readFrom != null) {
-            connection.setReadFrom(readFrom);
-        }
-        return connection;
     }
 
 }

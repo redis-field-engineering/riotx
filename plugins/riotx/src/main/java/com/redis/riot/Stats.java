@@ -70,8 +70,8 @@ public class Stats extends AbstractRedisCommand {
         stats.setKeyspacePattern(keyspacePattern);
         stats.setBigKeyPredicate(kv -> kv.getMemoryUsage() >= memUsage.toBytes());
         KeyEventListenerContainer<String, String> listenerContainer = KeyEventListenerContainer.create(
-                getRedisContext().getClient(), StringCodec.UTF8);
-        int database = getRedisContext().getUri().getDatabase();
+                getRedisContext().client(), StringCodec.UTF8);
+        int database = getRedisContext().uri().getDatabase();
         StatsWriter writer = new StatsWriter(stats, listenerContainer, database, readerArgs.getKeyPattern());
         RiotStep<KeyValue<String>, KeyValue<String>> step = step("stats", reader, writer);
         step.addExecutionListener(new ExecutionListener(statsPrinter(stats)));

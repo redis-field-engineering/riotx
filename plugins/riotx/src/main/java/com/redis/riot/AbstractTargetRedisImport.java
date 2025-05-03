@@ -3,7 +3,6 @@ package com.redis.riot;
 import java.util.Map;
 
 import com.redis.riot.core.RedisContext;
-import com.redis.riot.core.RedisContextFactory;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 
 import io.lettuce.core.RedisURI;
@@ -13,7 +12,7 @@ import picocli.CommandLine.Option;
 public abstract class AbstractTargetRedisImport extends AbstractImport {
 
     @ArgGroup(exclusive = false)
-    private RedisArgs sourceRedisArgs = new RedisArgs();
+    private SingleRedisArgs sourceRedisArgs = new SingleRedisArgs();
 
     @Option(names = "--target-uri", description = "Target server URI or endpoint in the form host:port. Source endpoint is used if not specified.", paramLabel = "<uri>")
     private RedisURI targetRedisUri;
@@ -40,7 +39,7 @@ public abstract class AbstractTargetRedisImport extends AbstractImport {
 
     private RedisContext sourceRedisContext() {
         log.info("Creating source Redis context with {}", sourceRedisArgs);
-        return RedisContextFactory.create(sourceRedisArgs.getUri(), sourceRedisArgs);
+        return sourceRedisArgs.redisContext();
     }
 
     @Override
@@ -50,7 +49,7 @@ public abstract class AbstractTargetRedisImport extends AbstractImport {
             return sourceRedisContext();
         }
         log.info("Creating target Redis context with {} {}", targetRedisUri, targetRedisArgs);
-        return RedisContextFactory.create(targetRedisUri, targetRedisArgs);
+        return targetRedisArgs.redisContext(targetRedisUri);
     }
 
     @Override
@@ -66,11 +65,11 @@ public abstract class AbstractTargetRedisImport extends AbstractImport {
         return writer;
     }
 
-    public RedisArgs getSourceRedisArgs() {
+    public SingleRedisArgs getSourceRedisArgs() {
         return sourceRedisArgs;
     }
 
-    public void setSourceRedisArgs(RedisArgs sourceRedisArgs) {
+    public void setSourceRedisArgs(SingleRedisArgs sourceRedisArgs) {
         this.sourceRedisArgs = sourceRedisArgs;
     }
 

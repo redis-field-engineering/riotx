@@ -1,40 +1,7 @@
 package com.redis.riot;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.zip.GZIPInputStream;
-
-import com.redis.riot.core.Expression;
-import com.redis.riot.core.QuietMapAccessor;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.json.JacksonJsonObjectReader;
-import org.springframework.batch.item.json.JsonItemReader;
-import org.springframework.batch.item.json.builder.JsonItemReaderBuilder;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.InputStreamResource;
-import org.springframework.expression.EvaluationContext;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.util.StringUtils;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.redis.lettucemod.RedisModulesUtils;
 import com.redis.lettucemod.search.Field;
 import com.redis.lettucemod.search.IndexInfo;
 import com.redis.lettucemod.search.Suggestion;
@@ -42,6 +9,8 @@ import com.redis.lettucemod.search.SuggetOptions;
 import com.redis.lettucemod.timeseries.MRangeOptions;
 import com.redis.lettucemod.timeseries.RangeResult;
 import com.redis.lettucemod.timeseries.TimeRange;
+import com.redis.riot.core.Expression;
+import com.redis.riot.core.QuietMapAccessor;
 import com.redis.riot.file.xml.XmlItemReader;
 import com.redis.riot.file.xml.XmlItemReaderBuilder;
 import com.redis.riot.file.xml.XmlObjectReader;
@@ -53,14 +22,33 @@ import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
 import com.redis.testcontainers.RedisStackContainer;
-
 import io.lettuce.core.GeoArgs;
 import io.lettuce.core.Range;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.cluster.SlotHash;
 import io.lettuce.core.codec.StringCodec;
+import org.junit.jupiter.api.*;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.json.JacksonJsonObjectReader;
+import org.springframework.batch.item.json.JsonItemReader;
+import org.springframework.batch.item.json.builder.JsonItemReaderBuilder;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.util.StringUtils;
 import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.ParseResult;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class StackRiotTests extends RiotTests {
 
@@ -498,7 +486,7 @@ class StackRiotTests extends RiotTests {
         execute(info, "generate-json-index");
         int keyCount = Math.min(GenerateArgs.DEFAULT_COUNT, GeneratorItemReader.DEFAULT_KEY_RANGE.getMax());
         Assertions.assertEquals(keyCount, redisCommands.dbsize());
-        IndexInfo indexInfo = RedisModulesUtils.indexInfo(redisCommands.ftInfo("jsonIdx"));
+        IndexInfo indexInfo = IndexInfo.parse(redisCommands.ftInfo("jsonIdx"));
         List<Field<String>> expectedFields = new ArrayList<>();
         for (int index = 1; index <= MapOptions.DEFAULT_FIELD_COUNT.getMax(); index++) {
             expectedFields.add(Field.tag("$.field" + index).as("field" + index).build());
@@ -512,7 +500,7 @@ class StackRiotTests extends RiotTests {
         execute(info, "generate-hash-index");
         int keyCount = Math.min(GenerateArgs.DEFAULT_COUNT, GeneratorItemReader.DEFAULT_KEY_RANGE.getMax());
         Assertions.assertEquals(keyCount, redisCommands.dbsize());
-        IndexInfo indexInfo = RedisModulesUtils.indexInfo(redisCommands.ftInfo("hashIdx"));
+        IndexInfo indexInfo = IndexInfo.parse(redisCommands.ftInfo("hashIdx"));
         List<Field<String>> expectedFields = new ArrayList<>();
         for (int index = 1; index <= MapOptions.DEFAULT_FIELD_COUNT.getMax(); index++) {
             expectedFields.add(Field.tag("field" + index).as("field" + index).separator(',').build());
@@ -720,8 +708,8 @@ class StackRiotTests extends RiotTests {
         String value1 = "value1";
         redisCommands.set(key1, value1);
         Replicate replication = new Replicate();
-        replication.getProcessorArgs().setKeyExpression(Expression
-                .parseTemplate(String.format("#{#date.parse('%s').getTime()}:#{key}", "2010-05-10T00:00:00.000+0000")));
+        replication.getProcessorArgs().setKeyExpression(Expression.parseTemplate(
+                String.format("#{#date.parse('%s').getTime()}:#{key}", "2010-05-10T00:00:00.000+0000")));
         execute(replication, info);
         Assertions.assertEquals(value1, targetRedisCommands.get("1273449600000:" + key1));
     }
@@ -732,8 +720,7 @@ class StackRiotTests extends RiotTests {
         expressions.put("field1", Expression.parse("'test:1'"));
         ImportProcessorArgs args = new ImportProcessorArgs();
         args.setExpressions(expressions);
-        ItemProcessor<Map<String, Object>, Map<String, Object>> processor = AbstractImport.processor(evaluationContext(),
-                args);
+        ItemProcessor<Map<String, Object>, Map<String, Object>> processor = AbstractImport.processor(evaluationContext(), args);
         Map<String, Object> map = processor.process(new HashMap<>());
         Assertions.assertEquals("test:1", map.get("field1"));
         // Assertions.assertEquals("1", map.get("id"));
@@ -749,8 +736,7 @@ class StackRiotTests extends RiotTests {
         expressions.put("field5", Expression.parse("field3+field4"));
         ImportProcessorArgs args = new ImportProcessorArgs();
         args.setExpressions(expressions);
-        ItemProcessor<Map<String, Object>, Map<String, Object>> processor = AbstractImport.processor(evaluationContext(),
-                args);
+        ItemProcessor<Map<String, Object>, Map<String, Object>> processor = AbstractImport.processor(evaluationContext(), args);
         for (int index = 0; index < 10; index++) {
             Map<String, Object> result = processor.process(new HashMap<>());
             assertEquals(5, result.size());
@@ -770,8 +756,7 @@ class StackRiotTests extends RiotTests {
     void processorFilter() throws Exception {
         ImportProcessorArgs args = new ImportProcessorArgs();
         args.setFilter(Expression.parse("index<10"));
-        ItemProcessor<Map<String, Object>, Map<String, Object>> processor = AbstractImport.processor(evaluationContext(),
-                args);
+        ItemProcessor<Map<String, Object>, Map<String, Object>> processor = AbstractImport.processor(evaluationContext(), args);
         for (int index = 0; index < 100; index++) {
             Map<String, Object> map = new HashMap<>();
             map.put("index", index);

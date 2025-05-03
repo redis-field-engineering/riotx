@@ -2,22 +2,22 @@ package com.redis.riot.core;
 
 public enum ReadFrom {
 
-	UPSTREAM(io.lettuce.core.ReadFrom.UPSTREAM), UPSTREAM_PREFERRED(io.lettuce.core.ReadFrom.UPSTREAM_PREFERRED),
+    UPSTREAM(io.lettuce.core.ReadFrom.UPSTREAM), UPSTREAM_PREFERRED(io.lettuce.core.ReadFrom.UPSTREAM_PREFERRED),
 
-	REPLICA_PREFERRED(io.lettuce.core.ReadFrom.REPLICA_PREFERRED), REPLICA(io.lettuce.core.ReadFrom.REPLICA),
+    REPLICA_PREFERRED(io.lettuce.core.ReadFrom.REPLICA_PREFERRED), REPLICA(io.lettuce.core.ReadFrom.REPLICA),
 
-	LOWEST_LATENCY(io.lettuce.core.ReadFrom.LOWEST_LATENCY),
+    LOWEST_LATENCY(io.lettuce.core.ReadFrom.LOWEST_LATENCY),
 
-	ANY(io.lettuce.core.ReadFrom.ANY), ANY_REPLICA(io.lettuce.core.ReadFrom.ANY_REPLICA);
+    ANY(io.lettuce.core.ReadFrom.ANY), ANY_REPLICA(io.lettuce.core.ReadFrom.ANY_REPLICA);
 
-	private final io.lettuce.core.ReadFrom readFrom;
+    private final io.lettuce.core.ReadFrom readFrom;
 
-	private ReadFrom(io.lettuce.core.ReadFrom readFrom) {
-		this.readFrom = readFrom;
-	}
+    ReadFrom(io.lettuce.core.ReadFrom readFrom) {
+        this.readFrom = readFrom;
+    }
 
-	public io.lettuce.core.ReadFrom getReadFrom() {
-		return readFrom;
-	}
+    public io.lettuce.core.ReadFrom getReadFrom() {
+        return readFrom;
+    }
 
 }

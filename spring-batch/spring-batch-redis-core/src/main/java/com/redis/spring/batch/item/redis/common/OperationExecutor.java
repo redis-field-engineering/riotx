@@ -5,6 +5,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
+import com.redis.lettucemod.utils.ConnectionBuilder;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.springframework.batch.core.observability.BatchMetrics;
@@ -65,7 +66,7 @@ public class OperationExecutor<K, V, I, O> implements InitializingBean, AutoClos
         Assert.notNull(client, "Redis client not set");
         GenericObjectPoolConfig<StatefulRedisModulesConnection<K, V>> config = new GenericObjectPoolConfig<>();
         config.setMaxTotal(poolSize);
-        Supplier<StatefulRedisModulesConnection<K, V>> supplier = BatchUtils.supplier(client, codec, readFrom);
+        Supplier<StatefulRedisModulesConnection<K, V>> supplier = ConnectionBuilder.client(client).readFrom(readFrom).connectionSupplier(codec);
         pool = ConnectionPoolSupport.createGenericObjectPool(supplier, config);
         initializeOperation();
     }

@@ -1,6 +1,5 @@
 package com.redis.riot;
 
-import com.redis.riot.core.RedisContextFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -11,11 +10,11 @@ class RedisArgsTests {
 
 	@Test
 	void redisArgsURI() {
-		RedisArgs args = new RedisArgs();
+		SingleRedisArgs args = new SingleRedisArgs();
 		RedisURI baseUri = RedisURI.create("redis://localhost");
 		args.setUri(baseUri);
 		args.setClientName("ansdf");
-		RedisURI uri = RedisContextFactory.create(args.getUri(), args).getUri();
+		RedisURI uri = args.redisURI();
 		Assertions.assertEquals(baseUri.getHost(), uri.getHost());
 		Assertions.assertEquals(baseUri.getPort(), uri.getPort());
 		Assertions.assertEquals(args.getClientName(), uri.getClientName());

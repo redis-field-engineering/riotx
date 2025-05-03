@@ -4,13 +4,13 @@ import java.io.File;
 import java.time.Duration;
 
 import com.redis.riot.core.ReadFrom;
-import com.redis.riot.core.RedisClientArgs;
+import io.lettuce.core.SslVerifyMode;
 import io.lettuce.core.protocol.ProtocolVersion;
 import lombok.ToString;
 import picocli.CommandLine.Option;
 
 @ToString
-public class SourceRedisArgs implements RedisClientArgs {
+public class SourceRedisArgs implements RedisArgs {
 
 	@Option(names = "--source-user", description = "Source ACL style 'AUTH username pass'. Needs password.", paramLabel = "<name>")
 	private String username;
@@ -26,6 +26,9 @@ public class SourceRedisArgs implements RedisClientArgs {
 
 	@Option(names = "--source-insecure", description = "Allow insecure TLS connection to source by skipping cert validation.")
 	private boolean insecure;
+
+	@Option(names = "--source-verify", description = "Source TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
+	private SslVerifyMode sslVerifyMode = DEFAULT_SSL_VERIFY_MODE;
 
 	@Option(names = "--source-client", description = "Client name used to connect to source Redis.", paramLabel = "<name>")
 	private String clientName;
@@ -91,6 +94,16 @@ public class SourceRedisArgs implements RedisClientArgs {
 
 	public void setInsecure(boolean insecure) {
 		this.insecure = insecure;
+	}
+
+	@Override
+	public SslVerifyMode getSslVerifyMode() {
+		return sslVerifyMode;
+	}
+
+	public SourceRedisArgs setSslVerifyMode(SslVerifyMode mode) {
+		this.sslVerifyMode = mode;
+		return this;
 	}
 
 	@Override

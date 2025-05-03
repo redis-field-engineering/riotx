@@ -42,7 +42,7 @@ public abstract class AbstractRiotApplicationTestBase extends AbstractRiotTestBa
             setDisableExceptionMessageHandling(true);
         }
 
-        private void configure(RedisArgs redisArgs) {
+        private void configure(SingleRedisArgs redisArgs) {
             redisArgs.setUri(redisURI);
             redisArgs.setCluster(getRedisServer().isRedisCluster());
         }

@@ -7,11 +7,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
+import com.redis.lettucemod.utils.ConnectionBuilder;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
@@ -86,6 +84,8 @@ public abstract class AbstractTestBase {
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
     private int chunkSize = DEFAULT_CHUNK_SIZE;
 
     private Duration idleTimeout = DEFAULT_IDLE_TIMEOUT;
@@ -151,7 +151,7 @@ public abstract class AbstractTestBase {
         }
         redisURI = redisURI(redis);
         redisClient = client(redis);
-        redisConnection = BatchUtils.connection(redisClient);
+        redisConnection = ConnectionBuilder.client(redisClient).connection();
         redisCommands = redisConnection.sync();
         redisAsyncCommands = redisConnection.async();
         log.info("Successfully set up Redis:\n{}", redisCommands.info());
@@ -177,6 +177,7 @@ public abstract class AbstractTestBase {
         if (redis instanceof Startable) {
             ((Startable) redis).stop();
         }
+        executor.shutdown();
     }
 
     @BeforeEach
@@ -320,7 +321,7 @@ public abstract class AbstractTestBase {
     }
 
     protected <T> void executeWhenSubscribers(Callable<T> callable) throws InterruptedException, ExecutionException {
-        Executors.newSingleThreadExecutor().submit(() -> {
+        executor.submit(() -> {
             awaitUntil(() -> redisCommands.pubsubNumpat() > 0);
             return callable.call();
         });

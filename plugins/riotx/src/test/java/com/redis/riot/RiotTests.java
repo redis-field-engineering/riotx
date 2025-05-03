@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redis.lettucemod.Beers;
+import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.riot.core.CompareMode;
 import com.redis.riot.core.ReplicationMode;
 import com.redis.spring.batch.item.redis.common.KeyValue;
@@ -85,9 +86,10 @@ abstract class RiotTests extends AbstractRiotApplicationTestBase {
         byte[] value = Hex.decode("aced0004");
         Map<byte[], byte[]> hash = new HashMap<>();
         hash.put(key, value);
-        StatefulRedisModulesConnection<byte[], byte[]> connection = BatchUtils.connection(redisClient, ByteArrayCodec.INSTANCE);
-        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = BatchUtils.connection(targetRedisClient,
-                ByteArrayCodec.INSTANCE);
+        StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
+                .connection(ByteArrayCodec.INSTANCE);
+        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = ConnectionBuilder.client(targetRedisClient)
+                .connection(ByteArrayCodec.INSTANCE);
         connection.sync().hset(key, hash);
         Replicate replication = new Replicate();
         replication.setCompareMode(CompareMode.NONE);
@@ -100,9 +102,10 @@ abstract class RiotTests extends AbstractRiotApplicationTestBase {
     void replicateBinaryKeyValueScan(TestInfo info) throws Exception {
         byte[] key = Hex.decode("aced0005");
         byte[] value = Hex.decode("aced0004");
-        StatefulRedisModulesConnection<byte[], byte[]> connection = BatchUtils.connection(redisClient, ByteArrayCodec.INSTANCE);
-        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = BatchUtils.connection(targetRedisClient,
-                ByteArrayCodec.INSTANCE);
+        StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
+                .connection(ByteArrayCodec.INSTANCE);
+        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = ConnectionBuilder.client(targetRedisClient)
+                .connection(ByteArrayCodec.INSTANCE);
         connection.sync().set(key, value);
         Replicate replication = new Replicate();
         replication.setCompareMode(CompareMode.NONE);
@@ -114,9 +117,10 @@ abstract class RiotTests extends AbstractRiotApplicationTestBase {
     void replicateBinaryKeyLive(TestInfo info) throws Exception {
         byte[] key = Hex.decode("aced0005");
         byte[] value = Hex.decode("aced0004");
-        StatefulRedisModulesConnection<byte[], byte[]> connection = BatchUtils.connection(redisClient, ByteArrayCodec.INSTANCE);
-        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = BatchUtils.connection(targetRedisClient,
-                ByteArrayCodec.INSTANCE);
+        StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
+                .connection(ByteArrayCodec.INSTANCE);
+        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = ConnectionBuilder.client(targetRedisClient)
+                .connection(ByteArrayCodec.INSTANCE);
         enableKeyspaceNotifications();
         executeWhenSubscribers(() -> connection.sync().set(key, value));
         Replicate replicate = new Replicate();

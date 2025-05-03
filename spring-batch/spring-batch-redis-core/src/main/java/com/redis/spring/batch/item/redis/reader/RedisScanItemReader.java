@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
+import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
@@ -53,11 +54,7 @@ public class RedisScanItemReader<K, V> extends RedisItemReader<K, V> {
     }
 
     private Iterator<K> keyIterator() {
-        if (client instanceof RedisClusterClient) {
-            StatefulRedisModulesConnection<K, V> connection = BatchUtils.connection(client, codec, readFrom);
-            return BatchUtils.scanIterator(connection, keyScanArgs());
-        }
-        return BatchUtils.scanIterator(BatchUtils.connection(client, codec), keyScanArgs());
+        return BatchUtils.scanIterator(ConnectionBuilder.client(client).readFrom(readFrom).connection(codec), keyScanArgs());
     }
 
     public List<KeyValue<K>> fetch(int count) throws Exception {

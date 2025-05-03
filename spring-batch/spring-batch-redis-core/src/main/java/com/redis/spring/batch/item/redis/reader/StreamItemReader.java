@@ -1,35 +1,23 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-
+import com.redis.lettucemod.api.StatefulRedisModulesConnection;
+import com.redis.lettucemod.utils.ConnectionBuilder;
+import com.redis.spring.batch.item.PollableItemReader;
+import com.redis.spring.batch.item.redis.common.Key;
+import io.lettuce.core.*;
+import io.lettuce.core.XReadArgs.StreamOffset;
+import io.lettuce.core.api.sync.RedisStreamCommands;
+import io.lettuce.core.codec.RedisCodec;
 import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.spring.batch.item.PollableItemReader;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.Key;
-
-import io.lettuce.core.AbstractRedisClient;
-import io.lettuce.core.Consumer;
-import io.lettuce.core.ReadFrom;
-import io.lettuce.core.RedisBusyException;
-import io.lettuce.core.StreamMessage;
-import io.lettuce.core.XGroupCreateArgs;
-import io.lettuce.core.XReadArgs;
-import io.lettuce.core.XReadArgs.StreamOffset;
-import io.lettuce.core.api.sync.RedisStreamCommands;
-import io.lettuce.core.codec.RedisCodec;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class StreamItemReader<K, V> extends AbstractItemCountingItemStreamItemReader<StreamMessage<K, V>>
         implements PollableItemReader<StreamMessage<K, V>> {
@@ -98,7 +86,7 @@ public class StreamItemReader<K, V> extends AbstractItemCountingItemStreamItemRe
     @Override
     protected synchronized void doOpen() throws Exception {
         if (reader == null) {
-            connection = BatchUtils.connection(client, codec, readFrom);
+            connection = ConnectionBuilder.client(client).readFrom(readFrom).connection(codec);
             commands = connection.sync();
             if (consumer != null) {
                 offsets.forEach(this::createConsumerGroup);
@@ -195,7 +183,7 @@ public class StreamItemReader<K, V> extends AbstractItemCountingItemStreamItemRe
 
         /**
          * Reads messages from a stream
-         * 
+         *
          * @param blockMillis number of millis to block for in XREAD
          * @return list of messages retrieved from the stream or empty list if no messages available
          */

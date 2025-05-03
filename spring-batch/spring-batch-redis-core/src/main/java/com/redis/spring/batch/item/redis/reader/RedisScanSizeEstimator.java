@@ -1,6 +1,15 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import java.io.IOException;
+import com.redis.lettucemod.api.StatefulRedisModulesConnection;
+import com.redis.lettucemod.api.async.RedisModulesAsyncCommands;
+import com.redis.lettucemod.utils.ConnectionBuilder;
+import com.redis.spring.batch.item.redis.common.BatchUtils;
+import io.lettuce.core.AbstractRedisClient;
+import io.lettuce.core.RedisFuture;
+import io.lettuce.core.internal.Exceptions;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,17 +19,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
-
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.lettucemod.api.async.RedisModulesAsyncCommands;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-
-import io.lettuce.core.AbstractRedisClient;
-import io.lettuce.core.RedisFuture;
-import io.lettuce.core.internal.Exceptions;
 
 public class RedisScanSizeEstimator implements LongSupplier {
 
@@ -38,15 +36,11 @@ public class RedisScanSizeEstimator implements LongSupplier {
      * Estimates the number of keys that match the given pattern and type.
      * 
      * @return Estimated number of keys matching the given pattern and type, or null if database is empty or any error occurs
-     * @throws ExecutionException if any Redis command execution occurs during estimation
-     * @throws InterruptedException if estimation is interrupted
-     * @throws TimeoutException if a timeout occurs with a Redis command
-     * @throws IOException if script execution exception happens during estimation
      */
     @Override
     public long getAsLong() {
         Assert.notNull(client, "Redis client not set");
-        try (StatefulRedisModulesConnection<String, String> connection = BatchUtils.connection(client)) {
+        try (StatefulRedisModulesConnection<String, String> connection = ConnectionBuilder.client(client).connection()) {
             try {
                 return size(connection);
             } catch (Exception e) {

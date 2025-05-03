@@ -1,7 +1,7 @@
 package com.redis.riot.db;
 
-import com.redis.lettucemod.RedisModulesUtils;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
+import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.spring.batch.item.PollableItemReader;
 import io.lettuce.core.AbstractRedisClient;
 import org.slf4j.Logger;
@@ -207,7 +207,7 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
     }
 
     private StatefulRedisModulesConnection<String, String> redisConnection() {
-        return RedisModulesUtils.connection(redisClient);
+        return ConnectionBuilder.client(redisClient).connection();
     }
 
     private StreamInfo streamInfo() {

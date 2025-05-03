@@ -1,7 +1,6 @@
 package com.redis.riot;
 
 import com.redis.riot.core.RedisContext;
-import com.redis.riot.core.RedisContextFactory;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.KeyValueMap;
@@ -20,7 +19,7 @@ import java.util.regex.Pattern;
 public abstract class AbstractRedisExport extends AbstractExport {
 
     @ArgGroup(exclusive = false, heading = "Redis options%n")
-    private RedisArgs redisArgs = new RedisArgs();
+    private SingleRedisArgs redisArgs = new SingleRedisArgs();
 
     @Option(names = "--key-regex", description = "Regex for key-field extraction, e.g. '\\w+:(?<id>.+)' extracts an id field from the key", paramLabel = "<rex>")
     private Pattern keyRegex;
@@ -40,7 +39,7 @@ public abstract class AbstractRedisExport extends AbstractExport {
 
     @Override
     protected RedisContext sourceRedisContext() {
-        return RedisContextFactory.create(redisArgs.getUri(), redisArgs);
+        return redisArgs.redisContext();
     }
 
     protected ItemProcessor<KeyValue<String>, Map<String, Object>> mapProcessor() {
@@ -51,11 +50,11 @@ public abstract class AbstractRedisExport extends AbstractExport {
         return new FunctionItemProcessor<>(mapFunction);
     }
 
-    public RedisArgs getRedisArgs() {
+    public SingleRedisArgs getRedisArgs() {
         return redisArgs;
     }
 
-    public void setRedisArgs(RedisArgs clientArgs) {
+    public void setRedisArgs(SingleRedisArgs clientArgs) {
         this.redisArgs = clientArgs;
     }
 
