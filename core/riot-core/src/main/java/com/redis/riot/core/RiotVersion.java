@@ -8,11 +8,10 @@ public class RiotVersion {
 
 	private static final ResourceBundle BUNDLE = ResourceBundle.getBundle(RiotVersion.class.getName());
 	private static final String RIOT_VERSION = BUNDLE.getString("riot_version");
+	private static final String RIOT_FORMAT = "riotx %s%n";
 	private static final String SEPARATOR = "------------------------------------------------------------%n";
-	private static final String RIOT_FORMAT = "riot %s%n";
 
 	private RiotVersion() {
-		// noop
 	}
 
 	public static String getVersion() {
@@ -34,6 +33,7 @@ public class RiotVersion {
 	public static void banner(PrintWriter out, boolean full) {
 		banner(out, full, BUNDLE, RIOT_FORMAT, RIOT_VERSION);
 	}
+
 
 	public static void banner(PrintWriter out, boolean full, ResourceBundle bundle, String format, String version) {
 		if (full) {

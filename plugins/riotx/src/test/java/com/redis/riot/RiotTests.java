@@ -1,11 +1,21 @@
 package com.redis.riot;
 
+import java.io.IOException;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Predicate;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.MappingIterator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.redis.lettucemod.Beers;
+import com.redis.lettucemod.utils.ConnectionBuilder;
+import com.redis.riot.core.CompareMode;
+import com.redis.riot.core.ReplicationMode;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import io.lettuce.core.LettuceFutures;
+import io.lettuce.core.RedisFuture;
+import io.lettuce.core.api.sync.RedisCommands;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -14,11 +24,6 @@ import org.slf4j.simple.SimpleLogger;
 import org.testcontainers.shaded.org.bouncycastle.util.encoders.Hex;
 
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.riot.core.ProgressStyle;
-import com.redis.riotx.AbstractRiotxApplicationTestBase;
-import com.redis.riotx.Replicate;
-import com.redis.riotx.ReplicateWriteLogger;
-import com.redis.riotx.ReplicationMode;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.Range;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
@@ -27,7 +32,7 @@ import com.redis.spring.batch.item.redis.gen.ItemType;
 import io.lettuce.core.cluster.SlotHash;
 import io.lettuce.core.codec.ByteArrayCodec;
 
-abstract class RiotTests extends AbstractRiotxApplicationTestBase {
+abstract class RiotTests extends AbstractRiotApplicationTestBase {
 
     public static final String BEERS_JSON_URL = "https://storage.googleapis.com/jrx/beers.json";
 
@@ -66,8 +71,7 @@ abstract class RiotTests extends AbstractRiotxApplicationTestBase {
     protected void execute(Replicate replicate, TestInfo info) throws Exception {
         System.setProperty(SimpleLogger.LOG_KEY_PREFIX + ReplicateWriteLogger.class.getName(), "error");
         replicate.getProgressArgs().setStyle(ProgressStyle.NONE);
-        replicate.setJobName(name(info));
-        replicate.setJobRepository(jobRepository);
+        replicate.getJobExecutor().setJobRepository(jobRepository);
         replicate.setSourceRedisUri(redisURI);
         replicate.getSourceRedisArgs().setCluster(getRedisServer().isRedisCluster());
         replicate.setTargetRedisUri(targetRedisURI);
@@ -82,9 +86,10 @@ abstract class RiotTests extends AbstractRiotxApplicationTestBase {
         byte[] value = Hex.decode("aced0004");
         Map<byte[], byte[]> hash = new HashMap<>();
         hash.put(key, value);
-        StatefulRedisModulesConnection<byte[], byte[]> connection = BatchUtils.connection(redisClient, ByteArrayCodec.INSTANCE);
-        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = BatchUtils.connection(targetRedisClient,
-                ByteArrayCodec.INSTANCE);
+        StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
+                .connection(ByteArrayCodec.INSTANCE);
+        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = ConnectionBuilder.client(targetRedisClient)
+                .connection(ByteArrayCodec.INSTANCE);
         connection.sync().hset(key, hash);
         Replicate replication = new Replicate();
         replication.setCompareMode(CompareMode.NONE);
@@ -97,9 +102,10 @@ abstract class RiotTests extends AbstractRiotxApplicationTestBase {
     void replicateBinaryKeyValueScan(TestInfo info) throws Exception {
         byte[] key = Hex.decode("aced0005");
         byte[] value = Hex.decode("aced0004");
-        StatefulRedisModulesConnection<byte[], byte[]> connection = BatchUtils.connection(redisClient, ByteArrayCodec.INSTANCE);
-        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = BatchUtils.connection(targetRedisClient,
-                ByteArrayCodec.INSTANCE);
+        StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
+                .connection(ByteArrayCodec.INSTANCE);
+        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = ConnectionBuilder.client(targetRedisClient)
+                .connection(ByteArrayCodec.INSTANCE);
         connection.sync().set(key, value);
         Replicate replication = new Replicate();
         replication.setCompareMode(CompareMode.NONE);
@@ -111,9 +117,10 @@ abstract class RiotTests extends AbstractRiotxApplicationTestBase {
     void replicateBinaryKeyLive(TestInfo info) throws Exception {
         byte[] key = Hex.decode("aced0005");
         byte[] value = Hex.decode("aced0004");
-        StatefulRedisModulesConnection<byte[], byte[]> connection = BatchUtils.connection(redisClient, ByteArrayCodec.INSTANCE);
-        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = BatchUtils.connection(targetRedisClient,
-                ByteArrayCodec.INSTANCE);
+        StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
+                .connection(ByteArrayCodec.INSTANCE);
+        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = ConnectionBuilder.client(targetRedisClient)
+                .connection(ByteArrayCodec.INSTANCE);
         enableKeyspaceNotifications();
         executeWhenSubscribers(() -> connection.sync().set(key, value));
         Replicate replicate = new Replicate();
@@ -136,7 +143,77 @@ abstract class RiotTests extends AbstractRiotxApplicationTestBase {
     }
 
     private Predicate<Integer> between(int start, int end) {
-        return i -> i >= 0 && i <= end;
+        return i -> i >= start && i <= end;
+    }
+
+    @Test
+    void redisImportJson(TestInfo info) throws Exception {
+        int count = 1000;
+        GeneratorItemReader generator = generator(count, ItemType.HASH);
+        generator.setKeyspace("hash");
+        generate(info, generator);
+        String filename = "redis-import-json";
+        execute(info, filename);
+        List<String> keys = targetRedisCommands.keys("doc:*");
+        Assertions.assertEquals(count, keys.size());
+        Assertions.assertEquals(KeyValue.TYPE_JSON, targetRedisCommands.type(keys.get(0)));
+        String json = targetRedisCommands.jsonGet(keys.get(1)).get(0).toString();
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode node = mapper.readTree(json);
+        Assertions.assertNull(node.get("id"));
+        Assertions.assertNotNull(node.get("field1"));
+    }
+
+    @Test
+    void streamImport(TestInfo info) throws Exception {
+        String stream = "stream:beers";
+        populateStream(stream);
+        String filename = "stream-import-hset";
+        execute(info, filename);
+        assertStreamImport(redisCommands);
+    }
+
+    @Test
+    void streamImportTarget(TestInfo info) throws Exception {
+        String stream = "stream:beers";
+        populateStream(stream);
+        String filename = "stream-import-target-hset";
+        execute(info, filename);
+        assertStreamImport(targetRedisCommands);
+    }
+
+    @Test
+    void parquetFileImport(TestInfo info) throws Exception {
+        String filename = "file-import-parquet";
+        execute(info, filename);
+        Assertions.assertEquals(1000, redisCommands.dbsize());
+    }
+
+    private static void assertStreamImport(RedisCommands<String, String> commands) throws IOException {
+        List<String> keys = commands.keys("beer:*");
+        Assertions.assertEquals(1019, keys.size());
+        Map<String, Object> expected = Beers.mapIterator().next();
+        Map<String, String> actual = commands.hgetall("beer:" + expected.get("id"));
+        Assertions.assertEquals(expected, actual);
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private int populateStream(String stream) throws IOException {
+        List<RedisFuture<?>> futures = new ArrayList<>();
+        int count = 0;
+        try {
+            MappingIterator<Map<String, Object>> iterator = Beers.mapIterator();
+            while (iterator.hasNext()) {
+                Map<String, String> beer = (Map) iterator.next();
+                futures.add(redisAsyncCommands.xadd(stream, beer));
+                count++;
+            }
+            redisConnection.flushCommands();
+            LettuceFutures.awaitAll(redisConnection.getTimeout(), futures.toArray(new RedisFuture[0]));
+        } finally {
+            redisConnection.setAutoFlushCommands(true);
+        }
+        return count;
     }
 
 }

@@ -20,6 +20,9 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
@@ -135,6 +138,11 @@ public abstract class RiotUtils {
             return (ItemWriter<S>) writer;
         }
         return new ProcessingItemWriter<>(processor, writer);
+    }
+
+    public static void latencyTimer(MeterRegistry registry, String name, String description, Duration duration, Tags tags) {
+        Timer lag = Timer.builder(name).description(description).tags(tags).register(registry);
+        lag.record(duration);
     }
 
 }

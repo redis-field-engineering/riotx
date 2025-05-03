@@ -3,7 +3,6 @@ package com.redis.riot;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import com.redis.enterprise.testcontainers.RedisEnterpriseServer;
-import com.redis.riotx.RedisContainerFactory;
 import com.redis.testcontainers.RedisStackContainer;
 
 @EnabledIfEnvironmentVariable(named = RedisEnterpriseServer.ENV_HOST, matches = ".*")

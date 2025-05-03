@@ -15,14 +15,13 @@ import org.junit.jupiter.api.TestInfo;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 
-import com.redis.riotx.AbstractRiotxApplicationTestBase;
 import com.redis.testcontainers.RedisServer;
 import com.redis.testcontainers.RedisStackContainer;
 
 import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.ParseResult;
 
-abstract class DbTests extends AbstractRiotxApplicationTestBase {
+abstract class DbTests extends AbstractRiotApplicationTestBase {
 
 	private static final RedisStackContainer redis = new RedisStackContainer(
 			RedisStackContainer.DEFAULT_IMAGE_NAME.withTag(RedisStackContainer.DEFAULT_TAG));
@@ -81,7 +80,6 @@ abstract class DbTests extends AbstractRiotxApplicationTestBase {
 
 	protected int executeDatabaseExport(ParseResult parseResult, TestInfo info) {
 		DatabaseExport command = command(parseResult);
-		command.setJobName(name(info));
 		configureDatabase(command.getDataSourceArgs());
 		return ExitCode.OK;
 	}

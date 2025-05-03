@@ -6,13 +6,13 @@ plugins {
 
 application {
     applicationName = 'riotx'
-    mainClass       = 'com.redis.riotx.Riotx'
+    mainClass       = 'com.redis.riot.Riotx'
 }
 
 jar {
     manifest {
         attributes([
-            'Main-Class': 'com.redis.riotx.Riotx',
+            'Main-Class': 'com.redis.riot.Riotx',
             'Automatic-Module-Name': project.findProperty('automatic.module.name')
         ])
     }
@@ -28,35 +28,28 @@ test {
 }
 
 dependencies {
-    implementation project(':riot')
-    implementation project(':spring-batch-memcached')
-    api project(':riotx-parquet')
-    api group: 'info.picocli', name: 'picocli', version: picocliVersion
+    implementation project(':riot-core')
+    implementation project(':riot-db')
+    implementation project(':riot-faker')
+    implementation project(':riot-file')
+    implementation project(':riot-parquet')
+    implementation 'org.slf4j:slf4j-simple'
+    implementation group: 'me.tongfei', name: 'progressbar', version: progressbarVersion
+    implementation group: 'info.picocli', name: 'picocli', version: picocliVersion
     annotationProcessor group: 'info.picocli', name: 'picocli-codegen', version: picocliVersion
-    implementation group: 'com.tdunning', name: 't-digest', version: tdigestVersion
     implementation group: 'com.github.freva', name: 'ascii-table', version: asciitableVersion
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
-    implementation 'io.micrometer:micrometer-registry-prometheus'
-    implementation 'io.prometheus:prometheus-metrics-exporter-httpserver'
-    implementation 'org.xerial:sqlite-jdbc'
-    implementation 'com.ibm.db2:jcc'
-    implementation group: 'net.snowflake', name: 'snowflake-jdbc', version: snowflakeVersion
 
-    testImplementation project(':riot-test') 
     testImplementation project(':spring-batch-redis-test')
+    testImplementation group: 'com.redis', name: 'lettucemod', version: lettucemodVersion, classifier: 'tests'
+    testImplementation group: 'com.redis', name: 'testcontainers-memcached', version: testcontainersRedisVersion
     testImplementation 'io.micrometer:micrometer-core'
-    testImplementation 'org.awaitility:awaitility'
     testImplementation 'org.hsqldb:hsqldb'
-    testImplementation 'org.springframework.boot:spring-boot-autoconfigure'
+    testImplementation 'org.springframework.batch:spring-batch-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-jdbc'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.batch:spring-batch-test'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:oracle-xe'
-    testImplementation 'org.hsqldb:hsqldb'
-    testImplementation group: 'com.redis', name: 'testcontainers-memcached', version: testcontainersRedisVersion
-    testImplementation group: 'com.redis', name: 'lettucemod', version: lettucemodVersion, classifier: 'tests'
-    
 }
 
 distributions {
@@ -124,7 +117,7 @@ afterEvaluate {
     }
 }
 
-mainClassName = "com.redis.riotx.Riox"
+mainClassName = "com.redis.riot.Riox"
 
 task copyRuntimeDependencies(type: Copy) {
     into "$buildDir/dependencies/flat"
@@ -140,9 +133,9 @@ project.rootProject.gradle.addBuildListener(new BuildAdapter() {
             .find { p -> p.name == 'riotx' }
             .processResources {
                 inputs.property('build_date', gradle.rootProject.config.buildInfo.buildDate + ':' + gradle.rootProject.config.buildInfo.buildTime)
-                filesMatching(['**/RiotxVersion.properties']) {
+                filesMatching(['**/RiotVersion.properties']) {
                     expand(
-                        'riotx_version': gradle.rootProject.version,
+                        'riot_version': gradle.rootProject.version,
                         'build_date': gradle.rootProject.config.buildInfo.buildDate,
                         'build_time': gradle.rootProject.config.buildInfo.buildTime,
                         'build_revision': gradle.rootProject.config.buildInfo.buildRevision
@@ -158,7 +151,7 @@ task generateManpageAsciiDoc(type: JavaExec) {
     description = "Generate AsciiDoc manpage"
     classpath(configurations.compileClasspath, configurations.annotationProcessor, sourceSets.main.runtimeClasspath)
     main 'picocli.codegen.docgen.manpage.ManPageGenerator'
-    args "com.redis.riotx.Riotx", "--outdir=${project.buildDir}/generated-riotx-docs", "-v"
+    args "com.redis.riot.Riotx", "--outdir=${project.buildDir}/generated-riotx-docs", "-v"
 }
 
 apply plugin: 'org.asciidoctor.jvm.convert'

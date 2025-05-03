@@ -1,0 +1,9 @@
+dependencies {
+    api 'org.springframework.batch:spring-batch-core'
+    api project(':spring-batch-redis-infrastructure')
+    api group: 'com.redis', name: 'lettucemod', version: lettucemodVersion
+    api group: 'com.redis', name: 'lettucemod-utils', version: lettucemodVersion
+    implementation 'org.apache.commons:commons-pool2'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation group: 'com.hrakaroo', name: 'glob', version: globVersion
+}

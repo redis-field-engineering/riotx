@@ -17,11 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.springframework.util.StreamUtils;
 
-import com.redis.riot.core.AbstractJobCommand;
-import com.redis.riot.core.ProgressStyle;
 import com.redis.riot.operation.HsetCommand;
-import com.redis.riotx.FileExport;
-import com.redis.riotx.FileImport;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
 import com.redis.spring.batch.test.AbstractTargetTestBase;
@@ -64,7 +60,6 @@ abstract class FileTests extends AbstractTargetTestBase {
         hset.setKeyspace(KEYSPACE);
         hset.setKeyFields(ID);
         executable.setImportOperationCommands(hset);
-        executable.setJobName(name(info));
         executable.call();
 
         List<String> keys = redisCommands.keys("*");
@@ -85,7 +80,6 @@ abstract class FileTests extends AbstractTargetTestBase {
         configure(info, executable);
         executable.setFiles("https://storage.googleapis.com/jrx/beers.csv");
         executable.getFileReaderArgs().setHeader(true);
-        executable.setJobName(name(info));
         HsetCommand hset = new HsetCommand();
         hset.setKeyspace(KEYSPACE);
         hset.setKeyFields(ID);
@@ -100,22 +94,21 @@ abstract class FileTests extends AbstractTargetTestBase {
         }
     }
 
-    private void configure(TestInfo info, AbstractRedisImportCommand callable) {
+    private void configure(TestInfo info, AbstractRedisImport callable) {
         configure(callable.getRedisArgs());
         configureJobCommand(info, callable);
     }
 
-    private void configure(TestInfo info, AbstractRedisExportCommand callable) {
+    private void configure(TestInfo info, AbstractRedisExport callable) {
         configure(callable.getRedisArgs());
         configureJobCommand(info, callable);
     }
 
     private void configureJobCommand(TestInfo info, AbstractJobCommand callable) {
-        callable.setJobName(name(info));
         callable.getProgressArgs().setStyle(ProgressStyle.NONE);
     }
 
-    private void configure(RedisArgs redisArgs) {
+    private void configure(SingleRedisArgs redisArgs) {
         redisArgs.setUri(RedisURI.create(getRedisServer().getRedisURI()));
         redisArgs.setCluster(getRedisServer().isRedisCluster());
     }
@@ -129,7 +122,6 @@ abstract class FileTests extends AbstractTargetTestBase {
         configure(info, executable);
         executable.setFiles(file1.getPath());
         executable.getFileReaderArgs().setHeader(true);
-        executable.setJobName(name(info));
         HsetCommand operationBuilder = new HsetCommand();
         operationBuilder.setKeyspace(KEYSPACE);
         operationBuilder.setKeyFields(ID);
@@ -151,7 +143,6 @@ abstract class FileTests extends AbstractTargetTestBase {
         executable.setFiles("https://storage.googleapis.com/jrx/beers.csv");
         executable.getFileReaderArgs().setHeader(true);
         executable.getJobArgs().setThreads(3);
-        executable.setJobName(name(info));
         HsetCommand operationBuilder = new HsetCommand();
         operationBuilder.setKeyspace(KEYSPACE);
         operationBuilder.setKeyFields(ID);
@@ -175,7 +166,6 @@ abstract class FileTests extends AbstractTargetTestBase {
         hset.setKeyspace(KEYSPACE);
         hset.setKeyFields(ID);
         executable.setImportOperationCommands(hset);
-        executable.setJobName(name(info));
         executable.call();
         List<String> keys = redisCommands.keys("*");
         assertEquals(6, keys.size());
@@ -210,7 +200,7 @@ abstract class FileTests extends AbstractTargetTestBase {
         String file = dir.resolve(filename).toFile().getPath();
         FileExport fileExport = new FileExport();
         configure(info, fileExport);
-        fileExport.setContentType(ContentType.STRUCT);
+        fileExport.setContentType(FileExport.ContentType.STRUCT);
         fileExport.setFile(file);
         fileExport.call();
         FileImport fileImport = new FileImport();

@@ -12,8 +12,8 @@ import java.util.function.Predicate;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import com.redis.riot.core.processor.StringToMapFunction;
-import com.redis.riot.function.KeyValueMap;
+import com.redis.riot.core.function.StringToMapFunction;
+import com.redis.riot.core.function.KeyValueMap;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.common.Range;
 
