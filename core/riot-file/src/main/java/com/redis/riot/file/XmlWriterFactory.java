@@ -14,7 +14,7 @@ public class XmlWriterFactory extends AbstractWriterFactory {
         XmlResourceItemWriterBuilder<?> writer = new XmlResourceItemWriterBuilder<>();
         writer.name(resource.getFilename());
         writer.append(options.isAppend());
-        writer.encoding(options.getEncoding());
+        writer.encoding(options.getEncoding().name());
         writer.lineSeparator(options.getLineSeparator());
         writer.rootName(options.getRootName());
         writer.resource(resource);

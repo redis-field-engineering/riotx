@@ -74,32 +74,32 @@ We are now all set to begin the migration process.
 The options you will use depend on your source and target databases, as well as the replication mode (snapshot or live).
 
 === {ec} Single Master -> Redis
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot replicate source:port target:port
+{app} replicate source:port target:port
 ----
 
 === Live {ec} Single Master -> Redis
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot replicate source:port target:port --mode live
+{app} replicate source:port target:port --mode live
 ----
 
 [IMPORTANT]
 ====
 In case {ec} is configured with https://docs.aws.amazon.com/Amazon{ec}/latest/red-ug/auth.html[AUTH TOKEN enabled], you need to pass `--source-tls` as well as `--source-pass` option:
 
-[source,console,subs="+quotes"]
+[source,console,subs="verbatim,attributes,+quotes"]
 ----
-riot replicate source:port target:port --source-tls --source-pass <password>
+{app} replicate source:port target:port --source-tls --source-pass <password>
 ----
 ====
 
 === {ec} Cluster -> Redis
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot replicate source:port target:port --source-cluster
+{app} replicate source:port target:port --source-cluster
 ----
 
 NOTE: `--cluster` is an important parameter used ONLY for {ec} whenever cluster-mode is enabled.
@@ -107,22 +107,22 @@ Do note that the source database is specified first and the target database is s
 
 === {ec} Single Master -> Redis (with specific database index)
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot replicate redis://source:port/db target:port
+{app} replicate redis://source:port/db target:port
 ----
 
 === {ec} Single Master -> Redis with OSS Cluster
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot replicate source:port target:port --target-cluster
+{app} replicate source:port target:port --target-cluster
 ----
 
 === Live {ec} Cluster -> Redis with OSS Cluster
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot replicate source:port target:port --source-cluster --target-cluster --mode live
+{app} replicate source:port target:port --source-cluster --target-cluster --mode live
 ----
 
 == Important Considerations

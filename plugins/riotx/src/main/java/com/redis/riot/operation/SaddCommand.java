@@ -12,7 +12,7 @@ public class SaddCommand extends AbstractMemberOperationCommand {
 
 	@Override
 	public Sadd<String, String, Map<String, Object>> operation() {
-		return new Sadd<>(keyFunction(), memberFunction().andThen(Arrays::asList));
+		return new Sadd<>(keyFunction(), memberFunction());
 	}
 
 }

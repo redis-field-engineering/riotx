@@ -12,7 +12,7 @@ than the table you are importing from by specifying `--cdc-schema`.
 * `riotx:offset:SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` - this key will be stored in the destination
       Redis database and is used to track the stream offset. If RIOT-X fails in the middle of copying data from the stream
       when restarted it will resume copying data from this offset. Removing this offset key from Redis will result in
-      RIOT-X creating recreating the stream at time "NOW". If `--snapshot-mode INITIAL` option is specified the stream
+{project-title} creating recreating the stream at time "NOW". If `--snapshot-mode INITIAL` option is specified the stream
       will also include the initial table data plus changes going forward. If you do not want initial table data to
       be included specify `--snapshot-mode NEVER`
 * snowflake-import currently works on tables and materialized views
@@ -20,14 +20,14 @@ than the table you are importing from by specifying `--cdc-schema`.
 
 The basic usage is:
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riotx snowflake-import [TABLE] [OPTIONS] [REDIS COMMAND...]
+{app} snowflake-import [TABLE] [OPTIONS] [REDIS COMMAND...]
 ----
 
 The recommended minimal necessary permissions for a snowflake role and user to run this command are:
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
 CREATE OR REPLACE ROLE riotx_cdc
 COMMENT = 'minimum cdc role for riotx';
@@ -35,14 +35,14 @@ COMMENT = 'minimum cdc role for riotx';
 -- replace compute_wh with the name of the warehouse you want to use
 GRANT USAGE, OPERATE ON WAREHOUSE compute_wh TO ROLE riotx_cdc;
 
--- replace tb_101.raw_pos_cdc with the name of a database and schema for RIOT to create the stream in
+-- replace tb_101.raw_pos_cdc with the name of a database and schema for {project-title} to create the stream in
 CREATE OR REPLACE SCHEMA tb_101.raw_pos_cdc;
 GRANT USAGE ON SCHEMA tb_101.raw_pos_cdc TO ROLE riotx_cdc;
 
--- replace tb_101 with the name of the database RIOT needs to read out of
+-- replace tb_101 with the name of the database {project-title} needs to read out of
 GRANT USAGE ON DATABASE tb_101 TO ROLE riotx_cdc;
 
--- replace tb_101.raw_pos with the name of the schema RIOT needs to read out of
+-- replace tb_101.raw_pos with the name of the schema {project-title} needs to read out of
 GRANT USAGE ON SCHEMA tb_101.raw_pos TO ROLE riotx_cdc;
 
 -- replace with the name of the table(s) you want to read from
@@ -64,16 +64,16 @@ GRANT ROLE riotx_cdc TO USER riotx_cdc;
 ----
 
 For the full usage, run:
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riotx snowflake-import --help
+{app} snowflake-import --help
 ----
 
 .Example: CDC to Hashes
 This command uses the example db, schema and table names from the minimal role setup above.
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riotx snowflake-import \
+{app} snowflake-import \
       tb_101.raw_pos.incremental_order_header \
       --snapshot-mode INITIAL # include initial table data  \
       --role riotx_cdc \
@@ -83,9 +83,7 @@ riotx snowflake-import \
       --jdbc-user databaseuser \
       --jdbc-pass databasepassword \
       --poll 10s # sleep 10s after each cdc import and then repeat \
-      hset \
-      --keyspace orderheader \
-      --key order_id # column name to use as id
+      hset orderheader:#{order_id} # column name to use as id
 ----
 
 The command above imports CDC data from the Snowflake table `tb_101.raw_pos.incremental_order_header` into Redis hashes in the keyspace `orderheader`.
@@ -95,17 +93,15 @@ This command will read all of the rows output from your SQL query and will write
 For more information see the link:https://redis.github.io/riot/#_db_import[db-import] command.
 
 .Example: One-time Import
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riotx db-import \
+{app} db-import \
       "SELECT * FROM SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE" \
       --jdbc-url "jdbc:snowflake://abcdefg.abc12345.snowflakecomputing.com" \
       --jdbc-driver net.snowflake.client.jdbc.SnowflakeDriver \
       --jdbc-user databaseuser \
       --jdbc-pass databasepassword \
-      hset \
-      --keyspace datatable \
-      --key data_id # column name to use as id
+      hset datatable:#{data_id} # column name to use as id
 ----
 
 This command performs a one-time import from Snowflake using the `db-import` command.

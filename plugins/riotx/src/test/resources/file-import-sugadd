@@ -1,1 +1,1 @@
-riotx file-import http://storage.googleapis.com/jrx/beers.csv --header ft.sugadd --keyspace names --value name --payload style --ignore-missing
+riotx file-import http://storage.googleapis.com/jrx/beers.csv --header ft.sugadd names --value #{name} --payload #{style} --ignore-missing

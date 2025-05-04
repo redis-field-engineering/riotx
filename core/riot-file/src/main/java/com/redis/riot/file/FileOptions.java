@@ -1,5 +1,6 @@
 package com.redis.riot.file;
 
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
@@ -13,14 +14,14 @@ public class FileOptions {
 	public static final String DELIMITER_PIPE = "|";
 	public static final String DELIMITER_COMMA = DelimitedLineTokenizer.DELIMITER_COMMA;
 	public static final String DELIMITER_TAB = DelimitedLineTokenizer.DELIMITER_TAB;
-	public static final String DEFAULT_ENCODING = StandardCharsets.UTF_8.name();
+	public static final Charset DEFAULT_ENCODING = StandardCharsets.UTF_8;
 	public static final char DEFAULT_QUOTE_CHARACTER = '"';
 
 	private boolean gzip;
 	private S3Options s3Options = new S3Options();
 	private GoogleStorageOptions googleStorageOptions = new GoogleStorageOptions();
 	private MimeType contentType;
-	private String encoding = DEFAULT_ENCODING;
+	private Charset encoding = DEFAULT_ENCODING;
 	private boolean header;
 	private String delimiter;
 	private char quoteCharacter = DEFAULT_QUOTE_CHARACTER;
@@ -81,11 +82,11 @@ public class FileOptions {
 		this.header = header;
 	}
 
-	public String getEncoding() {
+	public Charset getEncoding() {
 		return encoding;
 	}
 
-	public void setEncoding(String encoding) {
+	public void setEncoding(Charset encoding) {
 		this.encoding = encoding;
 	}
 

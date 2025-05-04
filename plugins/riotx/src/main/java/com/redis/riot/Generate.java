@@ -58,7 +58,7 @@ public class Generate extends AbstractRedisCommand {
     private CreateOptions<String, String> indexCreateOptions() {
         CreateOptions.Builder<String, String> options = CreateOptions.builder();
         options.on(indexOn());
-        options.prefix(generateArgs.getKeyspace() + generateArgs.getKeySepataror());
+        options.prefix(generateArgs.getKeyspace() + generateArgs.getKeySeparator());
         return options.build();
     }
 

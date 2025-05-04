@@ -160,7 +160,6 @@ abstract class RiotTests extends AbstractRiotApplicationTestBase {
         String json = targetRedisCommands.jsonGet(keys.get(1)).get(0).toString();
         ObjectMapper mapper = new ObjectMapper();
         JsonNode node = mapper.readTree(json);
-        Assertions.assertNull(node.get("id"));
         Assertions.assertNotNull(node.get("field1"));
     }
 

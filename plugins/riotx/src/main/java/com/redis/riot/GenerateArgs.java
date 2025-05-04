@@ -25,7 +25,7 @@ public class GenerateArgs {
 	private int count = DEFAULT_COUNT;
 
 	@Option(names = "--key-separator", description = "Key separator (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
-	private String keySepataror = GeneratorItemReader.DEFAULT_KEY_SEPARATOR;
+	private String keySeparator = GeneratorItemReader.DEFAULT_KEY_SEPARATOR;
 
 	@Option(names = "--keyspace", description = "Keyspace prefix for generated data structures (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
 	private String keyspace = GeneratorItemReader.DEFAULT_KEYSPACE;
@@ -154,7 +154,7 @@ public class GenerateArgs {
 	}
 
 	public void configure(GeneratorItemReader reader) {
-		reader.setKeySeparator(keySepataror);
+		reader.setKeySeparator(keySeparator);
 		reader.setExpiration(expiration);
 		reader.setHashOptions(hashOptions());
 		reader.setJsonOptions(jsonOptions());
@@ -353,12 +353,12 @@ public class GenerateArgs {
 		this.index = index;
 	}
 
-	public String getKeySepataror() {
-		return keySepataror;
+	public String getKeySeparator() {
+		return keySeparator;
 	}
 
-	public void setKeySepataror(String keySepataror) {
-		this.keySepataror = keySepataror;
+	public void setKeySeparator(String keySeparator) {
+		this.keySeparator = keySeparator;
 	}
 
 }

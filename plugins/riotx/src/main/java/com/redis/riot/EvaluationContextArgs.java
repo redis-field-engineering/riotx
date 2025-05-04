@@ -1,5 +1,6 @@
 package com.redis.riot;
 
+import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.LinkedHashMap;
@@ -19,68 +20,72 @@ import picocli.CommandLine.Option;
 @ToString
 public class EvaluationContextArgs {
 
-	public static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
-	public static final String DEFAULT_NUMBER_FORMAT = "#,###.##";
-	public static final String VAR_DATE = "date";
-	public static final String VAR_NUMBER = "number";
-	public static final String VAR_FAKER = "faker";
+    public static final DateFormat DEFAULT_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
-	@Option(arity = "1..*", names = "--var", description = "SpEL expressions for context variables, in the form var=\"exp\". For details see https://docs.spring.io/spring-framework/reference/core/expressions.html", paramLabel = "<v=exp>")
-	private Map<String, Expression> varExpressions = new LinkedHashMap<>();
+    public static final DecimalFormat DEFAULT_NUMBER_FORMAT = new DecimalFormat("#,###.##");
 
-	@Option(names = "--date-format", description = "Date/time format (default: ${DEFAULT-VALUE}). For details see https://www.baeldung.com/java-simple-date-format#date_time_patterns", paramLabel = "<fmt>")
-	private String dateFormat = DEFAULT_DATE_FORMAT;
+    public static final String VAR_DATE = "date";
 
-	@Option(names = "--number-format", description = "Number format (default: ${DEFAULT-VALUE}). For details see https://www.baeldung.com/java-decimalformat", paramLabel = "<fmt>")
-	private String numberFormat = DEFAULT_NUMBER_FORMAT;
+    public static final String VAR_NUMBER = "number";
 
-	private Map<String, Object> vars = new LinkedHashMap<>();
+    public static final String VAR_FAKER = "faker";
 
-	public StandardEvaluationContext evaluationContext() {
-		StandardEvaluationContext context = new StandardEvaluationContext();
-		RiotUtils.registerFunction(context, "geo", GeoLocation.class, "toString", String.class, String.class);
-		context.setVariable(VAR_DATE, new SimpleDateFormat(dateFormat));
-		context.setVariable(VAR_NUMBER, new DecimalFormat(numberFormat));
-		context.setVariable(VAR_FAKER, new Faker());
-		if (!CollectionUtils.isEmpty(vars)) {
-			vars.forEach(context::setVariable);
-		}
-		if (!CollectionUtils.isEmpty(varExpressions)) {
-			varExpressions.forEach((k, v) -> context.setVariable(k, v.getValue(context)));
-		}
-		return context;
-	}
+    @Option(arity = "1..*", names = "--var", description = "SpEL expressions for context variables, in the form var=\"exp\". For details see https://docs.spring.io/spring-framework/reference/core/expressions.html", paramLabel = "<v=exp>")
+    private Map<String, Expression> varExpressions = new LinkedHashMap<>();
 
-	public String getDateFormat() {
-		return dateFormat;
-	}
+    @Option(names = "--date-format", description = "Date/time format (default: ${DEFAULT-VALUE}). For details see https://www.baeldung.com/java-simple-date-format#date_time_patterns", paramLabel = "<fmt>")
+    private DateFormat dateFormat = DEFAULT_DATE_FORMAT;
 
-	public void setDateFormat(String format) {
-		this.dateFormat = format;
-	}
+    @Option(names = "--number-format", description = "Number format (default: ${DEFAULT-VALUE}). For details see https://www.baeldung.com/java-decimalformat", paramLabel = "<fmt>")
+    private DecimalFormat numberFormat = DEFAULT_NUMBER_FORMAT;
 
-	public Map<String, Expression> getVarExpressions() {
-		return varExpressions;
-	}
+    private Map<String, Object> vars = new LinkedHashMap<>();
 
-	public void setVarExpressions(Map<String, Expression> expressions) {
-		this.varExpressions = expressions;
-	}
+    public StandardEvaluationContext evaluationContext() {
+        StandardEvaluationContext context = new StandardEvaluationContext();
+        RiotUtils.registerFunction(context, "geo", GeoLocation.class, "toString", String.class, String.class);
+        context.setVariable(VAR_DATE, dateFormat);
+        context.setVariable(VAR_NUMBER, numberFormat);
+        context.setVariable(VAR_FAKER, new Faker());
+        if (!CollectionUtils.isEmpty(vars)) {
+            vars.forEach(context::setVariable);
+        }
+        if (!CollectionUtils.isEmpty(varExpressions)) {
+            varExpressions.forEach((k, v) -> context.setVariable(k, v.getValue(context)));
+        }
+        return context;
+    }
 
-	public Map<String, Object> getVars() {
-		return vars;
-	}
+    public Map<String, Expression> getVarExpressions() {
+        return varExpressions;
+    }
 
-	public void setVars(Map<String, Object> variables) {
-		this.vars = variables;
-	}
+    public void setVarExpressions(Map<String, Expression> expressions) {
+        this.varExpressions = expressions;
+    }
 
-	public String getNumberFormat() {
-		return numberFormat;
-	}
+    public Map<String, Object> getVars() {
+        return vars;
+    }
 
-	public void setNumberFormat(String numberFormat) {
-		this.numberFormat = numberFormat;
-	}
+    public void setVars(Map<String, Object> variables) {
+        this.vars = variables;
+    }
+
+    public DateFormat getDateFormat() {
+        return dateFormat;
+    }
+
+    public void setDateFormat(DateFormat dateFormat) {
+        this.dateFormat = dateFormat;
+    }
+
+    public DecimalFormat getNumberFormat() {
+        return numberFormat;
+    }
+
+    public void setNumberFormat(DecimalFormat numberFormat) {
+        this.numberFormat = numberFormat;
+    }
 
 }

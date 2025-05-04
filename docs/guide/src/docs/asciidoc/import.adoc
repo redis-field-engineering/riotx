@@ -1,6 +1,35 @@
 = Importing
 
-When importing data into Redis (`file-import`, `db-import`, `faker`) the following options allow for field-level processing and filtering.
+There are common features available when importing data into Redis (`db-import`, `faker`, `file-import`, `redis-import`, `snowflake-import`, `stream-import`).
+
+== Redis Key
+
+{project-title} offers two mechanisms to craft the Redis key:
+
+=== Template Expression
+
+This produces the key string using a https://docs.spring.io/spring-framework/reference/core/expressions/language-ref/templating.html[SpEL expression].
+
+Template expressions allow mixing literal text with one or more evaluation blocks.
+Each evaluation block is delimited with `#{ }` and within an evaluation block you can directly reference fields by their name, for example:
+
+.Template Expression Example
+[source,console,subs="verbatim,attributes"]
+----
+{app} file-import beers.json hset beer:#{id}
+----
+
+Here each key is constructed with the `beer:` prefix and suffixed with the value in the `id` field, producing keys `beer:123` `beer:494` etc.
+
+=== Keyspace and Key Fields
+
+This mechanism constructs keys using a keyspace string passed with `--keyspace` and key fields passed with `--key`, for example:
+
+.Keyspace/Key Fields Example
+[source,console,subs="verbatim,attributes"]
+----
+{app} file-import beers.json hset --keyspace beer --key id
+----
 
 == Processing
 
@@ -31,9 +60,9 @@ The `replicate` command exposes 2 command objects named `source` and `target`.
 `geo`:: Convenience function that takes a longitude and a latitude to produce a RediSearch geo-location string in the form `longitude,latitude` (e.g. `location=#geo(lon,lat)`)
 
 .Processor example
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot file-import --proc epoch="#date.parse(mydate).getTime()" location="#geo(lon,lat)" name="#redis.hget('person1','lastName')" ...
+{app} file-import --proc epoch="#date.parse(mydate).getTime()" location="#geo(lon,lat)" name="#redis.hget('person1','lastName')" ...
 ----
 
 .Faker processor example
@@ -56,8 +85,8 @@ Filters allow you to exclude records that don't match a {link_spel} boolean expr
 
 For example this filter will only keep records where the `value` field is a series of digits:
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot file-import --filter "value matches '\\d+'" ...
+{app} file-import --filter "value matches '\\d+'" ...
 ----
 

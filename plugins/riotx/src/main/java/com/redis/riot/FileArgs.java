@@ -6,6 +6,8 @@ import lombok.ToString;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
+import java.nio.charset.Charset;
+
 @ToString
 public class FileArgs {
 
@@ -21,8 +23,8 @@ public class FileArgs {
 	@Option(names = "--delimiter", description = "Delimiter character.", paramLabel = "<string>")
 	private String delimiter;
 
-	@Option(names = "--encoding", description = "File encoding (default: ${DEFAULT-VALUE}).", paramLabel = "<charset>")
-	private String encoding = FileOptions.DEFAULT_ENCODING;
+	@Option(names = "--encoding", description = "File encoding e.g. us_ascii or iso_8859_1 (default: ${DEFAULT-VALUE}).", paramLabel = "<chars>")
+	private Charset encoding = FileOptions.DEFAULT_ENCODING;
 
 	@Option(names = "--quote", description = "Escape character for CSV files (default: ${DEFAULT-VALUE}).", paramLabel = "<char>")
 	private char quoteCharacter = FileOptions.DEFAULT_QUOTE_CHARACTER;
@@ -51,11 +53,11 @@ public class FileArgs {
 		this.gzipped = gzipped;
 	}
 
-	public String getEncoding() {
+	public Charset getEncoding() {
 		return encoding;
 	}
 
-	public void setEncoding(String encoding) {
+	public void setEncoding(Charset encoding) {
 		this.encoding = encoding;
 	}
 

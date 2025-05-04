@@ -15,21 +15,21 @@ The replication mechanism is as follows:
 
 The basic usage is:
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot replicate [OPTIONS] SOURCE TARGET
+{app} replicate [OPTIONS] SOURCE TARGET
 ----
 
 where SOURCE and TARGET are <<_redis_uri,Redis URIs>>.
 
 For the full usage, run:
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot replicate --help
+{app} replicate --help
 ----
 
 TIP: To replicate a Redis logical database other than the default (`0`), specify the database in the source Redis URI.
-For example `riot replicate redis://source:6379/1 redis://target:6379` replicates database `1`.
+For example `{app} replicate redis://source:6379/1 redis://target:6379` replicates database `1`.
 
 [[_replication_mode]]
 == Replication Mode
@@ -166,9 +166,9 @@ The verification step happens automatically after the scan is complete (snapshot
 
 Verification can also be run on-demand using the `compare` command:
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot compare SOURCE TARGET [OPTIONS]
+{app} compare SOURCE TARGET [OPTIONS]
 ----
 
 The output looks like this:

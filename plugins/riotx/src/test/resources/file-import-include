@@ -1,1 +1,1 @@
-riotx file-import http://storage.googleapis.com/jrx/beers.csv --header hset --keyspace beer --key id --include name style abv
+riotx file-import http://storage.googleapis.com/jrx/beers.csv --header hset beer:#{id} --include name style abv

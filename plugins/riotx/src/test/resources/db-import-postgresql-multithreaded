@@ -1,1 +1,1 @@
-riotx db-import "SELECT * FROM orders" --jdbc-url "jdbc:postgresql://host:port/database" --jdbc-user appuser --jdbc-pass passwd --threads 3 hset --keyspace order --key order_id
+riotx db-import "SELECT * FROM orders" --jdbc-url "jdbc:postgresql://host:port/database" --jdbc-user appuser --jdbc-pass passwd --threads 3 hset order:#{order_id}

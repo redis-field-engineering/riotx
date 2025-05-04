@@ -11,40 +11,48 @@ import picocli.CommandLine.Option;
 @Command
 public abstract class AbstractCallableCommand extends BaseCommand implements Callable<Integer> {
 
-	@Option(names = "--help", usageHelp = true, description = "Show this help message and exit.")
-	private boolean helpRequested;
+    @Option(names = "--help", usageHelp = true, description = "Show this help message and exit.")
+    private boolean helpRequested;
 
-	protected Logger log;
+    protected Logger log;
 
-	@Override
-	public Integer call() throws Exception {
-		initialize();
-		try {
-			execute();
-		} finally {
-			teardown();
-		}
-		return 0;
-	}
+    @Override
+    public Integer call() throws Exception {
+        initialize();
+        try {
+            execute();
+        } finally {
+            teardown();
+        }
+        return 0;
+    }
 
-	protected void initialize() throws Exception {
-		if (log == null) {
-			log = LoggerFactory.getLogger(getClass());
-		}
-	}
+    protected void initialize() throws Exception {
+        if (log == null) {
+            log = LoggerFactory.getLogger(getClass());
+        }
+    }
 
-	protected abstract void execute() throws Exception;
+    protected abstract void execute() throws Exception;
 
-	protected void teardown() {
-		// do nothing
-	}
+    protected void teardown() {
+        // do nothing
+    }
 
-	public Logger getLog() {
-		return log;
-	}
+    public Logger getLog() {
+        return log;
+    }
 
-	public void setLog(Logger log) {
-		this.log = log;
-	}
+    public void setLog(Logger log) {
+        this.log = log;
+    }
+
+    public boolean isHelpRequested() {
+        return helpRequested;
+    }
+
+    public void setHelpRequested(boolean helpRequested) {
+        this.helpRequested = helpRequested;
+    }
 
 }

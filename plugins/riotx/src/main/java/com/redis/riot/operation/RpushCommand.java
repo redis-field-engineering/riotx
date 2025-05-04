@@ -12,7 +12,7 @@ public class RpushCommand extends AbstractMemberOperationCommand {
 
 	@Override
 	public Rpush<String, String, Map<String, Object>> operation() {
-		return new Rpush<>(keyFunction(), memberFunction().andThen(Arrays::asList));
+		return new Rpush<>(keyFunction(), memberFunction());
 	}
 
 }

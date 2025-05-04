@@ -1,1 +1,1 @@
-riotx file-import http://storage.googleapis.com/jrx/bad.psv --type psv --header --delimiter "|" --quote "'" hset --keyspace bad --key id
+riotx file-import http://storage.googleapis.com/jrx/bad.psv --type psv --header --delimiter "|" --quote "'" hset bad:#{id}

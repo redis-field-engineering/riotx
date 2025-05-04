@@ -5,15 +5,15 @@ The `stats` command analyzes the Redis database and displays keyspace statistics
 
 The basic usage is:
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riotx stats [OPTIONS]
+{app} stats [OPTIONS]
 ----
 
 For the full usage, run:
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riotx stats --help
+{app} stats --help
 ----
 
 `--mem <size>`:: Memory usage threshold above which a key is considered big
@@ -22,8 +22,8 @@ riotx stats --help
 
 
 .Example: Keys over 3MB in memory usage and 10MB in write rate
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riotx stats --mem 3mb --rate 10mb
+{app} stats --mem 3mb --rate 10mb
 ----
 

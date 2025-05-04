@@ -1,1 +1,1 @@
-riotx stream-import stream:beers --idle-timeout 1s hset --keyspace beer --key id
+riotx stream-import stream:beers --idle-timeout 1s hset beer:#{id}

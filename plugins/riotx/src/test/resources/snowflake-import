@@ -1,1 +1,1 @@
-riotx snowflake-import tb_101.raw_pos.incremental_order_header --role riotx_cdc --warehouse compute_wh --cdc-schema raw_pos_cdc --snapshot-mode INITIAL --jdbc-url "jdbc:snowflake://<accountid>.snowflakecomputing.com" --user riotx_cdc --jdbc-pass pass hset --keyspace orderheader --key order_id
+riotx snowflake-import tb_101.raw_pos.incremental_order_header --role riotx_cdc --warehouse compute_wh --cdc-schema raw_pos_cdc --snapshot-mode INITIAL --jdbc-url "jdbc:snowflake://<accountid>.snowflakecomputing.com" --user riotx_cdc --jdbc-pass pass hset orderheader:#{order_id}

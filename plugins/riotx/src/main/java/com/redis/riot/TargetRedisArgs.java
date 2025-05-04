@@ -29,7 +29,7 @@ public class TargetRedisArgs implements RedisArgs {
     @Option(names = "--target-insecure", description = "Allow insecure TLS connection to target by skipping cert validation.")
     private boolean insecure;
 
-    @Option(names = "--target-verify", description = "Target TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
+    @Option(names = "--target-verify", description = "Target TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SslVerifyMode sslVerifyMode = DEFAULT_SSL_VERIFY_MODE;
 
     @Option(names = "--target-client", description = "Client name used to connect to target Redis.", paramLabel = "<name>")

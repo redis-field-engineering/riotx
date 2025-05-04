@@ -1,6 +1,8 @@
 package com.redis.riot;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.StringTokenizer;
@@ -17,110 +19,122 @@ import picocli.CommandLine.ParseResult;
 
 public abstract class AbstractRiotTestBase extends AbstractTargetTestBase {
 
-	public static final Duration DEFAULT_IDLE_TIMEOUT = Duration.ofSeconds(1);
-	public static final int DEFAULT_EVENT_QUEUE_CAPACITY = 100000;
+    public static final Duration DEFAULT_IDLE_TIMEOUT = Duration.ofSeconds(1);
 
-	static {
-		System.setProperty(SimpleLogger.SHOW_DATE_TIME_KEY, "true");
-		System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "info");
-	}
+    public static final int DEFAULT_EVENT_QUEUE_CAPACITY = 100000;
 
-	protected static void assertExecutionSuccessful(int exitCode) {
-		Assertions.assertEquals(0, exitCode);
-	}
+    static {
+        System.setProperty(SimpleLogger.SHOW_DATE_TIME_KEY, "true");
+        System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "info");
+    }
 
-	protected <T> T command(ParseResult parseResult) {
-		return parseResult.subcommands().get(0).commandSpec().commandLine().getCommand();
-	}
+    protected static void assertExecutionSuccessful(int exitCode) {
+        Assertions.assertEquals(0, exitCode);
+    }
 
-	protected int execute(TestInfo info, String filename) throws Exception {
-		return doExecute(info, filename);
-	}
+    protected <T> T command(ParseResult parseResult) {
+        return parseResult.subcommands().get(0).commandSpec().commandLine().getCommand();
+    }
 
-	protected int execute(TestInfo info, String filename, IExecutionStrategy config) throws Exception {
-		return doExecute(info, filename, config);
-	}
+    protected int execute(TestInfo info, String filename) throws Exception {
+        return doExecute(info, filename);
+    }
 
-	private int doExecute(TestInfo info, String filename, IExecutionStrategy... executionStrategies) throws Exception {
-		MainCommand mainCommand = mainCommand(info, executionStrategies);
-		return mainCommand.run(args(mainCommand, filename));
-	}
+    protected int execute(TestInfo info, String filename, IExecutionStrategy config) throws Exception {
+        return doExecute(info, filename, config);
+    }
 
-	protected abstract MainCommand mainCommand(TestInfo info, IExecutionStrategy... executionStrategies);
+    private int doExecute(TestInfo info, String filename, IExecutionStrategy... executionStrategies) throws Exception {
+        MainCommand mainCommand = mainCommand(info, executionStrategies);
+        return mainCommand.run(args(mainCommand, filename));
+    }
 
-	protected abstract String getMainCommandPrefix();
+    protected abstract MainCommand mainCommand(TestInfo info, IExecutionStrategy... executionStrategies);
 
-	private String[] args(MainCommand mainCommand, String filename) throws Exception {
-		try (InputStream inputStream = mainCommand.getClass().getResourceAsStream("/" + filename)) {
-			String command = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-			String prefix = getMainCommandPrefix();
-			if (command.startsWith(prefix)) {
-				command = command.substring(prefix.length());
-			}
-			return translateCommandline(command);
-		}
-	}
+    protected abstract String getMainCommandPrefix();
 
-	protected String[] translateCommandline(String toProcess) throws Exception {
-		if ((toProcess == null) || (toProcess.length() == 0)) {
-			return new String[0];
-		}
+    private String[] args(MainCommand mainCommand, String filename) throws Exception {
+        try (InputStream inputStream = mainCommand.getClass().getResourceAsStream("/" + filename);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            StringBuilder commandBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.endsWith("\\")) {
+                    commandBuilder.append(line, 0, line.length() - 1).append(" ");
+                } else {
+                    commandBuilder.append(line).append(" ");
+                }
+            }
 
-		// parse with a simple finite state machine
+            String command = commandBuilder.toString().trim();
+            String prefix = getMainCommandPrefix();
+            if (command.startsWith(prefix)) {
+                command = command.substring(prefix.length());
+            }
+            return translateCommandline(command);
+        }
+    }
 
-		final int normal = 0;
-		final int inQuote = 1;
-		final int inDoubleQuote = 2;
-		int state = normal;
-		StringTokenizer tok = new StringTokenizer(toProcess, "\"\' ", true);
-		Vector<String> v = new Vector<String>();
-		StringBuilder current = new StringBuilder();
+    protected String[] translateCommandline(String toProcess) throws Exception {
+        if ((toProcess == null) || (toProcess.length() == 0)) {
+            return new String[0];
+        }
 
-		while (tok.hasMoreTokens()) {
-			String nextTok = tok.nextToken();
-			switch (state) {
-			case inQuote:
-				if ("\'".equals(nextTok)) {
-					state = normal;
-				} else {
-					current.append(nextTok);
-				}
-				break;
-			case inDoubleQuote:
-				if ("\"".equals(nextTok)) {
-					state = normal;
-				} else {
-					current.append(nextTok);
-				}
-				break;
-			default:
-				if ("\'".equals(nextTok)) {
-					state = inQuote;
-				} else if ("\"".equals(nextTok)) {
-					state = inDoubleQuote;
-				} else if (" ".equals(nextTok)) {
-					if (current.length() != 0) {
-						v.addElement(current.toString());
-						current.setLength(0);
-					}
-				} else {
-					current.append(nextTok);
-				}
-				break;
-			}
-		}
+        // parse with a simple finite state machine
 
-		if (current.length() != 0) {
-			v.addElement(current.toString());
-		}
+        final int normal = 0;
+        final int inQuote = 1;
+        final int inDoubleQuote = 2;
+        int state = normal;
+        StringTokenizer tok = new StringTokenizer(toProcess, "\"\' ", true);
+        Vector<String> v = new Vector<String>();
+        StringBuilder current = new StringBuilder();
 
-		if ((state == inQuote) || (state == inDoubleQuote)) {
-			throw new Exception("unbalanced quotes in " + toProcess);
-		}
+        while (tok.hasMoreTokens()) {
+            String nextTok = tok.nextToken();
+            switch (state) {
+                case inQuote:
+                    if ("\'".equals(nextTok)) {
+                        state = normal;
+                    } else {
+                        current.append(nextTok);
+                    }
+                    break;
+                case inDoubleQuote:
+                    if ("\"".equals(nextTok)) {
+                        state = normal;
+                    } else {
+                        current.append(nextTok);
+                    }
+                    break;
+                default:
+                    if ("\'".equals(nextTok)) {
+                        state = inQuote;
+                    } else if ("\"".equals(nextTok)) {
+                        state = inDoubleQuote;
+                    } else if (" ".equals(nextTok)) {
+                        if (current.length() != 0) {
+                            v.addElement(current.toString());
+                            current.setLength(0);
+                        }
+                    } else {
+                        current.append(nextTok);
+                    }
+                    break;
+            }
+        }
 
-		String[] args = new String[v.size()];
-		v.copyInto(args);
-		return args;
-	}
+        if (current.length() != 0) {
+            v.addElement(current.toString());
+        }
+
+        if ((state == inQuote) || (state == inDoubleQuote)) {
+            throw new Exception("unbalanced quotes in " + toProcess);
+        }
+
+        String[] args = new String[v.size()];
+        v.copyInto(args);
+        return args;
+    }
 
 }

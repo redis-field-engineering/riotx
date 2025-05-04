@@ -27,7 +27,7 @@ public class SourceRedisArgs implements RedisArgs {
 	@Option(names = "--source-insecure", description = "Allow insecure TLS connection to source by skipping cert validation.")
 	private boolean insecure;
 
-	@Option(names = "--source-verify", description = "Source TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
+	@Option(names = "--source-verify", description = "Source TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
 	private SslVerifyMode sslVerifyMode = DEFAULT_SSL_VERIFY_MODE;
 
 	@Option(names = "--source-client", description = "Client name used to connect to source Redis.", paramLabel = "<name>")

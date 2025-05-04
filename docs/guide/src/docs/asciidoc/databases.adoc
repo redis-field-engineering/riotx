@@ -40,21 +40,21 @@ The `db-import` command imports data from a relational database into Redis.
 NOTE: Ensure {project-title} has the relevant JDBC driver for your database.
 See the <<_db_drivers,Drivers>> section for more details.
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot db-import --jdbc-url <jdbc url> -u <Redis URI> SQL [REDIS COMMAND...]
+{app} db-import --jdbc-url <jdbc url> -u <Redis URI> SQL [REDIS COMMAND...]
 ----
 
 To show the full usage, run:
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot db-import --help
+{app} db-import --help
 ----
 
 You must specify at least one Redis command as a target.
 
-IMPORTANT: Redis connection options apply to the root command (`riot`) and not to subcommands.
+IMPORTANT: Redis connection options apply to the root command (`{app}`) and not to subcommands.
 
 The keys that will be written are constructed from input records by concatenating the keyspace prefix and key fields.
 
@@ -89,15 +89,15 @@ NOTE: Ensure {project-title} has the relevant JDBC driver for your database.
 See the <<_db_drivers,Drivers>> section for more details.
 
 The general usage is:
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot db-export --jdbc-url <jdbc url> SQL
+{app} db-export --jdbc-url <jdbc url> SQL
 ----
 
 To show the full usage, run:
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot db-export --help
+{app} db-export --help
 ----
 
 .Example: export to PostgreSQL

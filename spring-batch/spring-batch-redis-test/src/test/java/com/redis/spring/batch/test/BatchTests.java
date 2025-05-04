@@ -623,8 +623,8 @@ abstract class BatchTests extends AbstractTargetTestBase {
         Assertions.assertEquals(0, redisCommands.dbsize());
     }
 
-    private GeoValue<String> geoValue(Geo geo) {
-        return GeoValue.just(geo.getLongitude(), geo.getLatitude(), geo.getMember());
+    private Collection<GeoValue<String>> geoValue(Geo geo) {
+        return Arrays.asList(GeoValue.just(geo.getLongitude(), geo.getLatitude(), geo.getMember()));
     }
 
     private static class Geo {
