@@ -1,4 +1,6 @@
 name: Clear cache
+permissions:
+  actions: write
 
 on:
   schedule:
