@@ -1,4 +1,6 @@
 name: Clone Releases
+permissions:
+  contents: read
 
 on:
   workflow_dispatch:
