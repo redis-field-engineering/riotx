@@ -31,7 +31,7 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
 
     private static final String CREATE_STREAM_SQL = "CREATE OR REPLACE STREAM %s ON TABLE %s";
 
-    private static final String CREATE_TEMP_TABLE_SQL = "CREATE OR REPLACE TABLE %s AS SELECT * FROM %s";
+    private static final String CREATE_TEMP_TABLE_SQL = "CREATE OR REPLACE TABLE %s AS SELECT * FROM %s WHERE METADATA$ACTION <> 'DELETE'";
 
     public static final Duration DEFAULT_POLL_INTERVAL = Duration.ofSeconds(5);
 
