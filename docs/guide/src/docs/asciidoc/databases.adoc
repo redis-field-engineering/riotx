@@ -12,19 +12,17 @@
 {project-title} relies on JDBC to interact with databases.
 It includes JDBC drivers for the most common database systems:
 
-https://docs.oracle.com/cd/E11882_01/appdev.112/e13995/oracle/jdbc/OracleDriver.html[Oracle]:: `jdbc:oracle:thin:@myhost:1521:orcl`
-
-https://docs.microsoft.com/en-us/sql/connect/jdbc/building-the-connection-url?view=sql-server-2017[SQL Server]:: `jdbc:sqlserver://[serverName[\instanceName][:portNumber]][;property=value[;property=value]]`
+https://www.ibm.com/docs/en/db2/12.1?topic=cdsudidsdjs-url-format-data-server-driver-jdbc-sqlj-type-4-connectivity[Db2]:: `jdbc:db2://host:port/database`
 
 https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-reference-jdbc-url-format.html[MySQL]:: `jdbc:mysql://[host]:[port][/database][?properties]`
+
+https://docs.oracle.com/cd/E11882_01/appdev.112/e13995/oracle/jdbc/OracleDriver.html[Oracle]:: `jdbc:oracle:thin:@myhost:1521:orcl`
 
 https://www.postgresql.org/docs/7.4/jdbc-use.html[Postgres]:: `jdbc:postgresql://host:port/database`
 
 https://docs.snowflake.com/en/developer-guide/jdbc/jdbc-configure[Snowflake]:: `jdbc:snowflake://<account_identifier>.snowflakecomputing.com/?<connection_params>`
 
-https://www.sqlitetutorial.net/sqlite-java/sqlite-jdbc-driver/[SQLite]:: `jdbc:sqlite:path_to_sqlite_file`
-
-https://www.ibm.com/docs/en/db2/12.1?topic=cdsudidsdjs-url-format-data-server-driver-jdbc-sqlj-type-4-connectivity[Db2]:: `jdbc:db2://host:port/database`
+https://docs.microsoft.com/en-us/sql/connect/jdbc/building-the-connection-url?view=sql-server-2017[SQL Server]:: `jdbc:sqlserver://[serverName[\instanceName][:portNumber]][;property=value[;property=value]]`
 
 
 [TIP]
