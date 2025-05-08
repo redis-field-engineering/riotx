@@ -8,5 +8,4 @@ dependencies {
     implementation 'com.oracle.database.jdbc:ojdbc11'
     implementation group: 'net.snowflake', name: 'snowflake-jdbc', version: snowflakeVersion
     implementation 'org.postgresql:postgresql'
-    implementation 'org.xerial:sqlite-jdbc'
 }
