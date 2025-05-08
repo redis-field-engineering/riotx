@@ -20,7 +20,9 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     public static final Duration DEFAULT_IDLE_TIMEOUT = FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT;
 
-    private static final Duration DEFAULT_FLUSH_INTERVAL = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
+    public static final Duration DEFAULT_FLUSH_INTERVAL = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
+
+    public static final SnowflakeStreamItemReader.SnapshotMode DEFAULT_SNAPSHOT_MODE = SnowflakeStreamItemReader.SnapshotMode.INITIAL;
 
     @ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
@@ -31,8 +33,8 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Parameters(arity = "1", description = "Fully qualified Snowflake Table or Materialized View, eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
     private String tableOrView;
 
-    @Option(names = "--no-snapshot", description = "Disable initial snapshot.")
-    private boolean disableSnapshot;
+    @Option(names = "--snapshot", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
+    private SnowflakeStreamItemReader.SnapshotMode snapshotMode = DEFAULT_SNAPSHOT_MODE;
 
     @Option(names = "--role", description = "Snowflake role to use", paramLabel = "<str>")
     private String role;
@@ -78,9 +80,7 @@ public class SnowflakeImport extends AbstractRedisImport {
         reader.setPollInterval(pollInterval);
         reader.setRole(role);
         reader.setWarehouse(warehouse);
-        reader.setSnapshotMode(disableSnapshot
-                ? SnowflakeStreamItemReader.SnapshotMode.NEVER
-                : SnowflakeStreamItemReader.SnapshotMode.INITIAL);
+        reader.setSnapshotMode(snapshotMode);
         reader.setTableOrView(tableOrView);
         return reader;
     }
@@ -125,12 +125,12 @@ public class SnowflakeImport extends AbstractRedisImport {
         this.role = role;
     }
 
-    public boolean isDisableSnapshot() {
-        return disableSnapshot;
+    public SnowflakeStreamItemReader.SnapshotMode getSnapshotMode() {
+        return snapshotMode;
     }
 
-    public void setDisableSnapshot(boolean disableSnapshot) {
-        this.disableSnapshot = disableSnapshot;
+    public void setSnapshotMode(SnowflakeStreamItemReader.SnapshotMode snapshotMode) {
+        this.snapshotMode = snapshotMode;
     }
 
     public DatabaseReaderArgs getReaderArgs() {
