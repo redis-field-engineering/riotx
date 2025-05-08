@@ -31,8 +31,8 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Parameters(arity = "1", description = "Fully qualified Snowflake Table or Materialized View, eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
     private String tableOrView;
 
-    @Option(names = "--snapshot-mode", description = "Snapshot mode: ${COMPLETION-CANDIDATES} . INITIAL is the default and will set the Snowflake Stream SHOW_INITIAL_ROWS=TRUE option", defaultValue = "INITIAL")
-    private SnowflakeStreamItemReader.SnapshotMode snapshotMode;
+    @Option(names = "--no-snapshot", description = "Disable initial snapshot.")
+    private boolean disableSnapshot;
 
     @Option(names = "--role", description = "Snowflake role to use", paramLabel = "<str>")
     private String role;
@@ -46,7 +46,7 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Option(names = "--cdc-schema", description = "Snowflake CDC schema to use for stream and temp table", paramLabel = "<str>")
     private String cdcSchema;
 
-    @Option(names = "--poll", description = "Table polling interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
+    @Option(names = "--poll", description = "Snowflake stream polling interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration pollInterval = SnowflakeStreamItemReader.DEFAULT_POLL_INTERVAL;
 
     @Option(names = "--flush-interval", description = "Max duration between batch flushes (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
@@ -78,7 +78,9 @@ public class SnowflakeImport extends AbstractRedisImport {
         reader.setPollInterval(pollInterval);
         reader.setRole(role);
         reader.setWarehouse(warehouse);
-        reader.setSnapshotMode(snapshotMode);
+        reader.setSnapshotMode(disableSnapshot
+                ? SnowflakeStreamItemReader.SnapshotMode.NEVER
+                : SnowflakeStreamItemReader.SnapshotMode.INITIAL);
         reader.setTableOrView(tableOrView);
         return reader;
     }
@@ -123,12 +125,12 @@ public class SnowflakeImport extends AbstractRedisImport {
         this.role = role;
     }
 
-    public SnowflakeStreamItemReader.SnapshotMode getSnapshotMode() {
-        return snapshotMode;
+    public boolean isDisableSnapshot() {
+        return disableSnapshot;
     }
 
-    public void setSnapshotMode(SnowflakeStreamItemReader.SnapshotMode snapshotMode) {
-        this.snapshotMode = snapshotMode;
+    public void setDisableSnapshot(boolean disableSnapshot) {
+        this.disableSnapshot = disableSnapshot;
     }
 
     public DatabaseReaderArgs getReaderArgs() {
