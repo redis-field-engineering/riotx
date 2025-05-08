@@ -2,6 +2,7 @@ package com.redis.spring.batch.test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -453,7 +454,7 @@ class StackBatchTests extends BatchTests {
         int count = 73;
         GeneratorItemReader gen = generator(count, ItemType.STRING);
         Expire<String, String, KeyValue<String>> expire = new Expire<>(KeyValue::getKey);
-        expire.setTtl(1L);
+        expire.setTtl(1);
         RedisItemWriter<String, String, KeyValue<String>> writer = writer(expire);
         run(info, gen, writer);
         awaitUntil(() -> redisCommands.dbsize() == 0);

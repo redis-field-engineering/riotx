@@ -1,1 +1,1 @@
-riotx faker id="numerify '##########'" firstName="name.first_name" lastName="name.last_name" address="address.full_address" hset --keyspace person --key id
+riotx faker id="numerify '##########'" firstName="name.first_name" lastName="name.last_name" address="address.full_address" hset person:#{id}

@@ -1,1 +1,1 @@
-riotx faker value="Random.next_double" --count 10 --batch 1 --sleep 1 --skip-policy never ts.add --keyspace ts:gen --value value
+riotx faker value="Random.next_double" --count 10 --batch 1 --sleep 1 --skip-policy never ts.add ts:gen --value value

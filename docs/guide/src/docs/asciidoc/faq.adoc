@@ -6,7 +6,7 @@ Logs are cut off or missing::
   This could be due to concurrency issues in the terminal when refreshing the progress bar and displaying logs.
   Try running with job option `--progress log`.
 Unknown options: '--keyspace', '--key'::
-  You must specify one or more Redis commands with import commands (<<_file_import,`file-import`>>, <<_datagen_faker,`faker`>>, <<_db_import,`db-import`>>).
+  You must specify one or more Redis commands for `*-import` (<<_file_import,`file-import`>>, <<_datagen_faker,`faker`>>, <<_db_import,`db-import`>>).
 ERR DUMP payload version or checksum are wrong::
   Redis 7 DUMP format is not backwards compatible with previous versions.
   To replicate between different Redis versions, use <<_replication_type_struct,Type-Based Replication>>.
@@ -26,8 +26,8 @@ ERR Error running script... This Redis command is not allowed from scripts::
   This can happen with Active/Active (CRDB) databases because the `MEMORY USAGE` command is not allowed to be run from a LUA script.
   Use the `--mem-limit -1` option to disable memory usage.
 java.lang.OutOfMemoryError: Java heap space::
-  The RIOT JVM ran out of memory. If you are running `db-import` this could be due to a large resultset being loaded upfront. Use the `--fetch` option to set a fixed fetch size (e.g. `--fetch 1000`).
-  Otherwise increase max JVM heap size (`export JAVA_OPTS="-Xmx8g"`) or reduce RIOT memory usage by lowering `threads`, `batch`, and `read-batch` values.
+  The {project-title} JVM ran out of memory. If you are running `db-import` this could be due to a large resultset being loaded upfront. Use the `--fetch` option to set a fixed fetch size (e.g. `--fetch 1000`).
+  Otherwise increase max JVM heap size (`export JAVA_OPTS="-Xmx8g"`) or reduce {project-title} memory usage by lowering `threads`, `batch`, and `read-batch` values.
   
   
 

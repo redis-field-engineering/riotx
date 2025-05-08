@@ -1,20 +1,36 @@
 package com.redis.riot;
 
 import com.redis.riot.db.DataSourceBuilder;
+import com.redis.riot.db.SnowflakeStreamItemReader;
+import com.redis.spring.batch.item.PollableItemReader;
+import com.redis.spring.batch.step.FlushingStepBuilder;
 import com.redis.testcontainers.RedisServer;
 import com.redis.testcontainers.RedisStackContainer;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.bridge.SLF4JBridgeHandler;
+import org.springframework.batch.core.ItemWriteListener;
+import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.StepExecutionListener;
+import org.springframework.batch.core.step.builder.SimpleStepBuilder;
+import org.springframework.batch.item.Chunk;
+import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.item.support.ListItemWriter;
 import picocli.CommandLine;
 
 import javax.sql.DataSource;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @EnabledIfEnvironmentVariable(named = "JDBC_URL", matches = ".+")
 class SnowflakeTests extends AbstractRiotApplicationTestBase {
@@ -76,6 +92,58 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
     @Override
     protected RedisServer getRedisServer() {
         return redis;
+    }
+
+    @Test
+    void testReader(TestInfo info) throws Exception {
+        sqlRunner.executeScript("db/snowflake-roles.sql");
+        sqlRunner.executeScript("db/snowflake-setup-data.sql");
+        ListItemWriter<Map<String, Object>> writer = new ListItemWriter<>();
+        setIdleTimeout(Duration.ofSeconds(20));
+        String name = name(info);
+        FlushingStepBuilder<Map<String, Object>, Map<String, Object>> step = new FlushingStepBuilder<>(
+                step(name, DEFAULT_CHUNK_SIZE));
+        step.reader(reader());
+        step.writer(writer);
+        step.idleTimeout(getIdleTimeout());
+        step.listener(new ItemWriteListener<>() {
+
+            private boolean executed;
+
+            @Override
+            public synchronized void afterWrite(Chunk<? extends Map<String, Object>> items) {
+                if (!executed) {
+                    try {
+                        sqlRunner.executeScript("db/snowflake-insert-more-data.sql");
+                        executed = true;
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        });
+        run(job(info).start(step.build()).build());
+        awaitUntil(() -> size(writer) == 1100);
+        log.info("Waiting for more items to be processed");
+    }
+
+    private <T> int size(ListItemWriter<T> writer) {
+        int size = writer.getWrittenItems().size();
+        log.info("Processed {} items", size);
+        return size;
+    }
+
+    private SnowflakeStreamItemReader reader() {
+        SnowflakeStreamItemReader reader = new SnowflakeStreamItemReader();
+        reader.setDataSource(dataSource);
+        reader.setRedisClient(redisClient);
+        reader.setCdcSchema("raw_pos_cdc");
+        reader.setPollInterval(Duration.ofSeconds(1));
+        reader.setRole("riotx_cdc");
+        reader.setWarehouse("compute_wh");
+        reader.setSnapshotMode(SnowflakeStreamItemReader.SnapshotMode.INITIAL);
+        reader.setTableOrView("tb_101.raw_pos.incremental_order_header");
+        return reader;
     }
 
     @Test

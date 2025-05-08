@@ -12,7 +12,7 @@ public class LpushCommand extends AbstractMemberOperationCommand {
 
 	@Override
 	public Lpush<String, String, Map<String, Object>> operation() {
-		return new Lpush<>(keyFunction(), memberFunction().andThen(Arrays::asList));
+		return new Lpush<>(keyFunction(), memberFunction());
 	}
 
 }

@@ -43,7 +43,7 @@ public abstract class AbstractReaderFactory implements ReaderFactory {
 		if (options.getMaxItemCount() > 0) {
 			builder.maxItemCount(options.getMaxItemCount());
 		}
-		builder.encoding(options.getEncoding());
+		builder.encoding(options.getEncoding().name());
 		builder.recordSeparatorPolicy(recordSeparatorPolicy(options));
 		builder.linesToSkip(linesToSkip(options));
 		builder.saveState(false);

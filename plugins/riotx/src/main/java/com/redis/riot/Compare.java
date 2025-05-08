@@ -42,4 +42,12 @@ public class Compare extends AbstractCompareCommand {
 		this.compareStreamMessageId = streamMessageId;
 	}
 
+	public boolean isQuick() {
+		return quick;
+	}
+
+	public void setQuick(boolean quick) {
+		this.quick = quick;
+	}
+
 }

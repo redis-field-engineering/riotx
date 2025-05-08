@@ -1,1 +1,1 @@
-riotx file-import gs://riotx/beers.json hset --keyspace beer --key id
+riotx file-import gs://riotx/beers.json hset beer:#{id}

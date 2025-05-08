@@ -121,7 +121,7 @@ public class FileImport extends AbstractRedisImport {
         ItemReader<?> reader = readerFactory.create(resource, readOptions);
         RedisItemWriter<?, ?, ?> writer = writer();
         configureTargetRedisWriter(writer);
-        RiotStep<?, ?> step = new RiotStep<>(resource.getFilename(), reader, writer);
+        RiotStep<?, ?> step = step(resource.getFilename(), reader, writer);
         step.name(location);
         if (hasOperations()) {
             step.processor(RiotUtils.processor(processor(), regexProcessor()));

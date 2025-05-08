@@ -1,17 +1,29 @@
 package com.redis.riot.operation;
 
+import com.redis.riot.core.TemplateExpression;
+import picocli.CommandLine;
+
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
-import picocli.CommandLine.ArgGroup;
+abstract class AbstractMemberOperationCommand extends AbstractOperationCommand implements OperationCommand {
 
-abstract class AbstractMemberOperationCommand extends AbstractOperationCommand {
+    @CommandLine.Option(arity = "1..*", required = true, names = "--member", description = "Member template expression.", paramLabel = "<exp>")
+    private List<TemplateExpression> members;
 
-	@ArgGroup(exclusive = false)
-	private MemberOperationArgs memberArgs = new MemberOperationArgs();
+    protected Function<Map<String, Object>, Collection<String>> memberFunction() {
+        return t -> members.stream().map(e -> e.getValue(evaluationContext, t)).collect(Collectors.toList());
+    }
 
-	protected Function<Map<String, Object>, String> memberFunction() {
-		return idFunction(memberArgs.getMemberSpace(), memberArgs.getMemberFields());
-	}
+    public List<TemplateExpression> getMembers() {
+        return members;
+    }
+
+    public void setMembers(List<TemplateExpression> members) {
+        this.members = members;
+    }
 
 }

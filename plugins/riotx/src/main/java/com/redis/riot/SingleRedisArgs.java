@@ -47,7 +47,7 @@ public class SingleRedisArgs implements RedisArgs {
     @Option(names = "--insecure", description = "Allow insecure TLS connection by skipping cert validation.")
     private boolean insecure;
 
-    @Option(names = "--verify", description = "TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
+    @Option(names = "--verify", description = "TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SslVerifyMode sslVerifyMode = DEFAULT_SSL_VERIFY_MODE;
 
     @Option(names = "--client", description = "Client name used to connect to Redis.", paramLabel = "<name>")

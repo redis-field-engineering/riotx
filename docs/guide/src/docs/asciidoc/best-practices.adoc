@@ -87,7 +87,7 @@ Conversely if you need to minimize memory used by {project-title} you can lower 
 {project-title} replication is essentially a network bridge between the source and target Redis databases so underlying network is crucial for the overall throughput and a 10 Gigabit network is the minimum recommended.
 Network latency will also have an impact on replication (and other {project-title} uses) performance.
 Make sure the host running {project-title} offers minimal latency to both the source and target databases.
-You can test the latency using the https://redis.github.io/riot/#_ping[ping command].  
+You can test the latency using the <<_ping,ping>> command].
 
 == CRDB
 

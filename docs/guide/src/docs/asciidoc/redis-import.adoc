@@ -5,15 +5,15 @@ The `redis-import` command reads data from a Redis database and writes it to ano
 
 The basic usage is:
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riotx redis-import [OPTIONS] [REDIS COMMAND...]
+{app} redis-import [OPTIONS] [REDIS COMMAND...]
 ----
 
 For the full usage, run:
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riotx redis-import --help
+{app} redis-import --help
 ----
 
 .Example: migrate hashes to JSON

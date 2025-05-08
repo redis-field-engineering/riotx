@@ -30,9 +30,9 @@ Download the pre-compiled binary from link:https://github.com/redis-field-engine
 
 [NOTE]
 ====
-`riotx-{project-version}.zip` requires Java 11 or greater to be installed.
+`{project-name}-{project-version}.zip` requires Java 11 or greater to be installed.
 
-`riotx-standalone-{project-version}-*.zip` includes its own Java runtime and does not require a Java installation.
+`{project-name}-standalone-{project-version}-*.zip` includes its own Java runtime and does not require a Java installation.
 ====
 
 [[_install_docker]]

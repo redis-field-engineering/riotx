@@ -12,7 +12,7 @@ import java.util.Map;
 public class DataSourceArgs {
 
     @Option(names = "--jdbc-driver", description = "Fully qualified name of the JDBC driver (e.g. oracle.jdbc.OracleDriver).", paramLabel = "<class>")
-    private String driver;
+    private Class<?> driver;
 
     @Option(names = "--jdbc-url", required = true, description = "JDBC URL to connect to the database.", paramLabel = "<string>")
     private String url;
@@ -26,13 +26,13 @@ public class DataSourceArgs {
     @Option(names = "--jdbc-property", description = "Additional JDBC property (key=value).", paramLabel = "<prop>")
     private Map<String, String> properties = new HashMap<>();
 
-    @Option(names = "--jdbc-max-pool-size", description = "Maximum number of connections in the pool.")
+    @Option(names = "--jdbc-pool", description = "Maximum number of connections in the pool.", paramLabel = "<int>")
     private Integer maxPoolSize;
 
-    @Option(names = "--jdbc-min-idle", description = "Minimum number of idle connections in the pool.")
+    @Option(names = "--jdbc-min-idle", description = "Minimum number of idle connections in the pool.", hidden = true)
     private Integer minIdle;
 
-    @Option(names = "--jdbc-connection-timeout", description = "Maximum time to wait for a connection from the pool.", paramLabel = "<dur>")
+    @Option(names = "--jdbc-timeout", description = "Maximum time to wait for a connection from the pool.", paramLabel = "<dur>")
     private Duration connectionTimeout;
 
     @Option(names = "--jdbc-idle-timeout", description = "Maximum idle time for a connection in the pool.", hidden = true)
@@ -50,15 +50,15 @@ public class DataSourceArgs {
     @Option(names = "--jdbc-leak-detection-threshold", description = "Time threshold for leak detection.", hidden = true)
     private Duration leakDetectionThreshold;
 
-    @Option(names = "--jdbc-auto-commit", description = "Whether auto-commit is enabled for connections in the pool.")
+    @Option(names = "--jdbc-auto-commit", description = "Whether auto-commit is enabled for connections in the pool.", hidden = true)
     private Boolean autoCommit;
 
-    @Option(names = "--jdbc-pool-name", description = "Custom name for the connection pool.")
+    @Option(names = "--jdbc-pool-name", description = "Custom name for the connection pool.", paramLabel = "<name>", hidden = true)
     private String poolName;
 
     public DataSourceBuilder dataSourceBuilder() {
         DataSourceBuilder builder = new DataSourceBuilder();
-        builder.driver(driver);
+        builder.driver(driver == null ? null : driver.getName());
         builder.url(url);
         builder.username(username);
         builder.password(password);
@@ -76,11 +76,11 @@ public class DataSourceArgs {
         return builder;
     }
 
-    public String getDriver() {
+    public Class<?> getDriver() {
         return driver;
     }
 
-    public void setDriver(String driver) {
+    public void setDriver(Class<?> driver) {
         this.driver = driver;
     }
 

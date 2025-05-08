@@ -1,13 +1,15 @@
 package com.redis.riot;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import com.redis.riot.core.*;
+import com.redis.riot.core.ExpressionProcessor;
+import com.redis.riot.core.QuietMapAccessor;
+import com.redis.riot.core.RedisContext;
+import com.redis.riot.core.RiotUtils;
+import com.redis.riot.core.function.PredicateOperator;
 import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.operation.*;
+import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.spring.batch.item.redis.common.MultiOperation;
+import com.redis.spring.batch.item.redis.common.RedisOperation;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.function.FunctionItemProcessor;
@@ -15,28 +17,14 @@ import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
-
-import com.redis.riot.core.function.PredicateOperator;
-import com.redis.riot.operation.DelCommand;
-import com.redis.riot.operation.ExpireCommand;
-import com.redis.riot.operation.GeoaddCommand;
-import com.redis.riot.operation.HsetCommand;
-import com.redis.riot.operation.JsonSetCommand;
-import com.redis.riot.operation.LpushCommand;
-import com.redis.riot.operation.OperationCommand;
-import com.redis.riot.operation.RpushCommand;
-import com.redis.riot.operation.SaddCommand;
-import com.redis.riot.operation.SetCommand;
-import com.redis.riot.operation.SugaddCommand;
-import com.redis.riot.operation.TsAddCommand;
-import com.redis.riot.operation.XaddCommand;
-import com.redis.riot.operation.ZaddCommand;
-import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.MultiOperation;
-import com.redis.spring.batch.item.redis.common.RedisOperation;
-
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Command(subcommands = { ExpireCommand.class, DelCommand.class, GeoaddCommand.class, HsetCommand.class, LpushCommand.class,
         RpushCommand.class, SaddCommand.class, SetCommand.class, XaddCommand.class, ZaddCommand.class, SugaddCommand.class,
@@ -57,12 +45,14 @@ public abstract class AbstractImport extends AbstractJobCommand {
     @ArgGroup(exclusive = false)
     private ImportProcessorArgs processorArgs = new ImportProcessorArgs();
 
-    protected RedisContext targetRedisContext;
-
     /**
      * Initialized manually during command parsing
      */
     private List<OperationCommand> importOperationCommands = new ArrayList<>();
+
+    protected RedisContext targetRedisContext;
+
+    private StandardEvaluationContext evaluationContext;
 
     @Override
     protected String taskName(RiotStep<?, ?> step) {
@@ -74,6 +64,10 @@ public abstract class AbstractImport extends AbstractJobCommand {
         super.initialize();
         targetRedisContext = targetRedisContext();
         targetRedisContext.afterPropertiesSet();
+        log.info("Creating SpEL evaluation context with {}", evaluationContextArgs);
+        evaluationContext = evaluationContextArgs.evaluationContext();
+        evaluationContext.setVariable(VAR_REDIS, targetRedisContext.getConnection().sync());
+        evaluationContext.addPropertyAccessor(new QuietMapAccessor());
     }
 
     @Override
@@ -85,7 +79,12 @@ public abstract class AbstractImport extends AbstractJobCommand {
     }
 
     protected List<RedisOperation<String, String, Map<String, Object>, Object>> operations() {
-        return importOperationCommands.stream().map(OperationCommand::operation).collect(Collectors.toList());
+        return importOperationCommands.stream().map(this::operation).collect(Collectors.toList());
+    }
+
+    private RedisOperation<String, String, Map<String, Object>, Object> operation(OperationCommand command) {
+        command.setEvaluationContext(evaluationContext);
+        return command.operation();
     }
 
     protected boolean hasOperations() {
@@ -100,10 +99,6 @@ public abstract class AbstractImport extends AbstractJobCommand {
     }
 
     protected ItemProcessor<Map<String, Object>, Map<String, Object>> processor() {
-        log.info("Creating SpEL evaluation context with {}", evaluationContextArgs);
-        StandardEvaluationContext evaluationContext = evaluationContextArgs.evaluationContext();
-        evaluationContext.setVariable(VAR_REDIS, targetRedisContext.getConnection().sync());
-        evaluationContext.addPropertyAccessor(new QuietMapAccessor());
         return processor(evaluationContext, processorArgs);
     }
 

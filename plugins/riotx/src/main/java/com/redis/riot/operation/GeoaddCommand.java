@@ -1,13 +1,15 @@
 package com.redis.riot.operation;
 
-import java.util.Map;
-import java.util.function.ToDoubleFunction;
-
-import com.redis.riot.core.function.ToGeoValue;
 import com.redis.spring.batch.item.redis.writer.impl.Geoadd;
-
+import io.lettuce.core.GeoValue;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.function.ToDoubleFunction;
+import java.util.stream.Collectors;
 
 @Command(name = "geoadd", description = "Add members to a geo set")
 public class GeoaddCommand extends AbstractMemberOperationCommand {
@@ -36,13 +38,17 @@ public class GeoaddCommand extends AbstractMemberOperationCommand {
 
 	@Override
 	public Geoadd<String, String, Map<String, Object>> operation() {
-		return new Geoadd<>(keyFunction(), geoValueFunction());
-	}
-
-	private ToGeoValue<String, Map<String, Object>> geoValueFunction() {
+		Function<Map<String, Object>, Collection<String>> members = memberFunction();
 		ToDoubleFunction<Map<String, Object>> lon = toDouble(longitude, 0);
 		ToDoubleFunction<Map<String, Object>> lat = toDouble(latitude, 0);
-		return new ToGeoValue<>(memberFunction(), lon, lat);
+		return new Geoadd<>(keyFunction(), t -> value(members, lon, lat, t));
+	}
+
+	private Collection<GeoValue<String>> value(Function<Map<String, Object>, Collection<String>> members, ToDoubleFunction<Map<String, Object>> lon, ToDoubleFunction<Map<String, Object>> lat, Map<String, Object> map) {
+		Collection<String> ids = members.apply(map);
+		double longitude = lon.applyAsDouble(map);
+		double latitude = lat.applyAsDouble(map);
+		return ids.stream().map(id -> GeoValue.just(longitude, latitude, id)).collect(Collectors.toList());
 	}
 
 }

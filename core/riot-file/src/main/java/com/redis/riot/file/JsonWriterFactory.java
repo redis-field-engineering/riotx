@@ -15,7 +15,7 @@ public class JsonWriterFactory extends AbstractWriterFactory {
         writer.name(resource.getFilename());
         writer.resource(resource);
         writer.append(options.isAppend());
-        writer.encoding(options.getEncoding());
+        writer.encoding(options.getEncoding().name());
         writer.forceSync(options.isForceSync());
         writer.lineSeparator(options.getLineSeparator());
         writer.saveState(false);

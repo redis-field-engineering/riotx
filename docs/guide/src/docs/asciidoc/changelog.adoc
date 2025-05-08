@@ -4,9 +4,9 @@
 You can use {project-title} to stream change data from a Redis database. 
 
 .Streaming to stdout
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot file-export --mode live
+{app} file-export --mode live
 {"key":"gen:1","type":"string","time":1718050552000,"ttl":-1,"memoryUsage":300003376}
 {"key":"gen:3","type":"string","time":1718050552000,"ttl":-1,"memoryUsage":300003376}
 {"key":"gen:6","type":"string","time":1718050552000,"ttl":-1,"memoryUsage":300003376}
@@ -14,7 +14,7 @@ riot file-export --mode live
 ----
 
 .Streaming to a file
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot file-export export.json --mode live
+{app} file-export export.json --mode live
 ----

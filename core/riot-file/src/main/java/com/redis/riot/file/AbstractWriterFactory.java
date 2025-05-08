@@ -27,7 +27,7 @@ public abstract class AbstractWriterFactory implements WriterFactory {
 		builder.name(resource.getFilename());
 		builder.resource(resource);
 		builder.append(options.isAppend());
-		builder.encoding(options.getEncoding());
+		builder.encoding(options.getEncoding().name());
 		builder.forceSync(options.isForceSync());
 		builder.lineSeparator(options.getLineSeparator());
 		builder.saveState(false);

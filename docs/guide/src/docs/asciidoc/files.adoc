@@ -13,16 +13,16 @@ The `file-import` command reads data from files and writes it to Redis.
 
 The basic usage for file imports is:
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot file-import [OPTIONS] FILE... [REDIS COMMAND...]
+{app} file-import [OPTIONS] FILE... [REDIS COMMAND...]
 ----
 
 To show the full usage, run:
 
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot file-import --help
+{app} file-import --help
 ----
 
 {project-title} will try to determine the file type from its extension (e.g. `.csv` or `.json`), but you can specify it with the `--type` option.
@@ -71,13 +71,13 @@ When one or more `REDIS COMMAND`s are specified, these commands are called for e
 
 [IMPORTANT]
 ====
-Redis client options apply to the root command (`riot`) and not to Redis commands.
+Redis client options apply to the root command (`{app}`) and not to Redis commands.
 
 In this example Redis client options will not be taken into account:
 
 [source,subs="verbatim,attributes"] 
 ----
-riot file-import my.json hset -h myredis.com -p 6380
+{app} file-import my.json hset -h myredis.com -p 6380
 ----
 ====
 
@@ -85,10 +85,10 @@ Redis command keys are constructed from input records by concatenating keyspace 
 
 image::mapping.svg[]
 
-.Import into hashes with keyspace `blah:<id>`
-[source,console]
+.Import into hashes with key `blah:<id>`
+[source,console,subs="verbatim,attributes"]
 ----
-riot file-import my.json hset --keyspace blah --key id
+{app} file-import my.json hset blah:#{id}
 ----
 
 .Import into JSON
@@ -98,15 +98,15 @@ include::{testdir}/file-import-json-elastic-jsonset[]
 ----
 
 .Import into hashes *and* set TTL on the key
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot file-import my.json hset --keyspace blah --key id expire --keyspace blah --key id
+{app} file-import my.json hset blah:#{id} expire blah:#{id}
 ----
 
-.Import into hashes in keyspace `blah:<id>` *and* set TTL *and* add each `id` to a set named `myset`
-[source,console]
+.Import into hashes `blah:<id>` *and* set TTL *and* add each `id` to a set named `myset`
+[source,console,subs="verbatim,attributes"]
 ----
-riot file-import my.json hset --keyspace blah --key id expire --keyspace blah --key id sadd --keyspace myset --member id
+{app} file-import my.json hset blah:#{id} expire blah:#{id} sadd myset --member #{id}
 ----
 
 [[_file_import_delimited]]
@@ -237,9 +237,9 @@ include::{testdir}/file-import-xml[]
 {project-title} supports https://parquet.apache.org/docs/overview/[Parquet] files.
 
 .Parquet file import example
-[source,console]
+[source,console,subs="verbatim,attributes"]
 -----
-riotx file-import s3://riotx/userdata1.parquet --s3-region us-west-1 hset --keyspace user --key id
+{app} file-import s3://riotx/userdata1.parquet --s3-region us-west-1 hset user:#{id}
 -----
 
 [[_file_export]]
@@ -248,15 +248,15 @@ riotx file-import s3://riotx/userdata1.parquet --s3-region us-west-1 hset --keys
 The `file-export` command reads data from a Redis database and writes it to a JSON or XML file, potentially gzip-compressed.
 
 The general usage is:
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot file-export [OPTIONS] FILE
+{app} file-export [OPTIONS] FILE
 ----
 
 To show the full usage, run:
-[source,console]
+[source,console,subs="verbatim,attributes"]
 ----
-riot file-export --help
+{app} file-export --help
 ----
 
 [[_file_export_json]]
@@ -291,8 +291,8 @@ include::{testdir}/file-export-xml[]
 === Parquet
 
 .Parquet file export example
-[source,console]
+[source,console,subs="verbatim,attributes"]
 -----
-riotx file-export beers.parquet --parquet-field ounces=DOUBLE abv=DOUBLE id=INT32
+{app} file-export beers.parquet --parquet-field ounces=DOUBLE abv=DOUBLE id=INT32
 -----
 
