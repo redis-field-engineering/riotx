@@ -12,8 +12,9 @@ For security, this can be created in a different schema than the table you are i
 If RIOT-X fails in the middle of copying data from the stream when restarted it will resume copying data from this offset.
 Removing this offset key from Redis will result in
 {project-title} creating recreating the stream at time "NOW".
-By default the stream will also include the initial table data plus changes going forward.
-If you do not want initial table data to be included specify `--no-snapshot`.
+With `--snapshot INITIAL` (default) the stream
+will include the initial table data plus changes going forward. If you do not want initial table data to
+be included specify `--snapshot NEVER`.
 * `snowflake-import` currently works on tables and materialized views
 
 The basic usage is:
@@ -81,8 +82,8 @@ This command uses the example db, schema and table names from the minimal role s
       --jdbc-url "jdbc:snowflake://abcdefg.abc12345.snowflakecomputing.com" \
       --jdbc-user databaseuser \
       --jdbc-pass databasepassword \
-      --poll 10s <1> \
-      hset orderheader:#{order_id} <2>
+      --poll 10s \ # <1>
+      hset orderheader:#{order_id} # <2>
 ----
 <1> Sleep 10 seconds after each CDC import
 <2> Column name to use as id
@@ -103,7 +104,7 @@ For more information see the link:https://redis.github.io/riot/#_db_import[db-im
       --jdbc-driver net.snowflake.client.jdbc.SnowflakeDriver \
       --jdbc-user databaseuser \
       --jdbc-pass databasepassword \
-      hset datatable:#{data_id} <1>
+      hset datatable:#{data_id} # <1>
 ----
 <1> Column name to use as id
 
