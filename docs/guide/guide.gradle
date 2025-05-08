@@ -22,7 +22,8 @@ asciidoctor {
             'source-highlighter'    : 'coderay',
             'coderay-linenums-mode' : 'table',
             'testdir'               : '../../../../../plugins/riotx/src/test/resources',
-            'app'                   : 'riotx'
+            'app'                   : 'riotx',
+            'toclevels'             : 3
 
     ]
     dependsOn ':aggregateCopyDocFiles'
