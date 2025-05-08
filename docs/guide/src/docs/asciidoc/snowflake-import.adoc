@@ -1,22 +1,20 @@
 [[_snowflake_import]]
 = Snowflake Import
 
-The `snowflake-import` command uses a Snowflake `STREAM` object to track changes (CDC) to a table and read them into
-a Redis data structure like `hash` or `json`. The Snowflake `STREAM` is created and managed by RIOTX. The user credentials
-you provide must have the ability to create a stream in the database and schema specified by the fully qualified object
-name.
+The `snowflake-import` command uses a Snowflake `STREAM` object to track changes (CDC) to a table and read them into a Redis data structure like `hash` or `json`.
+The Snowflake `STREAM` is created and managed by RIOTX.
+The user credentials you provide must have the ability to create a stream in the database and schema specified by the fully qualified object name.
 
 .Side effects and limitations
-* `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` will be created or replaced. For security, this can be created in a different schema
-than the table you are importing from by specifying `--cdc-schema`.
-* `riotx:offset:SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` - this key will be stored in the destination
-      Redis database and is used to track the stream offset. If RIOT-X fails in the middle of copying data from the stream
-      when restarted it will resume copying data from this offset. Removing this offset key from Redis will result in
-{project-title} creating recreating the stream at time "NOW". If `--snapshot-mode INITIAL` option is specified the stream
-      will also include the initial table data plus changes going forward. If you do not want initial table data to
-      be included specify `--snapshot-mode NEVER`
-* snowflake-import currently works on tables and materialized views
-
+* `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` will be created or replaced.
+For security, this can be created in a different schema than the table you are importing from by specifying `--cdc-schema`.
+* `riotx:offset:SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` - this key will be stored in the destination Redis database and is used to track the stream offset.
+If RIOT-X fails in the middle of copying data from the stream when restarted it will resume copying data from this offset.
+Removing this offset key from Redis will result in
+{project-title} creating recreating the stream at time "NOW".
+By default the stream will also include the initial table data plus changes going forward.
+If you do not want initial table data to be included specify `--no-snapshot`.
+* `snowflake-import` currently works on tables and materialized views
 
 The basic usage is:
 
@@ -64,6 +62,7 @@ GRANT ROLE riotx_cdc TO USER riotx_cdc;
 ----
 
 For the full usage, run:
+
 [source,console,subs="verbatim,attributes"]
 ----
 {app} snowflake-import --help
@@ -71,20 +70,23 @@ For the full usage, run:
 
 .Example: CDC to Hashes
 This command uses the example db, schema and table names from the minimal role setup above.
+
 [source,console,subs="verbatim,attributes"]
 ----
 {app} snowflake-import \
       tb_101.raw_pos.incremental_order_header \
-      --snapshot-mode INITIAL # include initial table data  \
       --role riotx_cdc \
       --warehouse compute_wh \
       --cdc-schema raw_pos_cdc \
       --jdbc-url "jdbc:snowflake://abcdefg.abc12345.snowflakecomputing.com" \
       --jdbc-user databaseuser \
       --jdbc-pass databasepassword \
-      --poll 10s # sleep 10s after each cdc import and then repeat \
-      hset orderheader:#{order_id} # column name to use as id
+      --poll 10s <1> \
+      hset orderheader:#{order_id} <2>
 ----
+<1> Sleep 10 seconds after each CDC import
+<2> Column name to use as id
+
 
 The command above imports CDC data from the Snowflake table `tb_101.raw_pos.incremental_order_header` into Redis hashes in the keyspace `orderheader`.
 
@@ -101,7 +103,8 @@ For more information see the link:https://redis.github.io/riot/#_db_import[db-im
       --jdbc-driver net.snowflake.client.jdbc.SnowflakeDriver \
       --jdbc-user databaseuser \
       --jdbc-pass databasepassword \
-      hset datatable:#{data_id} # column name to use as id
+      hset datatable:#{data_id} <1>
 ----
+<1> Column name to use as id
 
 This command performs a one-time import from Snowflake using the `db-import` command.
