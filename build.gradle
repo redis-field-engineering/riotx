@@ -37,9 +37,7 @@ config {
 
     docs {
         javadoc {
-            autoLinks {
-                enabled = false
-            }
+            enabled = false
         }
     }
 
@@ -127,7 +125,6 @@ subprojects { subproj ->
             enabled = true
             archiveClassifier = ''
         }
-
     }
 }
 
