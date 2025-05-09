@@ -2,7 +2,6 @@ package com.redis.riot.rdi;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.JsonNode;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -10,7 +9,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-class MessageSerializer {
+class MessageSerializationTests {
 
     @Test
     void serialize() throws IOException {
@@ -27,7 +26,7 @@ class MessageSerializer {
         after.put("Bytes", 11170334);
         after.put("UnitPrice", "0.99");
         message.setAfter(after);
-        Message.SourceInfo source = new Message.SourceInfo();
+        Message.Source source = new Message.Source();
         source.setVersion("2.7.3.Final");
         source.setConnector("postgresql");
         source.setName("rdi");
@@ -44,7 +43,7 @@ class MessageSerializer {
         source.setXmin(null);
         message.setSource(source);
         message.setTransaction(null);
-        message.setOp(Message.Operation.READ);
+        message.setOp(Message.OPERATION_READ);
         message.setTs_ms(1740785606297L);
         message.setTs_us(1740785606297446L);
         message.setTs_ns(1740785606297446000L);
