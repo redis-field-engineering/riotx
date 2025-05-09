@@ -6,14 +6,14 @@ config {
         tags = ['redis', 'tool', 'import', 'export', 'replication', 'enterprise']
 
         links {
-            website      = "https://github.com/redis-field-engineering/${project.rootProject.name}"
+            website = "https://github.com/redis-field-engineering/${project.rootProject.name}"
             issueTracker = "https://github.com/redis-field-engineering/${project.rootProject.name}/issues"
-            scm          = "https://github.com/redis-field-engineering/${project.rootProject.name}.git"
+            scm = "https://github.com/redis-field-engineering/${project.rootProject.name}.git"
         }
 
         scm {
-            url                 = "https://github.com/redis-field-engineering/${project.rootProject.name}"
-            connection          = "scm:git:https://github.com/redis-field-engineering/${project.rootProject.name}.git"
+            url = "https://github.com/redis-field-engineering/${project.rootProject.name}"
+            connection = "scm:git:https://github.com/redis-field-engineering/${project.rootProject.name}.git"
             developerConnection = "scm:git:git@github.com:redis-field-engineering/${project.rootProject.name}.git"
         }
 
@@ -24,12 +24,12 @@ config {
         implementation {
             enabled = true
         }
-        
+
         people {
             clearDomainSet()
             person {
-                id    = 'jruaux'
-                name  = 'Julien Ruaux'
+                id = 'jruaux'
+                name = 'Julien Ruaux'
                 roles = ['developer', 'author']
             }
         }
@@ -37,10 +37,12 @@ config {
 
     docs {
         javadoc {
-            enabled = false
+            autoLinks {
+                enabled = false
+            }
         }
     }
-    
+
     licensing {
         enabled = false
     }
@@ -73,29 +75,29 @@ allprojects {
 
 subprojects { subproj ->
     if (!subproj.name.contains('guide')) {
-    
+
         config {
-	        info {
-	            description = project.project_description
-	        }
+            info {
+                description = project.project_description
+            }
             coverage {
                 jacoco {
-		            toolVersion = jacocoPluginVersion
+                    toolVersion = jacocoPluginVersion
                 }
             }
-	    }
+        }
 
-	    license {
-	        exclude('build/**')
-	    }
-	    
-	    dependencyManagement {
-		    imports {
-		       mavenBom "com.google.cloud:spring-cloud-gcp-dependencies:$gcpVersion"
-		    }
-		}
+        license {
+            exclude('build/**')
+        }
 
-	    dependencies {
+        dependencyManagement {
+            imports {
+                mavenBom "com.google.cloud:spring-cloud-gcp-dependencies:$gcpVersion"
+            }
+        }
+
+        dependencies {
             compileOnly 'org.projectlombok:lombok'
             annotationProcessor 'org.projectlombok:lombok'
             testImplementation 'org.junit.jupiter:junit-jupiter-api'
@@ -105,19 +107,19 @@ subprojects { subproj ->
             testImplementation 'org.testcontainers:junit-jupiter'
             testImplementation 'org.slf4j:slf4j-simple'
             testImplementation 'org.slf4j:jul-to-slf4j'
-	        testImplementation group: 'com.redis', name: 'testcontainers-redis', version: testcontainersRedisVersion
-	    }
+            testImplementation group: 'com.redis', name: 'testcontainers-redis', version: testcontainersRedisVersion
+        }
 
-	    test {
-	        useJUnitPlatform()
-	    }
+        test {
+            useJUnitPlatform()
+        }
 
-	    configurations {
-	        all*.exclude module: 'spring-boot-starter-logging'
-	        all*.exclude module: 'commons-logging'
-	    }
+        configurations {
+            all*.exclude module: 'spring-boot-starter-logging'
+            all*.exclude module: 'commons-logging'
+        }
 
-	    bootJar {
+        bootJar {
             enabled = false
         }
 
@@ -126,7 +128,7 @@ subprojects { subproj ->
             archiveClassifier = ''
         }
 
-	}
+    }
 }
 
 subprojects { p ->
@@ -134,7 +136,7 @@ subprojects { p ->
         coverage {
             jacoco {
                 enabled = hasTestsAt(p.file('src/test'))
-		        toolVersion = jacocoPluginVersion
+                toolVersion = jacocoPluginVersion
             }
         }
     }

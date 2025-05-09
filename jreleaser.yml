@@ -97,10 +97,7 @@ deploy:
         active: RELEASE
         authorization: BASIC
         url: https://central.sonatype.com/api/v1/publisher
-        sign: true
-        verifyPom: true
-        javadocJar: false
-        sourceJar: false
+        applyMavenCentralRules: true
         retryDelay: 30
         maxRetries: 100
         stagingRepositories:
