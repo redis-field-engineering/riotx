@@ -1,42 +1,17 @@
 package com.redis.riot.rdi;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 /**
  * Descriptor for the structure of Debezium message objects representing CREATE, READ, UPDATE, and DELETE messages that conform
  * to that schema.
  */
 public class Message {
-
-
-    /**
-     * The operation that read the current state of a record, most typically during snapshots.
-     */
-    public static final String OPERATION_READ = "r";
-
-    /**
-     * An operation that resulted in a new record being created in the source.
-     */
-    public static final String OPERATION_CREATE = "c";
-
-    /**
-     * An operation that resulted in an existing record being updated in the source.
-     */
-    public static final String OPERATION_UPDATE = "u";
-
-    /**
-     * An operation that resulted in an existing record being removed from or deleted in the source.
-     */
-    public static final String OPERATION_DELETE = "d";
-
-    /**
-     * An operation that resulted in an existing table being truncated in the source.
-     */
-    public static final String OPERATION_TRUNCATE = "t";
-
-    /**
-     * An operation that resulted in a generic message
-     */
-    public static final String OPERATION_MESSAGE = "m";
-
 
     /**
      * The {@code before} field is used to store the state of a record before an operation.
@@ -57,7 +32,7 @@ public class Message {
     /**
      * The {@code op} field is used to store the kind of operation on a record.
      */
-    private String op;
+    private Operation op;
 
     private Object transaction;
 
@@ -79,6 +54,65 @@ public class Message {
      * The {@code ts_ns} field represents the timestamp but in nanoseconds.
      */
     private long ts_ns;
+
+    public enum Operation {
+
+        /**
+         * The operation that read the current state of a record, most typically during snapshots.
+         */
+        READ("r"),
+        /**
+         * An operation that resulted in a new record being created in the source.
+         */
+        CREATE("c"),
+        /**
+         * An operation that resulted in an existing record being updated in the source.
+         */
+        UPDATE("u"),
+        /**
+         * An operation that resulted in an existing record being removed from or deleted in the source.
+         */
+        DELETE("d"),
+        /**
+         * An operation that resulted in an existing table being truncated in the source.
+         */
+        TRUNCATE("t"),
+        /**
+         * An operation that resulted in a generic message
+         */
+        MESSAGE("m");
+
+        // Enum .values() returns a new array upon each invocation
+        // Reference: https://www.gamlor.info/wordpress/2017/08/javas-enum-values-hidden-allocations/
+        private static final Map<String, Operation> CODE_LOOKUP = Stream.of(Operation.values())
+                .collect(Collectors.toMap(Operation::code, op -> op));
+
+        private final String code;
+
+        Operation(String code) {
+            this.code = code;
+        }
+
+        /**
+         * Factory method for creating Operation instances from operation codes. Used by Jackson for deserialization through
+         * <code>@JsonCreator</code>.
+         */
+        @JsonCreator
+        public static Operation forCode(String code) {
+            if (code == null) {
+                return null;
+            }
+            return CODE_LOOKUP.get(code.toLowerCase());
+        }
+
+        /**
+         * Returns the operation code for this Operation. Used by Jackson for serialization through <code>@JsonValue</code>.
+         */
+        @JsonValue
+        public String code() {
+            return code;
+        }
+    }
 
     /**
      * Message.source field
@@ -251,11 +285,11 @@ public class Message {
         this.source = source;
     }
 
-    public String getOp() {
+    public Operation getOp() {
         return op;
     }
 
-    public void setOp(String op) {
+    public void setOp(Operation op) {
         this.op = op;
     }
 
