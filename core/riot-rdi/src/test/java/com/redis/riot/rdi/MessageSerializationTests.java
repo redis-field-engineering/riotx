@@ -6,14 +6,27 @@ import org.testcontainers.shaded.com.fasterxml.jackson.databind.JsonNode;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 class MessageSerializationTests {
 
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    private InputStream messageJsonInputStream() {
+        return getClass().getClassLoader().getResourceAsStream("message.json");
+    }
+
+
+
     @Test
-    void serialize() throws IOException {
-        Message message = new Message();
+    public void testMessageSerialization() throws Exception {
+
+        // Given
+        Message message = new Message(); // Your message object
         message.setBefore(null);
         Map<String, Object> after = new HashMap<>();
         after.put("TrackId", 1);
@@ -43,16 +56,31 @@ class MessageSerializationTests {
         source.setXmin(null);
         message.setSource(source);
         message.setTransaction(null);
-        message.setOp(Message.OPERATION_READ);
+        message.setOp(Message.Operation.READ);
         message.setTs_ms(1740785606297L);
         message.setTs_us(1740785606297446L);
         message.setTs_ns(1740785606297446000L);
-        ObjectMapper mapper = new ObjectMapper();
+        // When
         JsonNode actualJson = mapper.readTree(mapper.writeValueAsString(message));
-        JsonNode expectedJson = mapper.readTree(getClass().getClassLoader().getResourceAsStream("message.json"));
-        Assertions.assertEquals(expectedJson.get("before"), actualJson.get("before"));
-        Assertions.assertEquals(expectedJson.get("after"), actualJson.get("after"));
-        Assertions.assertEquals(expectedJson.get("op"), actualJson.get("op"));
+        JsonNode expectedJson = mapper.readTree(messageJsonInputStream());
+
+        // Then - Full comparison
+        assertThat(actualJson).isEqualTo(expectedJson);
+
     }
 
+    @Test
+    public void testMessageDeserialization() throws Exception {
+        // Given
+        ObjectMapper mapper = new ObjectMapper();
+        String json = new String(messageJsonInputStream().readAllBytes());
+
+        // When
+        Message message = mapper.readValue(json, Message.class);
+
+        // Then
+        // Assertions on the deserialized object
+        assertThat(message.getAfter()).isNotNull();
+        assertThat(message.getOp()).isEqualTo(Message.Operation.READ);
+    }
 }
