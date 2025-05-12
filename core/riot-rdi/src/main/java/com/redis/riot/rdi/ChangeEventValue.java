@@ -11,7 +11,7 @@ import java.util.stream.Stream;
  * Descriptor for the structure of Debezium message objects representing CREATE, READ, UPDATE, and DELETE messages that conform
  * to that schema.
  */
-public class Message {
+public class ChangeEventValue {
 
     /**
      * The {@code before} field is used to store the state of a record before an operation.
