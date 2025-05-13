@@ -58,16 +58,16 @@ public class RedisContext implements InitializingBean, AutoCloseable {
         return options.build();
     }
 
-    public <K, V> void configure(RedisItemReader<K, V> reader) {
+    public void configure(RedisItemReader<?, ?> reader) {
         reader.setClient(client);
         reader.setPoolSize(poolSize);
         if (reader instanceof RedisLiveItemReader) {
-            ((RedisLiveItemReader<K, V>) reader).setDatabase(uri.getDatabase());
+            ((RedisLiveItemReader<?, ?>) reader).setDatabase(uri.getDatabase());
         }
         reader.setReadFrom(readFrom);
     }
 
-    public <K, V, T> void configure(RedisItemWriter<K, V, T> writer) {
+    public void configure(RedisItemWriter<?, ?, ?> writer) {
         writer.setClient(client);
         writer.setPoolSize(poolSize);
     }

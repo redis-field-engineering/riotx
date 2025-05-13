@@ -114,8 +114,7 @@ public class FileImport extends AbstractRedisImport {
         } catch (IOException e) {
             throw new RuntimeIOException(String.format("Could not create resource from %s", location), e);
         }
-        MimeType type =
-                readOptions.getContentType() == null ? resourceMap.getContentTypeFor(resource) : readOptions.getContentType();
+        MimeType type = contentType(resource);
         ReaderFactory readerFactory = readerRegistry.getReaderFactory(type);
         Assert.notNull(readerFactory, () -> String.format("No reader found for file %s", location));
         ItemReader<?> reader = readerFactory.create(resource, readOptions);
@@ -133,6 +132,13 @@ public class FileImport extends AbstractRedisImport {
         step.noRetry(ParseException.class);
         step.noRetry(org.springframework.batch.item.ParseException.class);
         return step;
+    }
+
+    private MimeType contentType(Resource resource) {
+        if (readOptions.getContentType() == null) {
+            return resourceMap.getContentTypeFor(resource);
+        }
+        return readOptions.getContentType();
     }
 
     @Override

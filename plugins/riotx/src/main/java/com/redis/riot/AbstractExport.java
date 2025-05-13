@@ -58,10 +58,10 @@ public abstract class AbstractExport extends AbstractJobCommand {
     }
 
     protected <K, V, T> RiotStep<KeyValue<K>, T> step(String name, RedisItemReader<K, V> reader, ItemWriter<T> writer) {
+        configureSource(reader);
         RiotStep<KeyValue<K>, T> step = super.step(name, reader, writer);
         step.flushInterval(flushInterval);
         step.idleTimeout(idleTimeout);
-        configureSource(reader);
         return step;
     }
 
@@ -77,9 +77,8 @@ public abstract class AbstractExport extends AbstractJobCommand {
         context.setVariable(VAR_SOURCE, sourceRedisContext.getConnection().sync());
     }
 
-    protected <K, V, T> RedisItemWriter<K, V, T> configureSource(RedisItemWriter<K, V, T> writer) {
+    protected void configureSource(RedisItemWriter<?, ?, ?> writer) {
         sourceRedisContext.configure(writer);
-        return writer;
     }
 
     protected abstract RedisContext sourceRedisContext();
