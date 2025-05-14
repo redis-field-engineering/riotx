@@ -1,6 +1,7 @@
 package com.redis.riot;
 
 import com.redis.riot.db.DataSourceBuilder;
+import com.redis.riot.db.DatabaseObject;
 import com.redis.riot.db.SnowflakeStreamItemReader;
 import com.redis.riot.db.SnowflakeStreamRow;
 import com.redis.spring.batch.step.FlushingStepBuilder;
@@ -141,7 +142,7 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
         reader.setRole("riotx_cdc");
         reader.setWarehouse("compute_wh");
         reader.setSnapshotMode(SnowflakeStreamItemReader.SnapshotMode.INITIAL);
-        reader.setTableOrView("tb_101.raw_pos.incremental_order_header");
+        reader.setDatabaseObject(DatabaseObject.parse("tb_101.raw_pos.incremental_order_header"));
         return reader;
     }
 

@@ -20,8 +20,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeStreamRow>, ItemStream {
 
@@ -43,7 +41,7 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
 
     private JdbcReaderOptions readerOptions = new JdbcReaderOptions();
 
-    private String tableOrView;
+    private DatabaseObject databaseObject;
 
     private DataSource dataSource;
 
@@ -199,19 +197,11 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
     }
 
     private StreamInfo streamInfo() {
-        String objectRegex = "^(?<database>[a-zA-Z0-9_$]+)\\.(?<schema>[a-zA-Z0-9_$]+)\\.(?<table>[a-zA-Z0-9_$]+)$";
-        Pattern objectPattern = Pattern.compile(objectRegex);
-        Matcher objectMatcher = objectPattern.matcher(tableOrView);
-        Assert.isTrue(objectMatcher.matches(),
-                () -> String.format("Must provide table or view in format: DATABASE.SCHEMA.TABLE, found %s", tableOrView));
-        String database = objectMatcher.group("database");
-        String schema = objectMatcher.group("schema");
-        String simpleTable = objectMatcher.group("table");
 
-        String useDatabase = cdcDatabase == null ? database : cdcDatabase;
-        String useSchema = cdcSchema == null ? schema : cdcSchema;
+        String useDatabase = cdcDatabase == null ? databaseObject.getDatabase() : cdcDatabase;
+        String useSchema = cdcSchema == null ? databaseObject.getSchema() : cdcSchema;
 
-        String streamName = String.format("%s_changestream", simpleTable);
+        String streamName = String.format("%s_changestream", databaseObject.getTable());
         String fullStreamName = String.format("%s.%s.%s", useDatabase, useSchema, streamName);
         String tempTable = String.format("%s_temp", fullStreamName);
         String offsetKey = String.format("riotx:offset:%s", fullStreamName);
@@ -270,7 +260,7 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
     }
 
     private String createStreamSQL() {
-        return String.format(CREATE_STREAM_SQL, streamInfo.getFullStreamName(), tableOrView);
+        return String.format(CREATE_STREAM_SQL, streamInfo.getFullStreamName(), databaseObject.fullName());
     }
 
     private static class StreamInfo {
@@ -363,12 +353,12 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
         this.dataSource = dataSource;
     }
 
-    public String getTableOrView() {
-        return tableOrView;
+    public DatabaseObject getDatabaseObject() {
+        return databaseObject;
     }
 
-    public void setTableOrView(String tableOrView) {
-        this.tableOrView = tableOrView;
+    public void setDatabaseObject(DatabaseObject databaseObject) {
+        this.databaseObject = databaseObject;
     }
 
     public JdbcReaderOptions getReaderOptions() {
