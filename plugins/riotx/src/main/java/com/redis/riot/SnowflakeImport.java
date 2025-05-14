@@ -1,7 +1,9 @@
 package com.redis.riot;
 
 import com.redis.riot.core.RiotUtils;
+import com.redis.riot.core.RiotVersion;
 import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.db.DatabaseObject;
 import com.redis.riot.db.SnowflakeStreamItemReader;
 import com.redis.riot.db.SnowflakeStreamRow;
 import com.redis.riot.rdi.ChangeEvent;
@@ -51,7 +53,7 @@ public class SnowflakeImport extends AbstractRedisImport {
     private DatabaseReaderArgs readerArgs = new DatabaseReaderArgs();
 
     @Parameters(arity = "1", description = "Fully qualified Snowflake Table or Materialized View, eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
-    private String tableOrView;
+    private DatabaseObject databaseObject;
 
     @Option(names = "--snapshot", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SnowflakeStreamItemReader.SnapshotMode snapshotMode = DEFAULT_SNAPSHOT_MODE;
@@ -125,9 +127,33 @@ public class SnowflakeImport extends AbstractRedisImport {
         value.setOp(operation(row));
         Instant instant = Instant.now();
         value.setTs_ms(instant.toEpochMilli());
-        value.setTs_us(TimeUnit.SECONDS.toMicros(instant.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(instant.getNano()));
-        value.setTs_ns(TimeUnit.SECONDS.toNanos(instant.getEpochSecond()) + instant.getNano());
+        value.setTs_us(micros(instant));
+        value.setTs_ns(nanos(instant));
+        value.setSource(source());
         return value;
+    }
+
+    private long nanos(Instant instant) {
+        return TimeUnit.SECONDS.toNanos(instant.getEpochSecond()) + instant.getNano();
+    }
+
+    private long micros(Instant instant) {
+        return TimeUnit.SECONDS.toMicros(instant.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(instant.getNano());
+    }
+
+    private ChangeEventValue.Source source() {
+        ChangeEventValue.Source source = new ChangeEventValue.Source();
+        source.setConnector("snowflake");
+        source.setVersion(RiotVersion.getVersion());
+        source.setName("RIOT-X");
+        Instant instant = Instant.now();
+        source.setTs_ms(instant.toEpochMilli());
+        source.setTs_us(micros(instant));
+        source.setTs_ns(nanos(instant));
+        source.setDb(databaseObject.getDatabase());
+        source.setTable(databaseObject.getTable());
+        source.setSchema(databaseObject.getSchema());
+        return source;
     }
 
     private ChangeEventValue.Operation operation(SnowflakeStreamRow row) {
@@ -150,7 +176,7 @@ public class SnowflakeImport extends AbstractRedisImport {
     }
 
     private String rdiStream() {
-        return String.format("%s:%s", RDI_STREAM_PREFIX, tableOrView);
+        return String.format("%s:%s", RDI_STREAM_PREFIX, databaseObject.fullName());
     }
 
     @Override
@@ -172,7 +198,7 @@ public class SnowflakeImport extends AbstractRedisImport {
         reader.setRole(role);
         reader.setWarehouse(warehouse);
         reader.setSnapshotMode(snapshotMode);
-        reader.setTableOrView(tableOrView);
+        reader.setDatabaseObject(databaseObject);
         return reader;
     }
 
@@ -232,12 +258,12 @@ public class SnowflakeImport extends AbstractRedisImport {
         this.readerArgs = readerArgs;
     }
 
-    public String getTableOrView() {
-        return tableOrView;
+    public DatabaseObject getDatabaseObject() {
+        return databaseObject;
     }
 
-    public void setTableOrView(String tableOrView) {
-        this.tableOrView = tableOrView;
+    public void setDatabaseObject(DatabaseObject databaseObject) {
+        this.databaseObject = databaseObject;
     }
 
     public DataSourceArgs getDataSourceArgs() {
