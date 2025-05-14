@@ -7,11 +7,11 @@ import io.lettuce.core.AbstractRedisClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
+import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
 import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
@@ -19,13 +19,11 @@ import java.sql.*;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamItemReader<Map<String, Object>>
-        implements PollableItemReader<Map<String, Object>> {
+public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeStreamRow>, ItemStream {
 
     private static final String OFFSET_SQL = "SELECT SYSTEM$STREAM_GET_TABLE_TIMESTAMP(?)";
 
@@ -33,7 +31,7 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
 
     private static final String CREATE_TEMP_TABLE_SQL = "CREATE OR REPLACE TABLE %s AS SELECT * FROM %s WHERE METADATA$ACTION <> 'DELETE'";
 
-    public static final Duration DEFAULT_POLL_INTERVAL = Duration.ofSeconds(5);
+    public static final Duration DEFAULT_POLL_INTERVAL = Duration.ofSeconds(3);
 
     public enum SnapshotMode {
         INITIAL, NEVER;
@@ -73,7 +71,7 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
 
     private DataSource initSqlDataSource;
 
-    private JdbcCursorItemReader<Map<String, Object>> reader;
+    private JdbcCursorItemReader<SnowflakeStreamRow> reader;
 
     private StreamInfo streamInfo;
 
@@ -83,21 +81,8 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
 
     private Duration pollInterval = DEFAULT_POLL_INTERVAL;
 
-    public SnowflakeStreamItemReader() {
-        setName(ClassUtils.getShortName(getClass()));
-    }
-
     @Override
     public synchronized void open(ExecutionContext executionContext) throws ItemStreamException {
-        super.open(executionContext);
-        if (reader == null) {
-            reader = reader();
-            reader.open(executionContext);
-        }
-    }
-
-    @Override
-    protected synchronized void doOpen() throws Exception {
         Assert.notNull(redisClient, "Redis client is required");
         Assert.notNull(dataSource, "DataSource is required");
         if (initSqlDataSource == null) {
@@ -107,7 +92,15 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
             streamInfo = streamInfo();
         }
         if (nextOffset == null) {
-            fetch();
+            try {
+                fetch();
+            } catch (SQLException e) {
+                throw new ItemStreamException("Could not perform initial fetch", e);
+            }
+        }
+        if (reader == null) {
+            reader = reader();
+            reader.open(executionContext);
         }
     }
 
@@ -128,35 +121,35 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
             reader.close();
             reader = null;
         }
-        super.close();
-    }
-
-    @Override
-    protected synchronized void doClose() {
         nextOffset = null;
         streamInfo = null;
         initSqlDataSource = null;
     }
 
     @Override
-    protected Map<String, Object> doRead() throws Exception {
+    public SnowflakeStreamRow read() throws Exception {
         throw new UnsupportedOperationException("Read operation is not supported");
     }
 
     @Override
-    public synchronized Map<String, Object> poll(long timeout, TimeUnit unit) throws Exception {
-        Map<String, Object> item = reader.read();
+    public synchronized SnowflakeStreamRow poll(long timeout, TimeUnit unit) throws Exception {
+        SnowflakeStreamRow item = reader.read();
         if (item == null) {
             if (nextOffset != null) {
-                afterSuccess();
+                try (StatefulRedisModulesConnection<String, String> connection = redisConnection()) {
+                    connection.sync().set(streamInfo.getOffsetKey(), nextOffset);
+                    log.debug("In snowflake import after success: stored offset {}={}", streamInfo.getOffsetKey(), nextOffset);
+                }
+                try (Connection sqlConnection = initSqlDataSource.getConnection()) {
+                    sqlConnection.prepareStatement(String.format("DROP TABLE %s", streamInfo.getTempTable())).execute();
+                }
                 nextOffset = null;
             }
             if (shouldFetch()) {
-                fetch();
                 reader.close();
-                reader = reader();
+                fetch();
                 reader.open(new ExecutionContext());
-                return reader.read();
+                item = reader.read();
             }
         }
         return item;
@@ -166,9 +159,14 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
         return Duration.ofMillis(System.currentTimeMillis() - lastFetchTime).compareTo(pollInterval) > 0;
     }
 
-    private JdbcCursorItemReader<Map<String, Object>> reader() {
-        String sql = selectSQL();
-        return JdbcReaderFactory.create(readerOptions).sql(sql).name(sql).dataSource(initSqlDataSource).build();
+    private JdbcCursorItemReader<SnowflakeStreamRow> reader() {
+        JdbcCursorItemReaderBuilder<SnowflakeStreamRow> reader = JdbcReaderFactory.create(readerOptions);
+        String sql = String.format("SELECT * FROM %s", streamInfo.getTempTable());
+        reader.sql(sql);
+        reader.name(sql);
+        reader.rowMapper(new SnowflakeStreamColumnMapRowMapper());
+        reader.dataSource(initSqlDataSource);
+        return reader.build();
     }
 
     private String currentStreamOffset(Connection connection) throws SQLException {
@@ -187,16 +185,6 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
                 return null;
             }
             throw ex;
-        }
-    }
-
-    private void afterSuccess() throws SQLException {
-        try (StatefulRedisModulesConnection<String, String> connection = redisConnection()) {
-            connection.sync().set(streamInfo.getOffsetKey(), nextOffset);
-            log.debug("In snowflake import after success: stored offset {}={}", streamInfo.getOffsetKey(), nextOffset);
-        }
-        try (Connection sqlConnection = initSqlDataSource.getConnection()) {
-            sqlConnection.prepareStatement(String.format("DROP TABLE %s", streamInfo.getTempTable())).execute();
         }
     }
 
@@ -234,10 +222,6 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
         return streamInfo;
     }
 
-    private String selectSQL() {
-        return String.format("SELECT * FROM %s", streamInfo.getTempTable());
-    }
-
     private String sanitize(String value) {
         return value.replaceAll("[^a-zA-Z0-9]", "_");
     }
@@ -252,14 +236,14 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
                 }
                 log.debug("Initialized Snowflake stream: '{}'", initialSQL);
             } else {
-                String offsetSQL = streamSQL() + " AT (TIMESTAMP => TO_TIMESTAMP(?))";
+                String offsetSQL = createStreamSQL() + " AT (TIMESTAMP => TO_TIMESTAMP(?))";
                 try (PreparedStatement statement = connection.prepareStatement(offsetSQL)) {
                     statement.setString(1, offset);
                     statement.execute();
                 }
                 log.debug("Initialized Snowflake stream with offset {}: '{}'", offset, offsetSQL);
             }
-            String tempTableSQL = tempTableSQL();
+            String tempTableSQL = createTempTableSQL();
             try (Statement statement = connection.createStatement()) {
                 statement.execute(tempTableSQL);
             }
@@ -268,23 +252,24 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
             // don't commit it to redis until the current batch is successful
 
             nextOffset = currentStreamOffset(connection);
-            lastFetchTime = System.currentTimeMillis();
+            log.debug("Next offset: '{}'", nextOffset);
         }
+        lastFetchTime = System.currentTimeMillis();
     }
 
     private String initialSQL() {
-        String sql = streamSQL();
+        String sql = createStreamSQL();
         if (snapshotMode == SnapshotMode.INITIAL) {
             return sql + " SHOW_INITIAL_ROWS=TRUE";
         }
         return sql;
     }
 
-    private String tempTableSQL() {
+    private String createTempTableSQL() {
         return String.format(CREATE_TEMP_TABLE_SQL, streamInfo.getTempTable(), streamInfo.getFullStreamName());
     }
 
-    private String streamSQL() {
+    private String createStreamSQL() {
         return String.format(CREATE_STREAM_SQL, streamInfo.getFullStreamName(), tableOrView);
     }
 

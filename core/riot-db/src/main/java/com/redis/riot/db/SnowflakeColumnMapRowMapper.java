@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static com.redis.riot.core.JsonNodeConverter.convertJsonNode;
 
-public class VariantColumnMapRowMapper implements RowMapper<Map<String, Object>> {
+public class SnowflakeColumnMapRowMapper implements RowMapper<Map<String, Object>> {
 
     private static final String TYPE_VARIANT = "VARIANT";
 
@@ -25,6 +25,7 @@ public class VariantColumnMapRowMapper implements RowMapper<Map<String, Object>>
 
     private final Logger log = org.slf4j.LoggerFactory.getLogger(getClass());
 
+    @Override
     public Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
         ResultSetMetaData rsmd = rs.getMetaData();
         int columnCount = rsmd.getColumnCount();
