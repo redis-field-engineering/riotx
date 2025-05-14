@@ -7,11 +7,11 @@ import io.lettuce.core.AbstractRedisClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.item.ItemStream;
-import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
+import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
 import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
@@ -21,7 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeStreamRow>, ItemStream {
+public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamItemReader<SnowflakeStreamRow>
+        implements PollableItemReader<SnowflakeStreamRow> {
 
     private static final String OFFSET_SQL = "SELECT SYSTEM$STREAM_GET_TABLE_TIMESTAMP(?)";
 
@@ -41,7 +42,7 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
 
     private JdbcReaderOptions readerOptions = new JdbcReaderOptions();
 
-    private DatabaseObject databaseObject;
+    private DatabaseObject tableObject;
 
     private DataSource dataSource;
 
@@ -58,20 +59,13 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
     private String warehouse;
 
     /**
-     * Snowflake CDC database to use for stream and temp table
+     * Snowflake database object to use for stream and temp table
      */
-    private String cdcDatabase;
-
-    /**
-     * Snowflake CDC schema to use for stream and temp table
-     */
-    private String cdcSchema;
+    private DatabaseObject streamObject;
 
     private DataSource initSqlDataSource;
 
     private JdbcCursorItemReader<SnowflakeStreamRow> reader;
-
-    private StreamInfo streamInfo;
 
     private String nextOffset;
 
@@ -79,27 +73,44 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
 
     private Duration pollInterval = DEFAULT_POLL_INTERVAL;
 
+    public SnowflakeStreamItemReader() {
+        setName(ClassUtils.getShortName(getClass()));
+    }
+
     @Override
-    public synchronized void open(ExecutionContext executionContext) throws ItemStreamException {
+    protected void doOpen() throws Exception {
         Assert.notNull(redisClient, "Redis client is required");
         Assert.notNull(dataSource, "DataSource is required");
         if (initSqlDataSource == null) {
             initSqlDataSource = initSqlDataSource();
         }
-        if (streamInfo == null) {
-            streamInfo = streamInfo();
+        if (streamObject == null) {
+            streamObject = new DatabaseObject();
+        }
+        if (streamObject.getDatabase() == null) {
+            streamObject.setDatabase(tableObject.getDatabase());
+        }
+        if (streamObject.getSchema() == null) {
+            streamObject.setSchema(tableObject.getSchema());
+        }
+        if (streamObject.getTable() == null) {
+            streamObject.setTable(String.format("%s_changestream", tableObject.getTable()));
         }
         if (nextOffset == null) {
-            try {
-                fetch();
-            } catch (SQLException e) {
-                throw new ItemStreamException("Could not perform initial fetch", e);
-            }
+            fetch();
         }
         if (reader == null) {
             reader = reader();
-            reader.open(executionContext);
+            reader.open(new ExecutionContext());
         }
+    }
+
+    private String tempTable() {
+        return String.format("%s_temp", streamObject.fullName());
+    }
+
+    private String offsetKey() {
+        return String.format("riotx:offset:%s", streamObject.fullName());
     }
 
     private DataSource initSqlDataSource() {
@@ -114,18 +125,18 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
     }
 
     @Override
-    public synchronized void close() throws ItemStreamException {
+    protected void doClose() {
         if (reader != null) {
             reader.close();
             reader = null;
         }
         nextOffset = null;
-        streamInfo = null;
+        streamObject = null;
         initSqlDataSource = null;
     }
 
     @Override
-    public SnowflakeStreamRow read() throws Exception {
+    protected SnowflakeStreamRow doRead() throws Exception {
         throw new UnsupportedOperationException("Read operation is not supported");
     }
 
@@ -135,11 +146,11 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
         if (item == null) {
             if (nextOffset != null) {
                 try (StatefulRedisModulesConnection<String, String> connection = redisConnection()) {
-                    connection.sync().set(streamInfo.getOffsetKey(), nextOffset);
-                    log.debug("In snowflake import after success: stored offset {}={}", streamInfo.getOffsetKey(), nextOffset);
+                    connection.sync().set(offsetKey(), nextOffset);
+                    log.debug("In snowflake import after success: stored offset {}={}", offsetKey(), nextOffset);
                 }
                 try (Connection sqlConnection = initSqlDataSource.getConnection()) {
-                    sqlConnection.prepareStatement(String.format("DROP TABLE %s", streamInfo.getTempTable())).execute();
+                    sqlConnection.prepareStatement(String.format("DROP TABLE %s", tempTable())).execute();
                 }
                 nextOffset = null;
             }
@@ -159,7 +170,7 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
 
     private JdbcCursorItemReader<SnowflakeStreamRow> reader() {
         JdbcCursorItemReaderBuilder<SnowflakeStreamRow> reader = JdbcReaderFactory.create(readerOptions);
-        String sql = String.format("SELECT * FROM %s", streamInfo.getTempTable());
+        String sql = String.format("SELECT * FROM %s", tempTable());
         reader.sql(sql);
         reader.name(sql);
         reader.rowMapper(new SnowflakeStreamColumnMapRowMapper());
@@ -169,13 +180,13 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
 
     private String currentStreamOffset(Connection connection) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(OFFSET_SQL)) {
-            statement.setString(1, streamInfo.getFullStreamName());
+            statement.setString(1, streamObject.fullName());
             ResultSet results = statement.executeQuery();
             if (results.next()) {
                 return results.getString(1);
             }
-            throw new IllegalStateException(String.format("Could not retrieve current offset for Snowflake stream '%s'",
-                    streamInfo.getFullStreamName()));
+            throw new IllegalStateException(
+                    String.format("Could not retrieve current offset for Snowflake stream '%s'", streamObject));
         } catch (SQLException ex) {
             if (StringUtils.hasLength(ex.getMessage()) && ex.getMessage().toLowerCase()
                     .contains("must be a valid stream name")) {
@@ -188,28 +199,12 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
 
     private String currentRedisOffset() {
         try (StatefulRedisModulesConnection<String, String> connection = redisConnection()) {
-            return connection.sync().get(streamInfo.getOffsetKey());
+            return connection.sync().get(offsetKey());
         }
     }
 
     private StatefulRedisModulesConnection<String, String> redisConnection() {
         return ConnectionBuilder.client(redisClient).connection();
-    }
-
-    private StreamInfo streamInfo() {
-
-        String useDatabase = cdcDatabase == null ? databaseObject.getDatabase() : cdcDatabase;
-        String useSchema = cdcSchema == null ? databaseObject.getSchema() : cdcSchema;
-
-        String streamName = String.format("%s_changestream", databaseObject.getTable());
-        String fullStreamName = String.format("%s.%s.%s", useDatabase, useSchema, streamName);
-        String tempTable = String.format("%s_temp", fullStreamName);
-        String offsetKey = String.format("riotx:offset:%s", fullStreamName);
-        StreamInfo streamInfo = new StreamInfo();
-        streamInfo.setOffsetKey(offsetKey);
-        streamInfo.setTempTable(tempTable);
-        streamInfo.setFullStreamName(fullStreamName);
-        return streamInfo;
     }
 
     private String sanitize(String value) {
@@ -218,22 +213,26 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
 
     private void fetch() throws SQLException {
         try (Connection connection = initSqlDataSource.getConnection()) {
+            String createStreamSQL = String.format(CREATE_STREAM_SQL, streamObject.fullName(), tableObject.fullName());
             String offset = currentRedisOffset();
             if (!StringUtils.hasLength(offset) || offset.equals("0")) {
-                String initialSQL = initialSQL();
+                String initialSQL = createStreamSQL;
+                if (snapshotMode == SnapshotMode.INITIAL) {
+                    initialSQL += " SHOW_INITIAL_ROWS=TRUE";
+                }
                 try (Statement statement = connection.createStatement()) {
                     statement.execute(initialSQL);
                 }
                 log.debug("Initialized Snowflake stream: '{}'", initialSQL);
             } else {
-                String offsetSQL = createStreamSQL() + " AT (TIMESTAMP => TO_TIMESTAMP(?))";
+                String offsetSQL = createStreamSQL + " AT (TIMESTAMP => TO_TIMESTAMP(?))";
                 try (PreparedStatement statement = connection.prepareStatement(offsetSQL)) {
                     statement.setString(1, offset);
                     statement.execute();
                 }
                 log.debug("Initialized Snowflake stream with offset {}: '{}'", offset, offsetSQL);
             }
-            String tempTableSQL = createTempTableSQL();
+            String tempTableSQL = String.format(CREATE_TEMP_TABLE_SQL, tempTable(), streamObject.fullName());
             try (Statement statement = connection.createStatement()) {
                 statement.execute(tempTableSQL);
             }
@@ -247,70 +246,12 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
         lastFetchTime = System.currentTimeMillis();
     }
 
-    private String initialSQL() {
-        String sql = createStreamSQL();
-        if (snapshotMode == SnapshotMode.INITIAL) {
-            return sql + " SHOW_INITIAL_ROWS=TRUE";
-        }
-        return sql;
+    public DatabaseObject getStreamObject() {
+        return streamObject;
     }
 
-    private String createTempTableSQL() {
-        return String.format(CREATE_TEMP_TABLE_SQL, streamInfo.getTempTable(), streamInfo.getFullStreamName());
-    }
-
-    private String createStreamSQL() {
-        return String.format(CREATE_STREAM_SQL, streamInfo.getFullStreamName(), databaseObject.fullName());
-    }
-
-    private static class StreamInfo {
-
-        private String fullStreamName;
-
-        private String tempTable;
-
-        private String offsetKey;
-
-        public String getFullStreamName() {
-            return fullStreamName;
-        }
-
-        public void setFullStreamName(String fullStreamName) {
-            this.fullStreamName = fullStreamName;
-        }
-
-        public String getTempTable() {
-            return tempTable;
-        }
-
-        public void setTempTable(String tempTable) {
-            this.tempTable = tempTable;
-        }
-
-        public String getOffsetKey() {
-            return offsetKey;
-        }
-
-        public void setOffsetKey(String offsetKey) {
-            this.offsetKey = offsetKey;
-        }
-
-    }
-
-    public String getCdcSchema() {
-        return cdcSchema;
-    }
-
-    public void setCdcSchema(String cdcSchema) {
-        this.cdcSchema = cdcSchema;
-    }
-
-    public String getCdcDatabase() {
-        return cdcDatabase;
-    }
-
-    public void setCdcDatabase(String cdcDatabase) {
-        this.cdcDatabase = cdcDatabase;
+    public void setStreamObject(DatabaseObject streamObject) {
+        this.streamObject = streamObject;
     }
 
     public AbstractRedisClient getRedisClient() {
@@ -353,12 +294,12 @@ public class SnowflakeStreamItemReader implements PollableItemReader<SnowflakeSt
         this.dataSource = dataSource;
     }
 
-    public DatabaseObject getDatabaseObject() {
-        return databaseObject;
+    public DatabaseObject getTableObject() {
+        return tableObject;
     }
 
-    public void setDatabaseObject(DatabaseObject databaseObject) {
-        this.databaseObject = databaseObject;
+    public void setTableObject(DatabaseObject tableObject) {
+        this.tableObject = tableObject;
     }
 
     public JdbcReaderOptions getReaderOptions() {

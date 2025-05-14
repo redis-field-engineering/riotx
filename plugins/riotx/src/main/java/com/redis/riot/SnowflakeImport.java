@@ -191,15 +191,21 @@ public class SnowflakeImport extends AbstractRedisImport {
         SnowflakeStreamItemReader reader = new SnowflakeStreamItemReader();
         reader.setRedisClient(targetRedisContext.client());
         reader.setReaderOptions(readerArgs.readerOptions());
-        reader.setCdcDatabase(cdcDatabase);
-        reader.setCdcSchema(cdcSchema);
+        reader.setStreamObject(streamObject());
         reader.setDataSource(dataSourceArgs.dataSourceBuilder().driver(SNOWFLAKE_DRIVER).build());
         reader.setPollInterval(pollInterval);
         reader.setRole(role);
         reader.setWarehouse(warehouse);
         reader.setSnapshotMode(snapshotMode);
-        reader.setDatabaseObject(databaseObject);
+        reader.setTableObject(databaseObject);
         return reader;
+    }
+
+    private DatabaseObject streamObject() {
+        DatabaseObject streamObject = new DatabaseObject();
+        streamObject.setDatabase(cdcDatabase);
+        streamObject.setSchema(cdcSchema);
+        return streamObject;
     }
 
     public Duration getPollInterval() {

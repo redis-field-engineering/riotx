@@ -2,6 +2,9 @@ package com.redis.riot.db;
 
 import org.springframework.util.Assert;
 
+import javax.xml.crypto.Data;
+import java.util.Arrays;
+
 public class DatabaseObject {
 
     private static final String IDENTIFIER_PATTERN = "[a-zA-Z0-9_$]+";
@@ -12,12 +15,17 @@ public class DatabaseObject {
 
     private String schema;
 
+    public static DatabaseObject ofSchema(String schema) {
+        DatabaseObject object = new DatabaseObject();
+        object.setSchema(schema);
+        return object;
+    }
+
     public String getDatabase() {
         return database;
     }
 
     public void setDatabase(String database) {
-        check(database, "database");
         this.database = database;
     }
 
@@ -30,7 +38,6 @@ public class DatabaseObject {
     }
 
     public void setSchema(String schema) {
-        check(schema, "schema");
         this.schema = schema;
     }
 
@@ -39,7 +46,6 @@ public class DatabaseObject {
     }
 
     public void setTable(String table) {
-        check(table, "table");
         this.table = table;
     }
 
@@ -59,6 +65,9 @@ public class DatabaseObject {
         Assert.hasText(fullName, "Full name must not be empty");
         String[] parts = fullName.split("\\.");
         Assert.isTrue(parts.length == 3, "Must provide object in format: DATABASE.SCHEMA.TABLE, found " + fullName);
+        check(parts[0], "database");
+        check(parts[1], "schema");
+        check(parts[2], "table");
         DatabaseObject table = new DatabaseObject();
         table.setDatabase(parts[0]);
         table.setSchema(parts[1]);

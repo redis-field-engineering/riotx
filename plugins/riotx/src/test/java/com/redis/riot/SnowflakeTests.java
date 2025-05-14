@@ -20,7 +20,6 @@ import org.springframework.batch.item.support.ListItemWriter;
 import picocli.CommandLine;
 
 import javax.sql.DataSource;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -137,12 +136,12 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
         SnowflakeStreamItemReader reader = new SnowflakeStreamItemReader();
         reader.setDataSource(dataSource);
         reader.setRedisClient(redisClient);
-        reader.setCdcSchema("raw_pos_cdc");
+        reader.setStreamObject(DatabaseObject.ofSchema("raw_pos_cdc"));
         reader.setPollInterval(Duration.ofSeconds(1));
         reader.setRole("riotx_cdc");
         reader.setWarehouse("compute_wh");
         reader.setSnapshotMode(SnowflakeStreamItemReader.SnapshotMode.INITIAL);
-        reader.setDatabaseObject(DatabaseObject.parse("tb_101.raw_pos.incremental_order_header"));
+        reader.setTableObject(DatabaseObject.parse("tb_101.raw_pos.incremental_order_header"));
         return reader;
     }
 
