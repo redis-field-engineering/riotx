@@ -32,7 +32,7 @@ public class FakerImport extends AbstractRedisImport {
 
     @Override
     protected Job job() {
-        return job(step(reader()));
+        return job(operationStep(reader()).processor(operationProcessor()));
     }
 
     @Override

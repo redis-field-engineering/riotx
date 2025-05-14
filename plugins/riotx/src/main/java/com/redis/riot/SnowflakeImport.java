@@ -1,17 +1,31 @@
 package com.redis.riot;
 
+import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.db.SnowflakeStreamItemReader;
+import com.redis.riot.db.SnowflakeStreamRow;
+import com.redis.riot.rdi.ChangeEvent;
+import com.redis.riot.rdi.ChangeEventToStreamMessage;
+import com.redis.riot.rdi.ChangeEventValue;
+import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.spring.batch.item.redis.writer.impl.Xadd;
 import com.redis.spring.batch.step.FlushingChunkProvider;
+import io.lettuce.core.StreamMessage;
+import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.function.FunctionItemProcessor;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.time.Duration;
-import java.util.Map;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 @CommandLine.Command(name = "snowflake-import", description = "Import from a snowflake table (uses Snowflake Streams to track changes).")
 public class SnowflakeImport extends AbstractRedisImport {
@@ -23,6 +37,12 @@ public class SnowflakeImport extends AbstractRedisImport {
     public static final Duration DEFAULT_FLUSH_INTERVAL = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
 
     public static final SnowflakeStreamItemReader.SnapshotMode DEFAULT_SNAPSHOT_MODE = SnowflakeStreamItemReader.SnapshotMode.INITIAL;
+
+    private static final String STEP_NAME = "snowflake-import";
+
+    private static final String RDI_STEP_NAME = "rdi-forward";
+
+    private static final Object RDI_STREAM_PREFIX = "rdi";
 
     @ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
@@ -59,12 +79,83 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     @Override
     protected Job job() {
-        return job(step(reader()));
+        return job(step());
+    }
+
+    private RiotStep<?, ?> step() {
+        if (hasOperations()) {
+            return operationStep(reader()).processor(
+                    RiotUtils.processor(new RowFilter(), new FunctionItemProcessor<>(SnowflakeStreamRow::getColumns),
+                            operationProcessor()));
+        }
+        RedisItemWriter<String, String, StreamMessage<String, String>> writer = rdiWriter();
+        configureTargetRedisWriter(writer);
+        return step(RDI_STEP_NAME, reader(), writer).processor(rdiProcessor());
+    }
+
+    private ItemProcessor<SnowflakeStreamRow, StreamMessage<String, String>> rdiProcessor() {
+        return RiotUtils.processor(new RowFilter(), new FunctionItemProcessor<>(this::changeEvent),
+                new ChangeEventToStreamMessage(rdiStream()));
+    }
+
+    private static class RowFilter implements ItemProcessor<SnowflakeStreamRow, SnowflakeStreamRow> {
+
+        @Override
+        public SnowflakeStreamRow process(SnowflakeStreamRow row) throws Exception {
+            // Snowflake creates 2 rows for each update: one INSERT and one DELETE. Both have IS_UPDATE=true
+            if (row.getAction() == SnowflakeStreamRow.Action.DELETE && row.isUpdate()) {
+                // Filter out delete events for updates
+                return null;
+            }
+            return row;
+        }
+
+    }
+
+    private ChangeEvent changeEvent(SnowflakeStreamRow row) {
+        ChangeEvent event = new ChangeEvent();
+        event.setKey(row.getColumns());
+        event.setValue(changeEventValue(row));
+        return event;
+    }
+
+    private ChangeEventValue changeEventValue(SnowflakeStreamRow row) {
+        ChangeEventValue value = new ChangeEventValue();
+        value.setAfter(row.getColumns());
+        value.setOp(operation(row));
+        Instant instant = Instant.now();
+        value.setTs_ms(instant.toEpochMilli());
+        value.setTs_us(TimeUnit.SECONDS.toMicros(instant.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(instant.getNano()));
+        value.setTs_ns(TimeUnit.SECONDS.toNanos(instant.getEpochSecond()) + instant.getNano());
+        return value;
+    }
+
+    private ChangeEventValue.Operation operation(SnowflakeStreamRow row) {
+        switch (row.getAction()) {
+            case INSERT:
+                if (row.isUpdate()) {
+                    return ChangeEventValue.Operation.UPDATE;
+                }
+                return ChangeEventValue.Operation.CREATE;
+            case DELETE:
+                return ChangeEventValue.Operation.DELETE;
+            default:
+                throw new IllegalArgumentException("Unknown action: " + row.getAction());
+        }
+    }
+
+    private RedisItemWriter<String, String, StreamMessage<String, String>> rdiWriter() {
+        String stream = rdiStream();
+        return new RedisItemWriter<>(StringCodec.UTF8, new Xadd<>(m -> stream, Arrays::asList));
+    }
+
+    private String rdiStream() {
+        return String.format("%s:%s", RDI_STREAM_PREFIX, tableOrView);
     }
 
     @Override
-    protected RiotStep<Map<String, Object>, Map<String, Object>> step(ItemReader<Map<String, Object>> reader) {
-        RiotStep<Map<String, Object>, Map<String, Object>> step = super.step(reader);
+    protected <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
+        RiotStep<I, O> step = super.step(name, reader, writer);
         step.flushInterval(flushInterval);
         step.idleTimeout(idleTimeout);
         return step;

@@ -1,8 +1,11 @@
 package com.redis.riot;
 
 import com.redis.riot.db.JdbcReaderFactory;
+import com.redis.riot.db.SnowflakeColumnMapRowMapper;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
+import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
+import org.springframework.jdbc.core.ColumnMapRowMapper;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
@@ -24,12 +27,21 @@ public class DatabaseImport extends AbstractRedisImport {
 
     @Override
     protected Job job() {
-        return job(step(reader()));
+        return job(operationStep(reader()));
     }
 
     protected JdbcCursorItemReader<Map<String, Object>> reader() {
         log.info("Creating JDBC reader with sql=\"{}\" {} {}", sql, dataSourceArgs, readerArgs);
-        return JdbcReaderFactory.create(readerArgs.readerOptions()).sql(sql).name(sql).dataSource(dataSource()).build();
+        JdbcCursorItemReaderBuilder<Map<String, Object>> reader = JdbcReaderFactory.create(readerArgs.readerOptions());
+        reader.sql(sql);
+        reader.name(sql);
+        reader.rowMapper(isSnowflake() ? new SnowflakeColumnMapRowMapper() : new ColumnMapRowMapper());
+        reader.dataSource(dataSource());
+        return reader.build();
+    }
+
+    private boolean isSnowflake() {
+        return dataSourceArgs.getUrl().toLowerCase().startsWith("jdbc:snowflake");
     }
 
     private DataSource dataSource() {
