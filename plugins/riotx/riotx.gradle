@@ -33,6 +33,7 @@ dependencies {
     implementation project(':riot-faker')
     implementation project(':riot-file')
     implementation project(':riot-parquet')
+    implementation project(':riot-rdi')
     implementation 'org.slf4j:slf4j-simple'
     implementation group: 'me.tongfei', name: 'progressbar', version: progressbarVersion
     implementation group: 'info.picocli', name: 'picocli', version: picocliVersion
