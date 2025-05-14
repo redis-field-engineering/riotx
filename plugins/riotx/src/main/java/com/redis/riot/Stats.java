@@ -20,7 +20,6 @@ import org.springframework.util.unit.DataSize;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.KeyEventListenerContainer;
-import com.redis.spring.batch.item.redis.reader.MemoryUsage;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 
 import io.lettuce.core.codec.StringCodec;
@@ -38,8 +37,8 @@ public class Stats extends AbstractRedisCommand {
     @ArgGroup(exclusive = false)
     private RedisReaderArgs readerArgs = new RedisReaderArgs();
 
-    @Option(names = "--mem-samples", description = "Number of memory usage samples for a key (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
-    private int memoryUsageSamples = MemoryUsageArgs.DEFAULT_SAMPLES;
+    @Option(names = "--mem-samples", description = "Number of sampled nested values for key memory usage.", paramLabel = "<int>")
+    private int memoryUsageSamples;
 
     @Option(names = "--border", description = "Table border type: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE})", paramLabel = "<name>")
     private AsciiTableBorder tableBorder = StatsPrinter.DEFAULT_TABLE_BORDER;
@@ -63,8 +62,9 @@ public class Stats extends AbstractRedisCommand {
 
     @Override
     protected Job job() {
-        RedisScanItemReader<String, String> reader = RedisItemReader.scanStruct();
-        reader.setMemoryUsage(memoryUsage());
+        RedisScanItemReader<String, String> reader = RedisScanItemReader.type();
+        reader.setMemoryLimit(-1);
+        reader.setMemoryUsageSamples(memoryUsageSamples);
         configure(reader);
         RedisStats stats = new RedisStats();
         stats.setKeyspacePattern(keyspacePattern);
@@ -76,11 +76,6 @@ public class Stats extends AbstractRedisCommand {
         RiotStep<KeyValue<String>, KeyValue<String>> step = step("stats", reader, writer);
         step.addExecutionListener(new ExecutionListener(statsPrinter(stats)));
         return job(step);
-    }
-
-    private MemoryUsage memoryUsage() {
-        // lowest limit while still reading mem usage
-        return MemoryUsage.of(DataSize.ofBytes(1), memoryUsageSamples);
     }
 
     @Override

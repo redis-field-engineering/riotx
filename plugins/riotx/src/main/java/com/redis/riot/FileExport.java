@@ -5,7 +5,6 @@ import com.redis.riot.file.*;
 import com.redis.riot.parquet.ParquetFieldType;
 import com.redis.riot.parquet.ParquetFileItemWriter;
 import com.redis.riot.parquet.ParquetFileNameMap;
-import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import org.apache.parquet.schema.MessageType;
@@ -117,7 +116,7 @@ public class FileExport extends AbstractRedisExport {
     }
 
     private Map<String, Object> headerRecord() {
-        RedisScanItemReader<String, String> reader = RedisItemReader.scanStruct();
+        RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
         configureSource(reader);
         try {
             reader.open(new ExecutionContext());

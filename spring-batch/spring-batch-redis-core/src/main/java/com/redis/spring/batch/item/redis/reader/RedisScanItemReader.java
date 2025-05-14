@@ -1,21 +1,20 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.common.RedisOperation;
-
 import io.lettuce.core.KeyScanArgs;
-import io.lettuce.core.cluster.RedisClusterClient;
+import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.RedisCodec;
+import io.lettuce.core.codec.StringCodec;
 import lombok.ToString;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 @ToString
 public class RedisScanItemReader<K, V> extends RedisItemReader<K, V> {
@@ -88,6 +87,27 @@ public class RedisScanItemReader<K, V> extends RedisItemReader<K, V> {
         }
         valueIterator = keyValues.iterator();
         return valueIterator.next();
+    }
+
+
+    public static RedisScanItemReader<byte[], byte[]> dump() {
+        return new RedisScanItemReader<>(ByteArrayCodec.INSTANCE, KeyValueRead.dump(ByteArrayCodec.INSTANCE));
+    }
+
+    public static RedisScanItemReader<String, String> struct() {
+        return struct(StringCodec.UTF8);
+    }
+
+    public static <K, V> RedisScanItemReader<K, V> struct(RedisCodec<K, V> codec) {
+        return new RedisScanItemReader<>(codec, KeyValueRead.struct(codec));
+    }
+
+    public static RedisScanItemReader<String, String> type() {
+        return type(StringCodec.UTF8);
+    }
+
+    public static <K, V> RedisScanItemReader<K, V> type(RedisCodec<K, V> codec) {
+        return new RedisScanItemReader<>(codec, KeyValueRead.type(codec));
     }
 
     public long getScanLimit() {

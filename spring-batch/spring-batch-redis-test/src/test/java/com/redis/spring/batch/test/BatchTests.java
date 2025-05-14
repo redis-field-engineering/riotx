@@ -1,26 +1,28 @@
 package com.redis.spring.batch.test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.time.Duration;
-import java.util.AbstractMap.SimpleEntry;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.Random;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.redis.lettucemod.Beers;
+import com.redis.lettucemod.api.StatefulRedisModulesConnection;
+import com.redis.lettucemod.api.sync.RedisModulesCommands;
+import com.redis.lettucemod.search.IndexInfo;
 import com.redis.lettucemod.utils.ConnectionBuilder;
+import com.redis.spring.batch.JobUtils;
+import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.spring.batch.item.redis.Wait;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.common.Range;
+import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
+import com.redis.spring.batch.item.redis.gen.ItemType;
+import com.redis.spring.batch.item.redis.reader.*;
+import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
+import com.redis.spring.batch.item.redis.reader.StreamItemReader.AckPolicy;
+import com.redis.spring.batch.item.redis.writer.KeyValueWrite;
+import com.redis.spring.batch.item.redis.writer.impl.*;
+import io.lettuce.core.*;
+import io.lettuce.core.codec.ByteArrayCodec;
+import io.lettuce.core.codec.StringCodec;
+import io.lettuce.core.models.stream.PendingMessages;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -34,48 +36,17 @@ import org.springframework.batch.item.support.ListItemReader;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.redis.lettucemod.Beers;
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.lettucemod.api.sync.RedisModulesCommands;
-import com.redis.lettucemod.search.IndexInfo;
-import com.redis.spring.batch.JobUtils;
-import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.Wait;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.Range;
-import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
-import com.redis.spring.batch.item.redis.gen.ItemType;
-import com.redis.spring.batch.item.redis.reader.KeyComparison;
-import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
-import com.redis.spring.batch.item.redis.reader.KeyEventItemReader;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
-import com.redis.spring.batch.item.redis.reader.StreamItemReader;
-import com.redis.spring.batch.item.redis.reader.StreamItemReader.AckPolicy;
-import com.redis.spring.batch.item.redis.writer.KeyValueWrite;
-import com.redis.spring.batch.item.redis.writer.impl.ClassifierOperation;
-import com.redis.spring.batch.item.redis.writer.impl.Del;
-import com.redis.spring.batch.item.redis.writer.impl.Geoadd;
-import com.redis.spring.batch.item.redis.writer.impl.Hset;
-import com.redis.spring.batch.item.redis.writer.impl.JsonDel;
-import com.redis.spring.batch.item.redis.writer.impl.JsonSet;
+import java.time.Duration;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import io.lettuce.core.Consumer;
-import io.lettuce.core.GeoArgs;
-import io.lettuce.core.GeoValue;
-import io.lettuce.core.KeyScanArgs;
-import io.lettuce.core.RestoreArgs;
-import io.lettuce.core.ScanIterator;
-import io.lettuce.core.ScoredValue;
-import io.lettuce.core.StreamMessage;
-import io.lettuce.core.XAddArgs;
-import io.lettuce.core.codec.ByteArrayCodec;
-import io.lettuce.core.codec.StringCodec;
-import io.lettuce.core.models.stream.PendingMessages;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(classes = BatchTestApplication.class)
 @RunWith(SpringRunner.class)
@@ -108,9 +79,9 @@ abstract class BatchTests extends AbstractTargetTestBase {
         estimator.setClient(redisClient);
         estimator.setKeyPattern(GeneratorItemReader.DEFAULT_KEYSPACE + ":*");
         estimator.setSamples(300);
-        assertEquals(expectedCount, estimator.getAsLong(), expectedCount / 10);
+        assertEquals(expectedCount, estimator.getAsLong(), (float) expectedCount / 10);
         estimator.setKeyType(ItemType.HASH.getString());
-        assertEquals(expectedCount / 2, estimator.getAsLong(), expectedCount / 10);
+        assertEquals((float) expectedCount / 2, estimator.getAsLong(), (float) expectedCount / 10);
     }
 
     @Test
@@ -562,7 +533,7 @@ abstract class BatchTests extends AbstractTargetTestBase {
         body.put("field2", "value2");
         redisCommands.xadd(key, body);
         redisCommands.xadd(key, body);
-        RedisScanItemReader<byte[], byte[]> reader = client(RedisItemReader.scanStruct(ByteArrayCodec.INSTANCE));
+        RedisScanItemReader<byte[], byte[]> reader = client(RedisScanItemReader.struct(ByteArrayCodec.INSTANCE));
         reader.open(new ExecutionContext());
         KeyValue<byte[]> ds = reader.read();
         Assertions.assertArrayEquals(toByteArray(key), ds.getKey());
@@ -819,12 +790,12 @@ abstract class BatchTests extends AbstractTargetTestBase {
 
     @Test
     void replicateLiveDump(TestInfo info) throws Exception {
-        replicate(info, client(RedisItemReader.liveDump()), dumpWriter());
+        replicate(info, client(RedisLiveItemReader.dump()), dumpWriter());
     }
 
     @Test
     void replicateLiveStruct(TestInfo info) throws Exception {
-        replicate(info, client(RedisItemReader.liveStruct()), structWriter());
+        replicate(info, client(RedisLiveItemReader.struct()), structWriter());
     }
 
 }

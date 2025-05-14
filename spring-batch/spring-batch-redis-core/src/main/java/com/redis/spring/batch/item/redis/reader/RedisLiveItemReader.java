@@ -7,6 +7,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import io.lettuce.core.codec.ByteArrayCodec;
+import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 
@@ -31,7 +33,9 @@ public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements 
 
     private KeyEventItemReader<K, V> keyEventReader;
 
-    private Iterator<KeyValue<K>> iterator = Collections.emptyIterator();;
+    private Iterator<KeyValue<K>> iterator = Collections.emptyIterator();
+
+    ;
 
     public RedisLiveItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> operation) {
         super(codec, operation);
@@ -90,8 +94,28 @@ public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements 
     }
 
     @Override
-    protected synchronized KeyValue<K> doRead() throws Exception {
+    protected synchronized KeyValue<K> doRead() {
         throw new UnsupportedOperationException();
+    }
+
+    public static RedisLiveItemReader<byte[], byte[]> dump() {
+        return new RedisLiveItemReader<>(ByteArrayCodec.INSTANCE, KeyValueRead.dump(ByteArrayCodec.INSTANCE));
+    }
+
+    public static RedisLiveItemReader<String, String> struct() {
+        return struct(StringCodec.UTF8);
+    }
+
+    public static <K, V> RedisLiveItemReader<K, V> struct(RedisCodec<K, V> codec) {
+        return new RedisLiveItemReader<>(codec, KeyValueRead.struct(codec));
+    }
+
+    public static RedisLiveItemReader<String, String> type() {
+        return type(StringCodec.UTF8);
+    }
+
+    public static <K, V> RedisLiveItemReader<K, V> type(RedisCodec<K, V> codec) {
+        return new RedisLiveItemReader<>(codec, KeyValueRead.type(codec));
     }
 
     public int getQueueCapacity() {

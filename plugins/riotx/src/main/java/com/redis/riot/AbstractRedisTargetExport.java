@@ -58,14 +58,12 @@ public abstract class AbstractRedisTargetExport extends AbstractExport {
         context.setVariable(VAR_TARGET, targetRedisContext.getConnection().sync());
     }
 
-    protected <K, V, R extends RedisItemReader<K, V>> R configureTarget(R reader) {
+    protected void configureTarget(RedisItemReader<?, ?> reader) {
         targetRedisContext.configure(reader);
-        return reader;
     }
 
-    protected <K, V, T> RedisItemWriter<K, V, T> configureTarget(RedisItemWriter<K, V, T> writer) {
+    protected void configureTarget(RedisItemWriter<?, ?, ?> writer) {
         targetRedisContext.configure(writer);
-        return writer;
     }
 
     public RedisURI getSourceRedisUri() {

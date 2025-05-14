@@ -1,22 +1,35 @@
 package com.redis.spring.batch.test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.time.Duration;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.*;
-
+import com.redis.lettucemod.RedisModulesClient;
+import com.redis.lettucemod.api.StatefulRedisModulesConnection;
+import com.redis.lettucemod.api.async.RedisModulesAsyncCommands;
+import com.redis.lettucemod.api.sync.RedisModulesCommands;
+import com.redis.lettucemod.cluster.RedisModulesClusterClient;
 import com.redis.lettucemod.utils.ConnectionBuilder;
+import com.redis.spring.batch.JobUtils;
+import com.redis.spring.batch.item.PollableItemReader;
+import com.redis.spring.batch.item.redis.RedisItemReader;
+import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.spring.batch.item.redis.common.BatchUtils;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.common.Range;
+import com.redis.spring.batch.item.redis.common.RedisOperation;
+import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
+import com.redis.spring.batch.item.redis.gen.ItemType;
+import com.redis.spring.batch.item.redis.gen.StreamOptions;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
+import com.redis.spring.batch.item.redis.reader.StreamItemReader;
+import com.redis.spring.batch.step.FlushingStepBuilder;
+import com.redis.testcontainers.RedisServer;
+import io.lettuce.core.AbstractRedisClient;
+import io.lettuce.core.Consumer;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.StreamMessage;
+import io.lettuce.core.codec.ByteArrayCodec;
+import io.lettuce.core.codec.RedisCodec;
+import io.lettuce.core.codec.StringCodec;
 import org.awaitility.Awaitility;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,34 +53,14 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 import org.testcontainers.lifecycle.Startable;
 
-import com.redis.lettucemod.RedisModulesClient;
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.lettucemod.api.async.RedisModulesAsyncCommands;
-import com.redis.lettucemod.api.sync.RedisModulesCommands;
-import com.redis.lettucemod.cluster.RedisModulesClusterClient;
-import com.redis.spring.batch.JobUtils;
-import com.redis.spring.batch.item.PollableItemReader;
-import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.Range;
-import com.redis.spring.batch.item.redis.common.RedisOperation;
-import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
-import com.redis.spring.batch.item.redis.gen.ItemType;
-import com.redis.spring.batch.item.redis.gen.StreamOptions;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-import com.redis.spring.batch.item.redis.reader.StreamItemReader;
-import com.redis.spring.batch.step.FlushingStepBuilder;
-import com.redis.testcontainers.RedisServer;
+import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.*;
 
-import io.lettuce.core.AbstractRedisClient;
-import io.lettuce.core.Consumer;
-import io.lettuce.core.RedisURI;
-import io.lettuce.core.StreamMessage;
-import io.lettuce.core.codec.ByteArrayCodec;
-import io.lettuce.core.codec.RedisCodec;
-import io.lettuce.core.codec.StringCodec;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestInstance(Lifecycle.PER_CLASS)
 public abstract class AbstractTestBase {
@@ -113,7 +106,7 @@ public abstract class AbstractTestBase {
     private TaskExecutorJobLauncher jobLauncher;
 
     protected RedisScanItemReader<byte[], byte[]> scanDumpReader() {
-        return client(RedisItemReader.scanDump());
+        return client(RedisScanItemReader.dump());
     }
 
     protected <K, V, R extends RedisItemReader<K, V>> R client(R reader) {
@@ -127,11 +120,11 @@ public abstract class AbstractTestBase {
     }
 
     protected RedisScanItemReader<String, String> scanStructReader() {
-        return client(RedisItemReader.scanStruct());
+        return client(RedisScanItemReader.struct());
     }
 
     protected <K, V> RedisScanItemReader<K, V> scanStructReader(RedisCodec<K, V> codec) {
-        return client(RedisItemReader.scanStruct(codec));
+        return client(RedisScanItemReader.struct(codec));
     }
 
     public static RedisURI redisURI(RedisServer server) {
@@ -154,7 +147,7 @@ public abstract class AbstractTestBase {
         redisConnection = ConnectionBuilder.client(redisClient).connection();
         redisCommands = redisConnection.sync();
         redisAsyncCommands = redisConnection.async();
-        log.info("Successfully set up Redis:\n{}", redisCommands.info());
+        log.debug("Successfully set up Redis:\n{}", redisCommands.info());
         jobRepository = JobUtils.jobRepositoryFactoryBean(ClassUtils.getShortName(getClass())).getObject();
         Assert.notNull(jobRepository, "Job repository is null");
         transactionManager = JobUtils.resourcelessTransactionManager();

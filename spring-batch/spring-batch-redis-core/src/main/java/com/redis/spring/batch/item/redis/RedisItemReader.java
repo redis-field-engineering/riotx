@@ -1,29 +1,23 @@
 package com.redis.spring.batch.item.redis;
 
-import java.util.List;
-import java.util.function.Predicate;
-
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
-import org.springframework.data.util.Predicates;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.common.OperationExecutor;
 import com.redis.spring.batch.item.redis.common.RedisOperation;
 import com.redis.spring.batch.item.redis.reader.KeyEvent;
 import com.redis.spring.batch.item.redis.reader.KeyValueRead;
-import com.redis.spring.batch.item.redis.reader.MemoryUsage;
-import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.ReadFrom;
-import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.RedisCodec;
-import io.lettuce.core.codec.StringCodec;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
+import org.springframework.data.util.Predicates;
+import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.unit.DataSize;
+
+import java.util.List;
+import java.util.function.Predicate;
 
 public abstract class RedisItemReader<K, V> extends AbstractItemCountingItemStreamItemReader<KeyValue<K>> {
 
@@ -91,46 +85,6 @@ public abstract class RedisItemReader<K, V> extends AbstractItemCountingItemStre
         return keyFilter.test(key);
     }
 
-    public static RedisScanItemReader<byte[], byte[]> scanDump() {
-        return new RedisScanItemReader<>(ByteArrayCodec.INSTANCE, KeyValueRead.dump(ByteArrayCodec.INSTANCE));
-    }
-
-    public static RedisScanItemReader<String, String> scanStruct() {
-        return scanStruct(StringCodec.UTF8);
-    }
-
-    public static <K, V> RedisScanItemReader<K, V> scanStruct(RedisCodec<K, V> codec) {
-        return new RedisScanItemReader<>(codec, KeyValueRead.struct(codec));
-    }
-
-    public static RedisScanItemReader<String, String> scanNone() {
-        return scanNone(StringCodec.UTF8);
-    }
-
-    public static <K, V> RedisScanItemReader<K, V> scanNone(RedisCodec<K, V> codec) {
-        return new RedisScanItemReader<>(codec, KeyValueRead.type(codec));
-    }
-
-    public static RedisLiveItemReader<byte[], byte[]> liveDump() {
-        return new RedisLiveItemReader<>(ByteArrayCodec.INSTANCE, KeyValueRead.dump(ByteArrayCodec.INSTANCE));
-    }
-
-    public static RedisLiveItemReader<String, String> liveStruct() {
-        return liveStruct(StringCodec.UTF8);
-    }
-
-    public static <K, V> RedisLiveItemReader<K, V> liveStruct(RedisCodec<K, V> codec) {
-        return new RedisLiveItemReader<>(codec, KeyValueRead.struct(codec));
-    }
-
-    public static RedisLiveItemReader<String, String> liveNone() {
-        return liveNone(StringCodec.UTF8);
-    }
-
-    public static <K, V> RedisLiveItemReader<K, V> liveNone(RedisCodec<K, V> codec) {
-        return new RedisLiveItemReader<>(codec, KeyValueRead.type(codec));
-    }
-
     public RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> getOperation() {
         return operation;
     }
@@ -179,9 +133,19 @@ public abstract class RedisItemReader<K, V> extends AbstractItemCountingItemStre
         this.batchSize = size;
     }
 
-    public void setMemoryUsage(MemoryUsage usage) {
+    public void setMemoryLimit(long limit) {
+        setMemoryLimit(DataSize.ofBytes(limit));
+    }
+
+    public void setMemoryLimit(DataSize limit) {
         if (operation instanceof KeyValueRead) {
-            ((KeyValueRead<K, V>) operation).memoryUsage(usage);
+            ((KeyValueRead<K, V>) operation).limit(limit);
+        }
+    }
+
+    public void setMemoryUsageSamples(int samples) {
+        if (operation instanceof KeyValueRead) {
+            ((KeyValueRead<K, V>) operation).memoryUsageSamples(samples);
         }
     }
 

@@ -1,29 +1,26 @@
 package com.redis.riot;
 
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.function.Supplier;
-
-import com.redis.riot.core.job.RiotStep;
-import com.redis.riot.core.RiotUtils;
-import org.springframework.batch.core.Job;
-
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.redis.spring.batch.item.redis.RedisItemReader;
+import com.redis.riot.core.RiotUtils;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.KeyEventItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
 import com.redis.spring.batch.item.redis.writer.impl.Xadd;
-
 import io.lettuce.core.StreamMessage;
+import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.function.Supplier;
 
 @Command(name = "stream-export", description = "Export Redis data to a Redis stream.")
 public class StreamExport extends AbstractRedisTargetExport {
@@ -55,14 +52,14 @@ public class StreamExport extends AbstractRedisTargetExport {
     }
 
     @Override
-    protected <K, V, T> RedisItemWriter<K, V, T> configureTarget(RedisItemWriter<K, V, T> writer) {
+    protected void configureTarget(RedisItemWriter<?, ?, ?> writer) {
         log.info("Configuring target Redis writer with {}", targetRedisWriterArgs);
         targetRedisWriterArgs.configure(writer);
-        return super.configureTarget(writer);
+        super.configureTarget(writer);
     }
 
     private RiotStep<KeyValue<String>, StreamMessage<String, String>> step() {
-        RedisLiveItemReader<String, String> reader = RedisItemReader.liveStruct();
+        RedisLiveItemReader<String, String> reader = RedisLiveItemReader.struct();
         configureSource(reader);
         RedisItemWriter<String, String, StreamMessage<String, String>> writer = writer();
         configureTarget(writer);

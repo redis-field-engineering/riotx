@@ -22,8 +22,6 @@ import com.redis.spring.batch.item.redis.writer.impl.Del;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.support.CompositeItemWriter;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.util.StringUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -126,17 +124,12 @@ public class Replicate extends AbstractCompareCommand {
         return StepFlow.of("liveFlow", liveStep());
     }
 
-    private TaskExecutor asyncTaskExecutor() {
-        return new SimpleAsyncTaskExecutor("export");
-    }
-
     @Override
-    protected <K, V, T> RedisItemWriter<K, V, T> configureTarget(RedisItemWriter<K, V, T> writer) {
+    protected void configureTarget(RedisItemWriter<?, ?, ?> writer) {
         super.configureTarget(writer);
         log.info("Configuring target Redis writer with {}", targetRedisWriterArgs);
         targetRedisWriterArgs.configure(writer);
         writer.getRedisSupportCheck().getConsumers().add(this::unsupportedRedis);
-        return writer;
     }
 
     private RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> step(String name, RedisItemReader<byte[], byte[]> reader) {
@@ -161,7 +154,9 @@ public class Replicate extends AbstractCompareCommand {
     }
 
     protected ItemWriter<KeyValue<byte[]>> targetWriter() {
-        ItemWriter<KeyValue<byte[]>> writer = RiotUtils.writer(processor(), configureTarget(writer(writeOperation())));
+        RedisItemWriter<byte[], byte[], KeyValue<byte[]>> redisWriter = writer(writeOperation());
+        configureTarget(redisWriter);
+        ItemWriter<KeyValue<byte[]>> writer = RiotUtils.writer(processor(), redisWriter);
         if (removeSourceKeys) {
             log.info("Adding source delete writer to replicate writer");
             RedisItemWriter<byte[], byte[], KeyValue<byte[]>> sourceDelete = writer(new Del<>(KeyValue::getKey));

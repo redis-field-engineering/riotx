@@ -1,24 +1,9 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 import com.redis.lettucemod.timeseries.Sample;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.common.InitializingOperation;
 import com.redis.spring.batch.item.redis.common.KeyValue;
-
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.StreamMessage;
@@ -27,14 +12,21 @@ import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
 import io.lettuce.core.internal.LettuceAssert;
+import org.springframework.util.unit.DataSize;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class KeyValueRead<K, V> implements InitializingOperation<K, V, KeyEvent<K>, KeyValue<K>> {
 
     protected enum ValueType {
         DUMP, STRUCT, NONE
     }
-
-    public static final String ATTR_MEMORY_USAGE = "memory-usage";
 
     private static final String SCRIPT_FILENAME = "keyvalue.lua";
 
@@ -44,7 +36,15 @@ public class KeyValueRead<K, V> implements InitializingOperation<K, V, KeyEvent<
 
     private final ValueType mode;
 
-    private MemoryUsage memoryUsage = MemoryUsage.of(MemoryUsage.DISABLED);
+    /**
+     * Max memory usage of a key in bytes. Use -1 for no limit.
+     */
+    private long limit;
+
+    /**
+     * Number of sampled nested values
+     */
+    private int samples;
 
     private KeyValueRead(RedisCodec<K, V> codec, ValueType mode) {
         this.mode = mode;
@@ -80,10 +80,10 @@ public class KeyValueRead<K, V> implements InitializingOperation<K, V, KeyEvent<
     @Override
     public void initialize(RedisAsyncCommands<K, V> commands)
             throws IOException, InterruptedException, ExecutionException, TimeoutException {
-        evalsha.setArgs(mode, memoryUsage.getLimit().toBytes(), memoryUsage.getSamples());
+        evalsha.setArgs(mode, limit, samples);
         String lua = BatchUtils.readFile(SCRIPT_FILENAME);
-        String digest = commands.scriptLoad(lua).get(commands.getStatefulConnection().getTimeout().toNanos(),
-                TimeUnit.NANOSECONDS);
+        String digest = commands.scriptLoad(lua)
+                .get(commands.getStatefulConnection().getTimeout().toNanos(), TimeUnit.NANOSECONDS);
         evalsha.setDigest(digest);
     }
 
@@ -121,8 +121,15 @@ public class KeyValueRead<K, V> implements InitializingOperation<K, V, KeyEvent<
         return toStringValueFunction.apply((V) value);
     }
 
-    public KeyValueRead<K, V> memoryUsage(MemoryUsage usage) {
-        this.memoryUsage = usage;
+    public KeyValueRead<K, V> limit(DataSize limit) {
+        if (limit != null) {
+            this.limit = limit.toBytes();
+        }
+        return this;
+    }
+
+    public KeyValueRead<K, V> memoryUsageSamples(int samples) {
+        this.samples = samples;
         return this;
     }
 

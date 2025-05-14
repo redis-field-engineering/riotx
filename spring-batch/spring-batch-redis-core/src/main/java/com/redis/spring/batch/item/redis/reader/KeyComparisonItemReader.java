@@ -95,6 +95,14 @@ public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStrea
         return null;
     }
 
+    public RedisScanItemReader<K, V> getSourceReader() {
+        return sourceReader;
+    }
+
+    public RedisScanItemReader<K, V> getTargetReader() {
+        return targetReader;
+    }
+
     public KeyComparator<K> getComparator() {
         return comparator;
     }
