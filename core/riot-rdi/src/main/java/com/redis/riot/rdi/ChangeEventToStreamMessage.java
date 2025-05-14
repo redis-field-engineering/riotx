@@ -2,7 +2,6 @@ package com.redis.riot.rdi;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import io.lettuce.core.StreamMessage;
 import org.springframework.batch.item.ItemProcessor;
 
@@ -17,8 +16,6 @@ public class ChangeEventToStreamMessage implements ItemProcessor<ChangeEvent, St
     public static final String VALUE = "value";
 
     private final ObjectMapper mapper = new ObjectMapper();
-
-    private final ObjectWriter writer = mapper.writerFor(ChangeEventValue.class).withDefaultPrettyPrinter();
 
     private final Function<ChangeEvent, String> streamFunction;
 
@@ -39,7 +36,7 @@ public class ChangeEventToStreamMessage implements ItemProcessor<ChangeEvent, St
     @Override
     public StreamMessage<String, String> process(ChangeEvent item) throws JsonProcessingException {
         String bodyKey = mapper.writeValueAsString(item.getKey());
-        String bodyValue = writer.writeValueAsString(item.getValue());
+        String bodyValue = mapper.writeValueAsString(item.getValue());
         Map<String, String> body = new HashMap<>();
         body.put(KEY, bodyKey);
         body.put(VALUE, bodyValue);
