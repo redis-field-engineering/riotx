@@ -10,6 +10,7 @@ import com.redis.spring.batch.step.FlushingChunkProvider;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.util.unit.DataSize;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
@@ -32,14 +33,17 @@ public abstract class AbstractExport extends AbstractJobCommand {
     @ArgGroup(exclusive = false)
     private RedisReaderArgs readerArgs = new RedisReaderArgs();
 
-    @ArgGroup(exclusive = false)
-    private MemoryUsageArgs memoryUsageArgs = new MemoryUsageArgs();
+    @Option(names = "--mem-limit", description = "Max mem usage for a key to be read, for example 12KB 5MB.", paramLabel = "<size>")
+    private DataSize memoryLimit;
+
+    @Option(names = "--mem-samples", description = "Number of nested values to sample in key memory usage.", paramLabel = "<int>")
+    private int memoryUsageSamples;
 
     private RedisContext sourceRedisContext;
 
     protected <K> ItemProcessor<KeyValue<K>, KeyValue<K>> keyValueFilter() {
         KeyValueFilter<K> filter = new KeyValueFilter<>();
-        filter.setMemoryLimit(memoryUsageArgs.getLimit());
+        filter.setMemoryLimit(memoryLimit);
         return filter;
     }
 
@@ -50,11 +54,11 @@ public abstract class AbstractExport extends AbstractJobCommand {
         sourceRedisContext.afterPropertiesSet();
     }
 
-    protected <K, V, R extends RedisItemReader<K, V>> R configureSource(R reader) {
+    protected void configureSource(RedisItemReader<?, ?> reader) {
         sourceRedisContext.configure(reader);
         readerArgs.configure(reader);
-        reader.setMemoryUsage(memoryUsageArgs.memoryUsage());
-        return reader;
+        reader.setMemoryLimit(memoryLimit);
+        reader.setMemoryUsageSamples(memoryUsageSamples);
     }
 
     protected <K, V, T> RiotStep<KeyValue<K>, T> step(String name, RedisItemReader<K, V> reader, ItemWriter<T> writer) {
@@ -91,14 +95,6 @@ public abstract class AbstractExport extends AbstractJobCommand {
         this.readerArgs = args;
     }
 
-    public MemoryUsageArgs getMemoryUsageArgs() {
-        return memoryUsageArgs;
-    }
-
-    public void setMemoryUsageArgs(MemoryUsageArgs args) {
-        this.memoryUsageArgs = args;
-    }
-
     public Duration getFlushInterval() {
         return flushInterval;
     }
@@ -113,6 +109,22 @@ public abstract class AbstractExport extends AbstractJobCommand {
 
     public void setIdleTimeout(Duration idleTimeout) {
         this.idleTimeout = idleTimeout;
+    }
+
+    public DataSize getMemoryLimit() {
+        return memoryLimit;
+    }
+
+    public void setMemoryLimit(DataSize limit) {
+        this.memoryLimit = limit;
+    }
+
+    public int getMemoryUsageSamples() {
+        return memoryUsageSamples;
+    }
+
+    public void setMemoryUsageSamples(int samples) {
+        this.memoryUsageSamples = samples;
     }
 
 }

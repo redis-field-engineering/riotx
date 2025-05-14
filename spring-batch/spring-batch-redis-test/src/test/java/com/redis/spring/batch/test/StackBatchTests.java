@@ -1,24 +1,29 @@
 package com.redis.spring.batch.test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
+import com.redis.lettucemod.search.Suggestion;
+import com.redis.lettucemod.timeseries.*;
+import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.spring.batch.item.redis.common.BatchUtils;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.common.MultiOperation;
+import com.redis.spring.batch.item.redis.common.Range;
+import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
+import com.redis.spring.batch.item.redis.gen.ItemType;
+import com.redis.spring.batch.item.redis.gen.MapOptions;
+import com.redis.spring.batch.item.redis.gen.TimeSeriesOptions;
+import com.redis.spring.batch.item.redis.reader.KeyComparison;
+import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
+import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
+import com.redis.spring.batch.item.redis.reader.StreamItemReader;
+import com.redis.spring.batch.item.redis.reader.StreamItemReader.AckPolicy;
+import com.redis.spring.batch.item.redis.writer.KeyValueWrite.WriteMode;
+import com.redis.spring.batch.item.redis.writer.impl.*;
+import com.redis.testcontainers.RedisServer;
+import io.lettuce.core.*;
+import io.lettuce.core.Range.Boundary;
+import io.lettuce.core.codec.ByteArrayCodec;
+import io.lettuce.core.codec.StringCodec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -31,51 +36,15 @@ import org.springframework.batch.item.support.ListItemWriter;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.util.unit.DataSize;
 
-import com.redis.lettucemod.search.Suggestion;
-import com.redis.lettucemod.timeseries.AddOptions;
-import com.redis.lettucemod.timeseries.DuplicatePolicy;
-import com.redis.lettucemod.timeseries.RangeOptions;
-import com.redis.lettucemod.timeseries.Sample;
-import com.redis.lettucemod.timeseries.TimeRange;
-import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.MultiOperation;
-import com.redis.spring.batch.item.redis.common.Range;
-import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
-import com.redis.spring.batch.item.redis.gen.ItemType;
-import com.redis.spring.batch.item.redis.gen.MapOptions;
-import com.redis.spring.batch.item.redis.gen.TimeSeriesOptions;
-import com.redis.spring.batch.item.redis.reader.KeyComparison;
-import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
-import com.redis.spring.batch.item.redis.reader.MemoryUsage;
-import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-import com.redis.spring.batch.item.redis.reader.StreamItemReader;
-import com.redis.spring.batch.item.redis.reader.StreamItemReader.AckPolicy;
-import com.redis.spring.batch.item.redis.writer.KeyValueWrite.WriteMode;
-import com.redis.spring.batch.item.redis.writer.impl.Del;
-import com.redis.spring.batch.item.redis.writer.impl.Expire;
-import com.redis.spring.batch.item.redis.writer.impl.ExpireAt;
-import com.redis.spring.batch.item.redis.writer.impl.Hset;
-import com.redis.spring.batch.item.redis.writer.impl.Lpush;
-import com.redis.spring.batch.item.redis.writer.impl.Rpush;
-import com.redis.spring.batch.item.redis.writer.impl.Sadd;
-import com.redis.spring.batch.item.redis.writer.impl.Sugadd;
-import com.redis.spring.batch.item.redis.writer.impl.TsAdd;
-import com.redis.spring.batch.item.redis.writer.impl.Xadd;
-import com.redis.spring.batch.item.redis.writer.impl.Zadd;
-import com.redis.testcontainers.RedisServer;
+import java.time.Instant;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import io.lettuce.core.Consumer;
-import io.lettuce.core.KeyScanArgs;
-import io.lettuce.core.Range.Boundary;
-import io.lettuce.core.ScanIterator;
-import io.lettuce.core.ScoredValue;
-import io.lettuce.core.StreamMessage;
-import io.lettuce.core.codec.ByteArrayCodec;
-import io.lettuce.core.codec.StringCodec;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class StackBatchTests extends BatchTests {
 
@@ -94,7 +63,7 @@ class StackBatchTests extends BatchTests {
     }
 
     protected RedisLiveItemReader<String, String> liveStructReader() {
-        return client(RedisItemReader.liveStruct());
+        return client(RedisLiveItemReader.struct());
     }
 
     @Test
@@ -174,14 +143,13 @@ class StackBatchTests extends BatchTests {
     @Test
     void readStructMemoryUsage(TestInfo info) throws Exception {
         generate(info, generator(73));
-        DataSize memLimit = DataSize.ofBytes(200);
         RedisScanItemReader<String, String> reader = scanStructReader();
-        reader.setMemoryUsage(MemoryUsage.of(memLimit));
+        long memLimit = 200;
+        reader.setMemoryLimit(memLimit);
         List<? extends KeyValue<String>> keyValues = readAll(info, reader);
         Assertions.assertFalse(keyValues.isEmpty());
         for (KeyValue<String> keyValue : keyValues) {
-            Assertions.assertNotNull(keyValue.getMemoryUsage());
-            if (keyValue.getMemoryUsage() > memLimit.toBytes()) {
+            if (keyValue.getMemoryUsage() > memLimit) {
                 Assertions.assertNull(keyValue.getValue());
             }
         }
@@ -197,7 +165,7 @@ class StackBatchTests extends BatchTests {
         long ttl = System.currentTimeMillis() + 123456;
         redisCommands.pexpireat(key, ttl);
         RedisScanItemReader<String, String> reader = scanStructReader();
-        reader.setMemoryUsage(MemoryUsage.of(MemoryUsage.NO_LIMIT));
+        reader.setMemoryLimit(-1);
         reader.open(new ExecutionContext());
         KeyValue<String> ds = reader.read();
         Assertions.assertEquals(key, ds.getKey());
@@ -209,13 +177,13 @@ class StackBatchTests extends BatchTests {
 
     @Test
     void readStructMemLimit(TestInfo info) throws Exception {
-        DataSize limit = DataSize.ofBytes(500);
+        long limit = 500;
         String key1 = "key:1";
         redisCommands.set(key1, "bar");
         String key2 = "key:2";
-        redisCommands.set(key2, GeneratorItemReader.string(Math.toIntExact(limit.toBytes() * 2)));
+        redisCommands.set(key2, GeneratorItemReader.string(Math.toIntExact(limit * 2)));
         RedisScanItemReader<String, String> reader = scanStructReader();
-        reader.setMemoryUsage(MemoryUsage.of(limit));
+        reader.setMemoryLimit(limit);
         List<? extends KeyValue<String>> keyValues = readAll(info, reader);
         Map<String, KeyValue<String>> map = keyValues.stream().collect(Collectors.toMap(KeyValue::getKey, Function.identity()));
         Assertions.assertNull(map.get(key2).getValue());
@@ -232,7 +200,7 @@ class StackBatchTests extends BatchTests {
     void replicateStructMemLimit(TestInfo info) throws Exception {
         generate(info, generator(73));
         RedisScanItemReader<String, String> reader = scanStructReader();
-        reader.setMemoryUsage(MemoryUsage.of(DataSize.ofMegabytes(100)));
+        reader.setMemoryLimit(DataSize.ofMegabytes(100).toBytes());
         replicate(info, reader, structWriter());
     }
 
@@ -240,7 +208,7 @@ class StackBatchTests extends BatchTests {
     void replicateDumpMemLimitHigh(TestInfo info) throws Exception {
         generate(info, generator(73));
         RedisScanItemReader<byte[], byte[]> reader = scanDumpReader();
-        reader.setMemoryUsage(MemoryUsage.of(DataSize.ofMegabytes(100)));
+        reader.setMemoryLimit(DataSize.ofMegabytes(100).toBytes());
         replicate(info, reader, dumpWriter());
     }
 
@@ -261,11 +229,11 @@ class StackBatchTests extends BatchTests {
     void readDumpMemLimitLow(TestInfo info) throws Exception {
         generate(info, generator(73));
         Assertions.assertTrue(redisCommands.dbsize() > 10);
-        DataSize memLimit = DataSize.ofBytes(1500);
+        long memLimit = 1500;
         RedisScanItemReader<byte[], byte[]> reader = scanDumpReader();
-        reader.setMemoryUsage(MemoryUsage.of(memLimit));
+        reader.setMemoryLimit(memLimit);
         List<? extends KeyValue<byte[]>> items = readAll(info, reader);
-        Assertions.assertFalse(items.stream().anyMatch(v -> v.getMemoryUsage() > memLimit.toBytes() && v.getValue() != null));
+        Assertions.assertFalse(items.stream().anyMatch(v -> v.getMemoryUsage() > memLimit && v.getValue() != null));
     }
 
     @Test

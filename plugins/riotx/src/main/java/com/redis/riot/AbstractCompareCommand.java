@@ -1,10 +1,10 @@
 package com.redis.riot;
 
 import com.redis.riot.core.CompareStepListener;
-import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.StringKeyValue;
 import com.redis.riot.core.function.ToStringKeyValue;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.*;
 import io.lettuce.core.codec.ByteArrayCodec;
@@ -17,6 +17,8 @@ import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
@@ -55,7 +57,7 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
 
     protected ItemProcessor<KeyValue<byte[]>, KeyValue<byte[]>> processor() {
         if (isIgnoreStreamMessageId()) {
-            Assert.isTrue(isStruct(), "--no-stream-id can only be used with --struct");
+            Assert.isTrue(isStruct(), "Dropping stream message ID is only possible in STRUCT mode");
         }
         StandardEvaluationContext evaluationContext = evaluationContext();
         log.info("Creating processor with {}", processorArgs);
@@ -76,14 +78,18 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
     }
 
     private <K> String compareMessage(KeyComparisonStatsWriter<K> stats) {
-        return CompareStepListener.statsByStatus(stats).stream().map(e -> String.format("%s %d", e.getKey(),
-                        e.getValue().stream().collect(Collectors.summingLong(KeyComparisonStat::getCount))))
-                .collect(Collectors.joining(" | "));
+        return CompareStepListener.statsByStatus(stats).stream().map(this::formatStatus).collect(Collectors.joining(" | "));
+    }
+
+    private String formatStatus(Map.Entry<KeyComparison.Status, List<KeyComparisonStat>> e) {
+        return String.format("%s %d", e.getKey(), e.getValue().stream().mapToLong(KeyComparisonStat::getCount).sum());
     }
 
     protected RiotStep<KeyComparison<byte[]>, KeyComparison<byte[]>> compareStep() {
-        RedisScanItemReader<byte[], byte[]> sourceReader = configureSource(compareReader());
-        RedisScanItemReader<byte[], byte[]> targetReader = configureTarget(compareReader());
+        RedisScanItemReader<byte[], byte[]> sourceReader = compareReader();
+        configureSource(sourceReader);
+        RedisScanItemReader<byte[], byte[]> targetReader = compareReader();
+        configureTarget(targetReader);
         KeyComparisonItemReader<byte[], byte[]> reader = new KeyComparisonItemReader<>(sourceReader, targetReader);
         reader.setBatchSize(getStepArgs().getChunkSize());
         reader.setComparator(keyComparator());

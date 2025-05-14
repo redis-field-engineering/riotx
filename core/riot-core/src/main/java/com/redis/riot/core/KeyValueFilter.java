@@ -10,7 +10,9 @@ public class KeyValueFilter<K> implements ItemProcessor<KeyValue<K>, KeyValue<K>
     private long memoryLimit;
 
     public void setMemoryLimit(DataSize limit) {
-        setMemoryLimit(limit.toBytes());
+        if (limit != null) {
+            setMemoryLimit(limit.toBytes());
+        }
     }
 
     public void setMemoryLimit(long bytes) {
@@ -19,7 +21,7 @@ public class KeyValueFilter<K> implements ItemProcessor<KeyValue<K>, KeyValue<K>
 
     @Override
     public KeyValue<K> process(KeyValue<K> item) throws Exception {
-        if (KeyValue.exists(item) && !KeyValue.hasValue(item) && item.getMemoryUsage() > memoryLimit) {
+        if (KeyValue.exists(item) && memoryLimit > 0 && item.getMemoryUsage() > memoryLimit) {
             return null;
         }
         return item;

@@ -65,7 +65,7 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
         targetRedisClient = client(targetRedis);
         targetRedisConnection = targetRedisConnection(StringCodec.UTF8);
         targetRedisCommands = targetRedisConnection.sync();
-        log.info("Successfully set up target Redis:\n{}", targetRedisCommands.info());
+        log.debug("Successfully set up target Redis:\n{}", targetRedisCommands.info());
     }
 
     @AfterAll
@@ -158,8 +158,8 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
     protected <K, V> List<KeyComparison<K>> compare(TestInfo info, RedisCodec<K, V> codec, KeyComparator<K> comparator)
             throws JobExecutionException {
         assertDbNotEmpty(redisCommands);
-        RedisScanItemReader<K, V> sourceReader = client(RedisItemReader.scanStruct(codec));
-        RedisScanItemReader<K, V> targetReader = targetClient(RedisItemReader.scanStruct(codec));
+        RedisScanItemReader<K, V> sourceReader = client(RedisScanItemReader.struct(codec));
+        RedisScanItemReader<K, V> targetReader = targetClient(RedisScanItemReader.struct(codec));
         KeyComparisonItemReader<K, V> reader = new KeyComparisonItemReader<>(sourceReader, targetReader);
         reader.setComparator(comparator);
         ListItemWriter<KeyComparison<K>> writer = new ListItemWriter<>();

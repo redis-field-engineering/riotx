@@ -17,6 +17,7 @@ import org.HdrHistogram.Histogram;
 import org.LatencyUtils.LatencyStats;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.Chunk;
+import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 
 import io.lettuce.core.metrics.CommandMetrics.CommandLatency;
@@ -34,8 +35,8 @@ public class Ping extends AbstractRedisCommand {
 
     public static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
 
-    private static final List<Double> DEFAULT_PERCENTILES = DoubleStream
-            .of(DefaultCommandLatencyCollectorOptions.DEFAULT_TARGET_PERCENTILES).boxed().collect(Collectors.toList());
+    private static final List<Double> DEFAULT_PERCENTILES = DoubleStream.of(
+            DefaultCommandLatencyCollectorOptions.DEFAULT_TARGET_PERCENTILES).boxed().collect(Collectors.toList());
 
     @ParentCommand
     IO parent;
@@ -55,7 +56,7 @@ public class Ping extends AbstractRedisCommand {
     }
 
     @Override
-    protected <I, O> LongSupplier maxItemCount(RiotStep<I, O> step) {
+    protected LongSupplier maxItemCount(ItemReader<?> reader) {
         return this::getCount;
     }
 

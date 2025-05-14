@@ -1,26 +1,21 @@
 package com.redis.riot;
 
-import java.util.Map;
-import java.util.function.LongSupplier;
-import java.util.regex.Pattern;
-
-import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.RiotUtils;
+import com.redis.riot.core.function.KeyValueMap;
+import com.redis.riot.core.function.RegexNamedGroupFunction;
+import com.redis.riot.core.job.RiotStep;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.util.Assert;
-
-import com.redis.riot.core.function.RegexNamedGroupFunction;
-import com.redis.riot.core.function.KeyValueMap;
-import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+
+import java.util.Map;
+import java.util.regex.Pattern;
 
 @Command(name = "redis-import", description = "Import data from a Redis database.")
 public class RedisImport extends AbstractTargetRedisImport {
@@ -48,14 +43,9 @@ public class RedisImport extends AbstractTargetRedisImport {
         return job(step);
     }
 
-    @Override
-    protected <I, O> LongSupplier maxItemCount(RiotStep<I, O> step) {
-        return BatchUtils.scanSizeEstimator((RedisScanItemReader<?, ?>) step.getReader());
-    }
-
     private RedisScanItemReader<String, String> reader() {
         log.info("Creating source Redis reader with {}", sourceRedisReaderArgs);
-        RedisScanItemReader<String, String> reader = RedisItemReader.scanStruct();
+        RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
         configureSourceRedisReader(reader);
         return reader;
     }

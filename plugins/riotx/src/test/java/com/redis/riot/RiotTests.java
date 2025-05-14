@@ -1,21 +1,22 @@
 package com.redis.riot;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.util.*;
-import java.util.function.Predicate;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redis.lettucemod.Beers;
+import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.riot.core.CompareMode;
 import com.redis.riot.core.ReplicationMode;
 import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.common.Range;
+import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
+import com.redis.spring.batch.item.redis.gen.ItemType;
 import io.lettuce.core.LettuceFutures;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.sync.RedisCommands;
+import io.lettuce.core.cluster.SlotHash;
+import io.lettuce.core.codec.ByteArrayCodec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -23,22 +24,12 @@ import org.junit.jupiter.api.TestInfo;
 import org.slf4j.simple.SimpleLogger;
 import org.testcontainers.shaded.org.bouncycastle.util.encoders.Hex;
 
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.Range;
-import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
-import com.redis.spring.batch.item.redis.gen.ItemType;
-
-import io.lettuce.core.cluster.SlotHash;
-import io.lettuce.core.codec.ByteArrayCodec;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.*;
+import java.util.function.Predicate;
 
 abstract class RiotTests extends AbstractRiotApplicationTestBase {
-
-    public static final String BEERS_JSON_URL = "https://storage.googleapis.com/jrx/beers.json";
-
-    public static final int BEER_CSV_COUNT = 2410;
-
-    public static final int BEER_JSON_COUNT = 216;
 
     @BeforeAll
     void setDefaults() {

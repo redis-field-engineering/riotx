@@ -1,12 +1,12 @@
 package com.redis.riot;
 
 import com.redis.riot.core.RedisContext;
-import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.KeyValueMap;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
-import com.redis.spring.batch.item.redis.RedisItemReader;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
@@ -27,7 +27,7 @@ public abstract class AbstractRedisExport extends AbstractExport {
     private static final String TASK_NAME = "Exporting";
 
     protected <T> RiotStep<KeyValue<String>, T> step(ItemProcessor<KeyValue<String>, T> processor, ItemWriter<T> writer) {
-        RiotStep<KeyValue<String>, T> step = step("export", RedisItemReader.scanStruct(), writer);
+        RiotStep<KeyValue<String>, T> step = step("export", RedisScanItemReader.struct(), writer);
         step.processor(RiotUtils.processor(keyValueFilter(), processor));
         return step;
     }

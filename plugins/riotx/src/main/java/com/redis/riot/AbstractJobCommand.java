@@ -5,6 +5,7 @@ import com.redis.riot.core.job.JobExecutor;
 import com.redis.riot.core.job.RiotFlow;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
+import com.redis.spring.batch.item.redis.reader.KeyComparisonItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemReader;
@@ -66,7 +67,7 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         if (shouldShowProgress()) {
             ProgressStepExecutionListener<O> listener = new ProgressStepExecutionListener<>();
             listener.setTaskName(taskName(step));
-            listener.setInitialMax(maxItemCount(step));
+            listener.setInitialMax(maxItemCount(step.getReader()));
             listener.setExtraMessage(extraMessage(step));
             listener.setProgressStyle(progressArgs.getStyle());
             listener.setUpdateInterval(progressArgs.getUpdateInterval());
@@ -80,9 +81,12 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         return null;
     }
 
-    protected <I, O> LongSupplier maxItemCount(RiotStep<I, O> step) {
-        if (step.getReader() instanceof RedisScanItemReader) {
-            return BatchUtils.scanSizeEstimator((RedisScanItemReader<?, ?>) step.getReader());
+    protected LongSupplier maxItemCount(ItemReader<?> reader) {
+        if (reader instanceof RedisScanItemReader) {
+            return BatchUtils.scanSizeEstimator((RedisScanItemReader<?, ?>) reader);
+        }
+        if (reader instanceof KeyComparisonItemReader<?, ?>) {
+            return maxItemCount(((KeyComparisonItemReader<?, ?>) reader).getSourceReader());
         }
         return null;
     }
