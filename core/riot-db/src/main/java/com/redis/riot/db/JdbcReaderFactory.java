@@ -1,15 +1,12 @@
 package com.redis.riot.db;
 
-import java.util.Map;
-
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
 
 public class JdbcReaderFactory {
 
-    public static JdbcCursorItemReaderBuilder<Map<String, Object>> create(JdbcReaderOptions options) {
-        JdbcCursorItemReaderBuilder<Map<String, Object>> reader = new JdbcCursorItemReaderBuilder<>();
+    public static <T> JdbcCursorItemReaderBuilder<T> create(JdbcReaderOptions options) {
+        JdbcCursorItemReaderBuilder<T> reader = new JdbcCursorItemReaderBuilder<>();
         reader.saveState(false);
-        reader.rowMapper(new VariantColumnMapRowMapper());
         reader.fetchSize(options.getFetchSize());
         reader.maxRows(options.getMaxRows());
         if (options.getQueryTimeout() != null) {

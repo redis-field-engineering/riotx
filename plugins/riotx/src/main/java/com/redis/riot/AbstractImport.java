@@ -36,6 +36,8 @@ public abstract class AbstractImport extends AbstractJobCommand {
 
     public static final String VAR_REDIS = "redis";
 
+    private static final String STEP_NAME = "import";
+
     @ArgGroup(exclusive = false)
     private RedisWriterArgs targetRedisWriterArgs = new RedisWriterArgs();
 
@@ -91,14 +93,14 @@ public abstract class AbstractImport extends AbstractJobCommand {
         return !CollectionUtils.isEmpty(importOperationCommands);
     }
 
-    protected RiotStep<Map<String, Object>, Map<String, Object>> step(ItemReader<Map<String, Object>> reader) {
+    protected <S> RiotStep<S, Map<String, Object>> operationStep(ItemReader<S> reader) {
         Assert.isTrue(hasOperations(), "No Redis command specified");
         RedisItemWriter<String, String, Map<String, Object>> writer = operationWriter();
         configureTargetRedisWriter(writer);
-        return step("import", reader, writer).processor(processor());
+        return step(STEP_NAME, reader, writer);
     }
 
-    protected ItemProcessor<Map<String, Object>, Map<String, Object>> processor() {
+    protected ItemProcessor<Map<String, Object>, Map<String, Object>> operationProcessor() {
         return processor(evaluationContext, processorArgs);
     }
 

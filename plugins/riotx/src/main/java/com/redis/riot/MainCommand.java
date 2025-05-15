@@ -1,17 +1,26 @@
 package com.redis.riot;
 
 import java.io.PrintWriter;
+import java.text.DateFormat;
+import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.concurrent.Callable;
 
 import com.redis.riot.core.Expression;
+import com.redis.riot.core.InetSocketAddressList;
 import com.redis.riot.core.TemplateExpression;
+import com.redis.riot.db.DatabaseObject;
+import com.redis.spring.batch.item.redis.common.Range;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.json.JsonPath;
 import org.springframework.boot.convert.DurationStyle;
 import org.springframework.util.unit.DataSize;
 
 import picocli.CommandLine;
 import picocli.CommandLine.ParseResult;
 import picocli.CommandLine.RunLast;
+import software.amazon.awssdk.regions.Region;
 
 public class MainCommand extends BaseCommand implements Callable<Integer>, IO {
 
@@ -44,6 +53,15 @@ public class MainCommand extends BaseCommand implements Callable<Integer>, IO {
         commandLine.registerConverter(DataSize.class, MainCommand::parseDataSize);
         commandLine.registerConverter(Expression.class, Expression::parse);
         commandLine.registerConverter(TemplateExpression.class, Expression::parseTemplate);
+        commandLine.registerConverter(NumberFormat.class, java.text.DecimalFormat::new);
+        commandLine.registerConverter(DateFormat.class, SimpleDateFormat::new);
+        commandLine.registerConverter(RedisURI.class, new RedisURIConverter());
+        commandLine.registerConverter(Region.class, Region::of);
+        commandLine.registerConverter(Range.class, new RangeConverter());
+        commandLine.registerConverter(JsonPath.class, JsonPath::of);
+        commandLine.registerConverter(DatabaseObject.class, DatabaseObject::parse);
+        commandLine.registerConverter(InetSocketAddressList.class, InetSocketAddressList::parse);
+
         commandLine.setExecutionStrategy(
                 new CompositeExecutionStrategy(LoggingMixin::executionStrategy, this::executionStrategy));
         return commandLine;

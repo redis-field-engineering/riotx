@@ -39,7 +39,7 @@ public class RedisImport extends AbstractTargetRedisImport {
         Assert.isTrue(hasOperations(), "No Redis command specified");
         RedisScanItemReader<String, String> reader = reader();
         RiotStep<KeyValue<String>, Map<String, Object>> step = step("redis-import", reader, operationWriter());
-        step.processor(RiotUtils.processor(mapProcessor(), processor()));
+        step.processor(RiotUtils.processor(keyValueProcessor(), operationProcessor()));
         return job(step);
     }
 
@@ -50,7 +50,7 @@ public class RedisImport extends AbstractTargetRedisImport {
         return reader;
     }
 
-    protected ItemProcessor<KeyValue<String>, Map<String, Object>> mapProcessor() {
+    protected ItemProcessor<KeyValue<String>, Map<String, Object>> keyValueProcessor() {
         KeyValueMap mapFunction = new KeyValueMap();
         if (keyRegex != null) {
             mapFunction.setKey(new RegexNamedGroupFunction(keyRegex));

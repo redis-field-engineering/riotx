@@ -1,0 +1,71 @@
+package com.redis.riot.rdi;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.redis.lettucemod.api.StatefulRedisModulesConnection;
+import com.redis.lettucemod.utils.ConnectionBuilder;
+import com.redis.riot.core.OffsetStore;
+import io.lettuce.core.AbstractRedisClient;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class RdiOffsetStore implements OffsetStore {
+
+    public static final String DEFAULT_KEY = "metadata:debezium:offsets";
+
+    public static final String DEFAULT_SERVER = "rdi";
+
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    private final AbstractRedisClient client;
+
+    private String key = DEFAULT_KEY;
+
+    private String server = DEFAULT_SERVER;
+
+    public RdiOffsetStore(AbstractRedisClient client) {
+        this.client = client;
+    }
+
+    private StatefulRedisModulesConnection<String, String> connection() {
+        return ConnectionBuilder.client(client).connection();
+    }
+
+    @Override
+    public void store(Map<String, Object> offset) throws JsonProcessingException {
+        try (StatefulRedisModulesConnection<String, String> connection = connection()) {
+            connection.sync().hset(key, field(), mapper.writeValueAsString(offset));
+        }
+    }
+
+    private String field() throws JsonProcessingException {
+        Map<String, String> field = new HashMap<>();
+        field.put("server", server);
+        return mapper.writeValueAsString(field);
+    }
+
+    @Override
+    public Map<String, Object> getOffset() throws JsonProcessingException {
+        try (StatefulRedisModulesConnection<String, String> connection = connection()) {
+            return mapper.readValue(connection.sync().hget(key, field()), Map.class);
+        }
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    public String getServer() {
+        return server;
+    }
+
+    public void setServer(String server) {
+        this.server = server;
+    }
+
+}

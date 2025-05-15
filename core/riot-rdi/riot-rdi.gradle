@@ -1,0 +1,6 @@
+dependencies {
+    implementation project(':riot-core')
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    testImplementation 'org.assertj:assertj-core'
+}

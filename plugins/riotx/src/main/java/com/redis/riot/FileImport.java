@@ -123,7 +123,7 @@ public class FileImport extends AbstractRedisImport {
         RiotStep<?, ?> step = step(resource.getFilename(), reader, writer);
         step.name(location);
         if (hasOperations()) {
-            step.processor(RiotUtils.processor(processor(), regexProcessor()));
+            step.processor(RiotUtils.processor(operationProcessor(), regexProcessor()));
         } else {
             Assert.isTrue(keyValueTypes.contains(type), "No Redis operation specified");
         }

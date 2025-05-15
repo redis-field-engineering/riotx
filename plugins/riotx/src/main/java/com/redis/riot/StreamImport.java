@@ -55,7 +55,7 @@ public class StreamImport extends AbstractTargetRedisImport {
     }
 
     protected ItemProcessor<StreamMessage<String, String>, Map<String, Object>> streamMessageProcessor() {
-        return RiotUtils.processor(new FunctionItemProcessor<>(this::messageBody), super.processor());
+        return RiotUtils.processor(new FunctionItemProcessor<>(this::messageBody), operationProcessor());
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
