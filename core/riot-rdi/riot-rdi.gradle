@@ -1,5 +1,5 @@
 dependencies {
-    implementation project(':spring-batch-redis-core')
+    implementation project(':riot-core')
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
     testImplementation 'org.assertj:assertj-core'

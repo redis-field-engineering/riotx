@@ -1,9 +1,8 @@
 package com.redis.riot.db;
 
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.lettucemod.utils.ConnectionBuilder;
+import com.redis.riot.core.InMemoryOffsetStore;
+import com.redis.riot.core.OffsetStore;
 import com.redis.spring.batch.item.PollableItemReader;
-import io.lettuce.core.AbstractRedisClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ExecutionContext;
@@ -18,7 +17,9 @@ import javax.sql.DataSource;
 import java.sql.*;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamItemReader<SnowflakeStreamRow>
@@ -32,17 +33,23 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
 
     public static final Duration DEFAULT_POLL_INTERVAL = Duration.ofSeconds(3);
 
+    private static final String OFFSET_KEY = "offset";
+
     public enum SnapshotMode {
         INITIAL, NEVER;
+
     }
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private AbstractRedisClient redisClient;
+    private OffsetStore offsetStore = new InMemoryOffsetStore();
 
     private JdbcReaderOptions readerOptions = new JdbcReaderOptions();
 
-    private DatabaseObject tableObject;
+    /**
+     * Full table name in the form db.schema.table
+     */
+    private String table;
 
     private DataSource dataSource;
 
@@ -59,13 +66,20 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
     private String warehouse;
 
     /**
-     * Snowflake database object to use for stream and temp table
+     * Database to use for stream. If not specified will use table database name
      */
-    private DatabaseObject streamObject;
+    private String streamDatabase;
+
+    /**
+     * Schema to use for stream. If not specified will use table schema
+     */
+    private String streamSchema;
 
     private DataSource initSqlDataSource;
 
     private JdbcCursorItemReader<SnowflakeStreamRow> reader;
+
+    private DatabaseObject streamObject;
 
     private String nextOffset;
 
@@ -79,21 +93,15 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
 
     @Override
     protected void doOpen() throws Exception {
-        Assert.notNull(redisClient, "Redis client is required");
         Assert.notNull(dataSource, "DataSource is required");
         if (initSqlDataSource == null) {
             initSqlDataSource = initSqlDataSource();
         }
         if (streamObject == null) {
+            DatabaseObject tableObject = DatabaseObject.parse(table);
             streamObject = new DatabaseObject();
-        }
-        if (streamObject.getDatabase() == null) {
-            streamObject.setDatabase(tableObject.getDatabase());
-        }
-        if (streamObject.getSchema() == null) {
-            streamObject.setSchema(tableObject.getSchema());
-        }
-        if (streamObject.getTable() == null) {
+            streamObject.setDatabase(streamDatabase == null ? tableObject.getDatabase() : streamDatabase);
+            streamObject.setSchema(streamSchema == null ? tableObject.getSchema() : streamSchema);
             streamObject.setTable(String.format("%s_changestream", tableObject.getTable()));
         }
         if (nextOffset == null) {
@@ -107,10 +115,6 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
 
     private String tempTable() {
         return String.format("%s_temp", streamObject.fullName());
-    }
-
-    private String offsetKey() {
-        return String.format("riotx:offset:%s", streamObject.fullName());
     }
 
     private DataSource initSqlDataSource() {
@@ -145,10 +149,9 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
         SnowflakeStreamRow item = reader.read();
         if (item == null) {
             if (nextOffset != null) {
-                try (StatefulRedisModulesConnection<String, String> connection = redisConnection()) {
-                    connection.sync().set(offsetKey(), nextOffset);
-                    log.debug("In snowflake import after success: stored offset {}={}", offsetKey(), nextOffset);
-                }
+                Map<String, Object> offsetMap = new HashMap<>();
+                offsetMap.put(OFFSET_KEY, nextOffset);
+                offsetStore.store(offsetMap);
                 try (Connection sqlConnection = initSqlDataSource.getConnection()) {
                     sqlConnection.prepareStatement(String.format("DROP TABLE %s", tempTable())).execute();
                 }
@@ -197,24 +200,18 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
         }
     }
 
-    private String currentRedisOffset() {
-        try (StatefulRedisModulesConnection<String, String> connection = redisConnection()) {
-            return connection.sync().get(offsetKey());
-        }
-    }
-
-    private StatefulRedisModulesConnection<String, String> redisConnection() {
-        return ConnectionBuilder.client(redisClient).connection();
-    }
-
     private String sanitize(String value) {
         return value.replaceAll("[^a-zA-Z0-9]", "_");
     }
 
-    private void fetch() throws SQLException {
+    private void fetch() throws Exception {
         try (Connection connection = initSqlDataSource.getConnection()) {
-            String createStreamSQL = String.format(CREATE_STREAM_SQL, streamObject.fullName(), tableObject.fullName());
-            String offset = currentRedisOffset();
+            String createStreamSQL = String.format(CREATE_STREAM_SQL, streamObject.fullName(), table);
+            Map<String, Object> offsetMap = offsetStore.getOffset();
+            if (offsetMap == null) {
+                offsetMap = new HashMap<>();
+            }
+            String offset = (String) offsetMap.get(OFFSET_KEY);
             if (!StringUtils.hasLength(offset) || offset.equals("0")) {
                 String initialSQL = createStreamSQL;
                 if (snapshotMode == SnapshotMode.INITIAL) {
@@ -246,20 +243,20 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
         lastFetchTime = System.currentTimeMillis();
     }
 
-    public DatabaseObject getStreamObject() {
-        return streamObject;
+    public String getStreamDatabase() {
+        return streamDatabase;
     }
 
-    public void setStreamObject(DatabaseObject streamObject) {
-        this.streamObject = streamObject;
+    public void setStreamDatabase(String streamDatabase) {
+        this.streamDatabase = streamDatabase;
     }
 
-    public AbstractRedisClient getRedisClient() {
-        return redisClient;
+    public String getStreamSchema() {
+        return streamSchema;
     }
 
-    public void setRedisClient(AbstractRedisClient redisClient) {
-        this.redisClient = redisClient;
+    public void setStreamSchema(String streamSchema) {
+        this.streamSchema = streamSchema;
     }
 
     public String getRole() {
@@ -294,12 +291,12 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
         this.dataSource = dataSource;
     }
 
-    public DatabaseObject getTableObject() {
-        return tableObject;
+    public String getTable() {
+        return table;
     }
 
-    public void setTableObject(DatabaseObject tableObject) {
-        this.tableObject = tableObject;
+    public void setTable(String table) {
+        this.table = table;
     }
 
     public JdbcReaderOptions getReaderOptions() {
@@ -316,6 +313,14 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
 
     public void setPollInterval(Duration pollInterval) {
         this.pollInterval = pollInterval;
+    }
+
+    public OffsetStore getOffsetStore() {
+        return offsetStore;
+    }
+
+    public void setOffsetStore(OffsetStore offsetStore) {
+        this.offsetStore = offsetStore;
     }
 
 }

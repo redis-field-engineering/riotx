@@ -135,13 +135,12 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
     private SnowflakeStreamItemReader reader() {
         SnowflakeStreamItemReader reader = new SnowflakeStreamItemReader();
         reader.setDataSource(dataSource);
-        reader.setRedisClient(redisClient);
-        reader.setStreamObject(DatabaseObject.ofSchema("raw_pos_cdc"));
+        reader.setStreamSchema("raw_pos_cdc");
         reader.setPollInterval(Duration.ofSeconds(1));
         reader.setRole("riotx_cdc");
         reader.setWarehouse("compute_wh");
         reader.setSnapshotMode(SnowflakeStreamItemReader.SnapshotMode.INITIAL);
-        reader.setTableObject(DatabaseObject.parse("tb_101.raw_pos.incremental_order_header"));
+        reader.setTable("tb_101.raw_pos.incremental_order_header");
         return reader;
     }
 

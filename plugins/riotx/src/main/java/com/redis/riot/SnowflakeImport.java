@@ -1,5 +1,7 @@
 package com.redis.riot;
 
+import com.redis.riot.core.OffsetStore;
+import com.redis.riot.core.RedisStringOffsetStore;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.RiotVersion;
 import com.redis.riot.core.job.RiotStep;
@@ -9,6 +11,7 @@ import com.redis.riot.db.SnowflakeStreamRow;
 import com.redis.riot.rdi.ChangeEvent;
 import com.redis.riot.rdi.ChangeEventToStreamMessage;
 import com.redis.riot.rdi.ChangeEventValue;
+import com.redis.riot.rdi.RdiOffsetStore;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.writer.impl.Xadd;
 import com.redis.spring.batch.step.FlushingChunkProvider;
@@ -46,6 +49,10 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     private static final Object RDI_STREAM_PREFIX = "rdi";
 
+    public static final String DEFAULT_OFFSET_PREFIX = "riotx:offset";
+
+    public static final String DEFAULT_OFFSET_KEY = RdiOffsetStore.DEFAULT_KEY;
+
     @ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
 
@@ -53,7 +60,7 @@ public class SnowflakeImport extends AbstractRedisImport {
     private DatabaseReaderArgs readerArgs = new DatabaseReaderArgs();
 
     @Parameters(arity = "1", description = "Fully qualified Snowflake Table or Materialized View, eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
-    private DatabaseObject databaseObject;
+    private DatabaseObject table;
 
     @Option(names = "--snapshot", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SnowflakeStreamItemReader.SnapshotMode snapshotMode = DEFAULT_SNAPSHOT_MODE;
@@ -79,6 +86,12 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Option(names = "--idle-timeout", description = "Min duration to consider reader complete, for example 3s 5m (default: no timeout).", paramLabel = "<dur>")
     private Duration idleTimeout = DEFAULT_IDLE_TIMEOUT;
 
+    @Option(names = "--offset-prefix", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}", paramLabel = "<str>")
+    private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
+
+    @Option(names = "--offset-key", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}", paramLabel = "<name>")
+    private String offsetKey = DEFAULT_OFFSET_KEY;
+
     @Override
     protected Job job() {
         return job(step());
@@ -86,13 +99,28 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     private RiotStep<?, ?> step() {
         if (hasOperations()) {
-            return operationStep(reader()).processor(
+            SnowflakeStreamItemReader reader = reader();
+            reader.setOffsetStore(stringOffsetStore());
+            return operationStep(reader).processor(
                     RiotUtils.processor(new RowFilter(), new FunctionItemProcessor<>(SnowflakeStreamRow::getColumns),
                             operationProcessor()));
         }
+        SnowflakeStreamItemReader reader = reader();
+        reader.setOffsetStore(rdiOffsetStore());
         RedisItemWriter<String, String, StreamMessage<String, String>> writer = rdiWriter();
         configureTargetRedisWriter(writer);
         return step(RDI_STEP_NAME, reader(), writer).processor(rdiProcessor());
+    }
+
+    private OffsetStore rdiOffsetStore() {
+        RdiOffsetStore store = new RdiOffsetStore(targetRedisContext.client());
+        store.setKey(offsetKey);
+        return store;
+    }
+
+    private OffsetStore stringOffsetStore() {
+        String key = String.format("%s:%s", offsetPrefix, table.fullName());
+        return new RedisStringOffsetStore(targetRedisContext.client(), key);
     }
 
     private ItemProcessor<SnowflakeStreamRow, StreamMessage<String, String>> rdiProcessor() {
@@ -150,9 +178,9 @@ public class SnowflakeImport extends AbstractRedisImport {
         source.setTs_ms(instant.toEpochMilli());
         source.setTs_us(micros(instant));
         source.setTs_ns(nanos(instant));
-        source.setDb(databaseObject.getDatabase());
-        source.setTable(databaseObject.getTable());
-        source.setSchema(databaseObject.getSchema());
+        source.setDb(table.getDatabase());
+        source.setTable(table.getTable());
+        source.setSchema(table.getSchema());
         return source;
     }
 
@@ -176,7 +204,7 @@ public class SnowflakeImport extends AbstractRedisImport {
     }
 
     private String rdiStream() {
-        return String.format("%s:%s", RDI_STREAM_PREFIX, databaseObject.fullName());
+        return String.format("%s:%s", RDI_STREAM_PREFIX, table.fullName());
     }
 
     @Override
@@ -189,23 +217,16 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     protected SnowflakeStreamItemReader reader() {
         SnowflakeStreamItemReader reader = new SnowflakeStreamItemReader();
-        reader.setRedisClient(targetRedisContext.client());
         reader.setReaderOptions(readerArgs.readerOptions());
-        reader.setStreamObject(streamObject());
+        reader.setStreamDatabase(cdcDatabase);
+        reader.setStreamSchema(cdcSchema);
         reader.setDataSource(dataSourceArgs.dataSourceBuilder().driver(SNOWFLAKE_DRIVER).build());
         reader.setPollInterval(pollInterval);
         reader.setRole(role);
         reader.setWarehouse(warehouse);
         reader.setSnapshotMode(snapshotMode);
-        reader.setTableObject(databaseObject);
+        reader.setTable(table.fullName());
         return reader;
-    }
-
-    private DatabaseObject streamObject() {
-        DatabaseObject streamObject = new DatabaseObject();
-        streamObject.setDatabase(cdcDatabase);
-        streamObject.setSchema(cdcSchema);
-        return streamObject;
     }
 
     public Duration getPollInterval() {
@@ -264,12 +285,12 @@ public class SnowflakeImport extends AbstractRedisImport {
         this.readerArgs = readerArgs;
     }
 
-    public DatabaseObject getDatabaseObject() {
-        return databaseObject;
+    public DatabaseObject getTable() {
+        return table;
     }
 
-    public void setDatabaseObject(DatabaseObject databaseObject) {
-        this.databaseObject = databaseObject;
+    public void setTable(DatabaseObject table) {
+        this.table = table;
     }
 
     public DataSourceArgs getDataSourceArgs() {
@@ -294,6 +315,22 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     public void setIdleTimeout(Duration idleTimeout) {
         this.idleTimeout = idleTimeout;
+    }
+
+    public String getOffsetKey() {
+        return offsetKey;
+    }
+
+    public void setOffsetKey(String offsetKey) {
+        this.offsetKey = offsetKey;
+    }
+
+    public String getOffsetPrefix() {
+        return offsetPrefix;
+    }
+
+    public void setOffsetPrefix(String offsetPrefix) {
+        this.offsetPrefix = offsetPrefix;
     }
 
 }
