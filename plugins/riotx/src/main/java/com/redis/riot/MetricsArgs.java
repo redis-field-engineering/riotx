@@ -165,7 +165,7 @@ public class MetricsArgs {
     }
 
     private HTTPServer startHttpServer(PrometheusRegistry registry) throws IOException {
-        return HTTPServer.builder().port(8080).registry(registry).buildAndStart();
+        return HTTPServer.builder().port(port).registry(registry).buildAndStart();
     }
 
     private MicrometerOptions micrometerOptions() {
