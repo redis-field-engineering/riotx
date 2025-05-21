@@ -6,8 +6,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redis.lettucemod.Beers;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.utils.ConnectionBuilder;
+import com.redis.riot.core.BackpressureStatus;
 import com.redis.riot.core.CompareMode;
 import com.redis.riot.core.ReplicationMode;
+import com.redis.riot.core.StreamLengthBackpressureStatusSupplier;
 import com.redis.riot.replicate.Replicate;
 import com.redis.riot.replicate.ReplicateWriteLogger;
 import com.redis.spring.batch.item.redis.common.KeyValue;
@@ -30,6 +32,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 abstract class RiotTests extends AbstractRiotApplicationTestBase {
 

@@ -11,6 +11,8 @@ import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.retry.backoff.BackOffPolicy;
+import org.springframework.retry.backoff.BackOffPolicyBuilder;
 import org.springframework.util.ClassUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -66,6 +68,7 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         step.setCommitInterval(stepArgs.getChunkSize());
         step.setRetryLimit(stepArgs.getRetryLimit());
         step.setSkipLimit(stepArgs.getSkipLimit());
+        step.setBackOffPolicy(backOffPolicy(stepArgs.getBackOffArgs()));
         if (shouldShowProgress()) {
             ProgressStepExecutionListener<?> listener = new ProgressStepExecutionListener<>();
             listener.setTaskName(taskName(step));
@@ -76,6 +79,14 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
             step.addListener(listener);
         }
         return step;
+    }
+
+    private BackOffPolicy backOffPolicy(BackOffArgs args) {
+        BackOffPolicyBuilder builder = BackOffPolicyBuilder.newBuilder();
+        builder.delay(args.getDelay().toMillis());
+        builder.maxDelay(args.getMaxDelay().toMillis());
+        builder.multiplier(args.getMultiplier());
+        return builder.build();
     }
 
     public long itemReaderSize(ItemReader<?> reader) {

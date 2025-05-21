@@ -33,6 +33,17 @@ public class StepArgs {
     @CommandLine.Option(names = "--dry-run", description = "Enable dummy writes.")
     private boolean dryRun;
 
+    @CommandLine.ArgGroup(exclusive = false)
+    private BackOffArgs backOffArgs = new BackOffArgs();
+
+    public BackOffArgs getBackOffArgs() {
+        return backOffArgs;
+    }
+
+    public void setBackOffArgs(BackOffArgs args) {
+        this.backOffArgs = args;
+    }
+
     public boolean isDryRun() {
         return dryRun;
     }

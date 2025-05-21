@@ -103,7 +103,7 @@ public abstract class AbstractTestBase {
 
     private PlatformTransactionManager transactionManager;
 
-    private TaskExecutorJobLauncher jobLauncher;
+    protected TaskExecutorJobLauncher jobLauncher;
 
     protected RedisScanItemReader<byte[], byte[]> scanDumpReader() {
         return client(RedisScanItemReader.dump());

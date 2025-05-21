@@ -1,9 +1,6 @@
 package com.redis.riot;
 
-import com.redis.riot.core.OffsetStore;
-import com.redis.riot.core.RedisStringOffsetStore;
-import com.redis.riot.core.RiotUtils;
-import com.redis.riot.core.RiotVersion;
+import com.redis.riot.core.*;
 import com.redis.riot.core.job.StepFactoryBean;
 import com.redis.riot.db.DatabaseObject;
 import com.redis.riot.db.SnowflakeStreamItemReader;
@@ -22,6 +19,7 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
+import org.springframework.batch.item.support.CompositeItemWriter;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
@@ -93,6 +91,9 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Option(names = "--offset-key", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}", paramLabel = "<name>")
     private String offsetKey = DEFAULT_OFFSET_KEY;
 
+    @Option(names = "--stream-limit", description = "Max length of RDI stream (default: ${DEFAULT-VALUE}). Use 0 for no limit.", paramLabel = "<int>")
+    private long rdiStreamLimit = StreamLengthBackpressureStatusSupplier.DEFAULT_LIMIT;
+
     @Override
     protected <I, O> StepFactoryBean<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
         StepFactoryBean<I, O> step = super.step(name, reader, writer);
@@ -118,13 +119,28 @@ public class SnowflakeImport extends AbstractRedisImport {
         }
         SnowflakeStreamItemReader reader = reader();
         reader.setOffsetStore(rdiOffsetStore());
-        RedisItemWriter<String, String, StreamMessage<String, String>> writer = rdiWriter();
-        configureTarget(writer);
         ItemProcessor<SnowflakeStreamRow, StreamMessage<String, String>> processor = RiotUtils.processor(new RowFilter(),
                 new FunctionItemProcessor<>(this::changeEvent), new ChangeEventToStreamMessage(rdiStream()));
-        StepFactoryBean<SnowflakeStreamRow, StreamMessage<String, String>> step = step(STEP_NAME, reader, writer);
+        StepFactoryBean<SnowflakeStreamRow, StreamMessage<String, String>> step = step(STEP_NAME, reader, rdiWriter());
         step.setItemProcessor(processor);
         return step;
+    }
+
+    private ItemWriter<StreamMessage<String, String>> rdiWriter() {
+        String stream = rdiStream();
+        RedisItemWriter<String, String, StreamMessage<String, String>> writer = rdiWriter(stream);
+        configureTarget(writer);
+        if (rdiStreamLimit > 0) {
+            BackpressureWriter<StreamMessage<String, String>> backpressureWriter = new BackpressureWriter<>();
+            StreamLengthBackpressureStatusSupplier statusSupplier = new StreamLengthBackpressureStatusSupplier(
+                    targetRedisContext.getConnection(), stream);
+            statusSupplier.setLimit(rdiStreamLimit);
+            backpressureWriter.setStatusSupplier(statusSupplier);
+            CompositeItemWriter<StreamMessage<String, String>> composite = new CompositeItemWriter<>();
+            composite.setDelegates(Arrays.asList(backpressureWriter, writer));
+            return composite;
+        }
+        return writer;
     }
 
     private OffsetStore rdiOffsetStore() {
@@ -208,8 +224,7 @@ public class SnowflakeImport extends AbstractRedisImport {
         }
     }
 
-    private RedisItemWriter<String, String, StreamMessage<String, String>> rdiWriter() {
-        String stream = rdiStream();
+    private RedisItemWriter<String, String, StreamMessage<String, String>> rdiWriter(String stream) {
         return new RedisItemWriter<>(StringCodec.UTF8, new Xadd<>(m -> stream, Arrays::asList));
     }
 
@@ -333,6 +348,13 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     public void setOffsetPrefix(String offsetPrefix) {
         this.offsetPrefix = offsetPrefix;
+    }
+
+    public long getRdiStreamLimit() {
+        return rdiStreamLimit;
+    }
+
+    public void setRdiStreamLimit(long rdiStreamLimit) {
     }
 
 }
