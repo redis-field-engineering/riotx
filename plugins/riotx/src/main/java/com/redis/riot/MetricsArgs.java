@@ -134,6 +134,18 @@ public class MetricsArgs {
         this.properties = properties;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDecriptions(boolean decriptions) {
+        this.decriptions = decriptions;
+    }
+
     public void configure(RedisContext context) {
         if (redis) {
             MicrometerCommandLatencyRecorder recorder = new MicrometerCommandLatencyRecorder(Metrics.globalRegistry,
