@@ -9,6 +9,7 @@ import java.util.concurrent.Callable;
 
 import com.redis.riot.core.Expression;
 import com.redis.riot.core.InetSocketAddressList;
+import com.redis.riot.core.PrefixedNumber;
 import com.redis.riot.core.TemplateExpression;
 import com.redis.riot.db.DatabaseObject;
 import com.redis.spring.batch.item.redis.common.Range;
@@ -61,7 +62,7 @@ public class MainCommand extends BaseCommand implements Callable<Integer>, IO {
         commandLine.registerConverter(JsonPath.class, JsonPath::of);
         commandLine.registerConverter(DatabaseObject.class, DatabaseObject::parse);
         commandLine.registerConverter(InetSocketAddressList.class, InetSocketAddressList::parse);
-
+        commandLine.registerConverter(PrefixedNumber.class, PrefixedNumber::parse);
         commandLine.setExecutionStrategy(
                 new CompositeExecutionStrategy(LoggingMixin::executionStrategy, this::executionStrategy));
         return commandLine;

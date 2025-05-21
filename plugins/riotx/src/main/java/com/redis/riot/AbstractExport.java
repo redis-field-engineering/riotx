@@ -2,12 +2,13 @@ package com.redis.riot;
 
 import com.redis.riot.core.KeyValueFilter;
 import com.redis.riot.core.RedisContext;
-import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.core.job.StepFactoryBean;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.step.FlushingChunkProvider;
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.unit.DataSize;
@@ -42,9 +43,18 @@ public abstract class AbstractExport extends AbstractJobCommand {
     private RedisContext sourceRedisContext;
 
     protected <K> ItemProcessor<KeyValue<K>, KeyValue<K>> keyValueFilter() {
-        KeyValueFilter<K> filter = new KeyValueFilter<>();
-        filter.setMemoryLimit(memoryLimit);
-        return filter;
+        if (memoryLimit != null && memoryLimit.toBytes() > 0) {
+            return new KeyValueFilter<>(memoryLimit.toBytes());
+        }
+        return null;
+    }
+
+    @Override
+    protected <I, O> StepFactoryBean<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
+        StepFactoryBean<I, O> step = super.step(name, reader, writer);
+        step.setFlushInterval(flushInterval);
+        step.setIdleTimeout(idleTimeout);
+        return step;
     }
 
     @Override
@@ -59,14 +69,6 @@ public abstract class AbstractExport extends AbstractJobCommand {
         readerArgs.configure(reader);
         reader.setMemoryLimit(memoryLimit);
         reader.setMemoryUsageSamples(memoryUsageSamples);
-    }
-
-    protected <K, V, T> RiotStep<KeyValue<K>, T> step(String name, RedisItemReader<K, V> reader, ItemWriter<T> writer) {
-        configureSource(reader);
-        RiotStep<KeyValue<K>, T> step = super.step(name, reader, writer);
-        step.flushInterval(flushInterval);
-        step.idleTimeout(idleTimeout);
-        return step;
     }
 
     @Override

@@ -17,77 +17,71 @@ import com.google.cloud.storage.StorageOptions;
 
 public class GoogleStorageOptions {
 
-	public static final GcpScope DEFAULT_SCOPE = GcpScope.STORAGE_READ_ONLY;
+    public static final GcpScope DEFAULT_SCOPE = GcpScope.STORAGE_READ_ONLY;
 
-	private Path keyFile;
-	private String projectId;
-	private String encodedKey;
-	private GcpScope scope = DEFAULT_SCOPE;
+    private Path keyFile;
 
-	public Storage storage() {
-		StorageOptions.Builder builder = StorageOptions.newBuilder();
-		builder.setProjectId(ServiceOptions.getDefaultProjectId());
-		builder.setHeaderProvider(new UserAgentHeaderProvider(GcpStorageAutoConfiguration.class));
-		if (keyFile != null) {
-			InputStream inputStream;
-			try {
-				inputStream = Files.newInputStream(keyFile);
-			} catch (IOException e) {
-				throw new RuntimeIOException("Could not read key file", e);
-			}
-			builder.setCredentials(credentials(inputStream));
-		}
-		if (encodedKey != null) {
-			byte[] bytes = Base64.getDecoder().decode(encodedKey);
-			builder.setCredentials(credentials(new ByteArrayInputStream(bytes)));
-		}
-		if (projectId != null) {
-			builder.setProjectId(projectId);
-		}
-		return builder.build().getService();
-	}
+    private String projectId;
 
-	private GoogleCredentials credentials(InputStream inputStream) {
-		GoogleCredentials credentials;
-		try {
-			credentials = GoogleCredentials.fromStream(inputStream);
-		} catch (IOException e) {
-			throw new RuntimeIOException("Could not create Google credentials", e);
-		}
-		credentials.createScoped(scope.getUrl());
-		return credentials;
-	}
+    private String encodedKey;
 
-	public Path getKeyFile() {
-		return keyFile;
-	}
+    private GcpScope scope = DEFAULT_SCOPE;
 
-	public void setKeyFile(Path keyFile) {
-		this.keyFile = keyFile;
-	}
+    public Storage storage() throws IOException {
+        StorageOptions.Builder builder = StorageOptions.newBuilder();
+        builder.setProjectId(ServiceOptions.getDefaultProjectId());
+        builder.setHeaderProvider(new UserAgentHeaderProvider(GcpStorageAutoConfiguration.class));
+        if (keyFile != null) {
+            InputStream inputStream;
+            inputStream = Files.newInputStream(keyFile);
+            builder.setCredentials(credentials(inputStream));
+        }
+        if (encodedKey != null) {
+            byte[] bytes = Base64.getDecoder().decode(encodedKey);
+            builder.setCredentials(credentials(new ByteArrayInputStream(bytes)));
+        }
+        if (projectId != null) {
+            builder.setProjectId(projectId);
+        }
+        return builder.build().getService();
+    }
 
-	public String getProjectId() {
-		return projectId;
-	}
+    private GoogleCredentials credentials(InputStream inputStream) throws IOException {
+        GoogleCredentials credentials = GoogleCredentials.fromStream(inputStream);
+        credentials.createScoped(scope.getUrl());
+        return credentials;
+    }
 
-	public void setProjectId(String projectId) {
-		this.projectId = projectId;
-	}
+    public Path getKeyFile() {
+        return keyFile;
+    }
 
-	public String getEncodedKey() {
-		return encodedKey;
-	}
+    public void setKeyFile(Path keyFile) {
+        this.keyFile = keyFile;
+    }
 
-	public void setEncodedKey(String encodedKey) {
-		this.encodedKey = encodedKey;
-	}
+    public String getProjectId() {
+        return projectId;
+    }
 
-	public GcpScope getScope() {
-		return scope;
-	}
+    public void setProjectId(String projectId) {
+        this.projectId = projectId;
+    }
 
-	public void setScope(GcpScope scope) {
-		this.scope = scope;
-	}
+    public String getEncodedKey() {
+        return encodedKey;
+    }
+
+    public void setEncodedKey(String encodedKey) {
+        this.encodedKey = encodedKey;
+    }
+
+    public GcpScope getScope() {
+        return scope;
+    }
+
+    public void setScope(GcpScope scope) {
+        this.scope = scope;
+    }
 
 }

@@ -2,13 +2,13 @@ package com.redis.riot.db;
 
 import com.redis.riot.core.InMemoryOffsetStore;
 import com.redis.riot.core.OffsetStore;
+import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.spring.batch.item.PollableItemReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamItemReader<SnowflakeStreamRow>
+public class SnowflakeStreamItemReader extends AbstractCountingItemReader<SnowflakeStreamRow>
         implements PollableItemReader<SnowflakeStreamRow> {
 
     private static final String OFFSET_SQL = "SELECT SYSTEM$STREAM_GET_TABLE_TIMESTAMP(?)";
@@ -86,10 +86,6 @@ public class SnowflakeStreamItemReader extends AbstractItemCountingItemStreamIte
     private long lastFetchTime;
 
     private Duration pollInterval = DEFAULT_POLL_INTERVAL;
-
-    public SnowflakeStreamItemReader() {
-        setName(ClassUtils.getShortName(getClass()));
-    }
 
     @Override
     protected void doOpen() throws Exception {

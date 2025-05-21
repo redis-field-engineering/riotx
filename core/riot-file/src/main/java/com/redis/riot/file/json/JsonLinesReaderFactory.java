@@ -1,7 +1,11 @@
-package com.redis.riot.file;
+package com.redis.riot.file.json;
 
 import java.util.Map;
 
+import com.redis.riot.file.AbstractReaderFactory;
+import com.redis.riot.file.MapFieldSetMapper;
+import com.redis.riot.file.ObjectMapperLineMapper;
+import com.redis.riot.file.ReadOptions;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.JsonLineMapper;

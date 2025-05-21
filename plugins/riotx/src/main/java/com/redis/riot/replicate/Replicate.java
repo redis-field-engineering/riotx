@@ -1,18 +1,21 @@
-package com.redis.riot;
+package com.redis.riot.replicate;
 
+import com.redis.riot.AbstractCompareCommand;
+import com.redis.riot.MetricsArgs;
+import com.redis.riot.RedisWriterArgs;
 import com.redis.riot.core.CompareMode;
 import com.redis.riot.core.RedisContext;
 import com.redis.riot.core.ReplicationMode;
 import com.redis.riot.core.RiotUtils;
-import com.redis.riot.core.job.CompositeFlow;
-import com.redis.riot.core.job.RiotFlow;
-import com.redis.riot.core.job.RiotStep;
-import com.redis.riot.core.job.StepFlow;
+import com.redis.riot.core.job.FlowFactoryBean;
+import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.StepFlowFactoryBean;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.common.RedisInfo;
 import com.redis.spring.batch.item.redis.common.RedisOperation;
+import com.redis.spring.batch.item.redis.reader.KeyComparison;
 import com.redis.spring.batch.item.redis.reader.KeyValueRead;
 import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
@@ -26,6 +29,8 @@ import org.springframework.util.StringUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+
+import java.util.Arrays;
 
 @Command(name = "replicate", aliases = "sync", description = "Replicate a Redis database into another Redis database.")
 public class Replicate extends AbstractCompareCommand {
@@ -80,12 +85,12 @@ public class Replicate extends AbstractCompareCommand {
     private boolean removeSourceKeys;
 
     @Override
-    protected Job job() {
+    protected Job job() throws Exception {
         return job(flow());
     }
 
     @Override
-    protected String taskName(RiotStep<?, ?> step) {
+    protected String taskName(StepFactoryBean<?, ?> step) {
         switch (step.getName()) {
             case SCAN_STEP:
                 return SCAN_TASK_NAME;
@@ -96,19 +101,20 @@ public class Replicate extends AbstractCompareCommand {
         }
     }
 
-    private RiotFlow flow() {
-        RiotFlow replicateFlow = replicateFlow();
+    private FlowFactoryBean flow() {
+        FlowFactoryBean replicateFlow = replicateFlow();
         if (shouldCompare()) {
-            StepFlow compareFlow = StepFlow.of("compareFlow", compareStep());
-            return CompositeFlow.sequential("replicateCompareFlow", replicateFlow, compareFlow);
+            StepFlowFactoryBean<KeyComparison<byte[]>, KeyComparison<byte[]>> compareFlow = new StepFlowFactoryBean<>(
+                    compareStep());
+            return FlowFactoryBean.sequential("replicateCompareFlow", Arrays.asList(replicateFlow, compareFlow));
         }
         return replicateFlow;
     }
 
-    public RiotFlow replicateFlow() {
+    public FlowFactoryBean replicateFlow() {
         switch (mode) {
             case LIVE:
-                return CompositeFlow.parrallel("scanLiveFlow", scanFlow(), liveFlow());
+                return FlowFactoryBean.parallel("scanLiveFlow", scanFlow(), liveFlow());
             case LIVEONLY:
                 return liveFlow();
             default:
@@ -116,12 +122,12 @@ public class Replicate extends AbstractCompareCommand {
         }
     }
 
-    private RiotFlow scanFlow() {
-        return StepFlow.of("scanFlow", scanStep());
+    private FlowFactoryBean scanFlow() {
+        return new StepFlowFactoryBean<>(scanStep());
     }
 
-    private RiotFlow liveFlow() {
-        return StepFlow.of("liveFlow", liveStep());
+    private FlowFactoryBean liveFlow() {
+        return new StepFlowFactoryBean<>(liveStep());
     }
 
     @Override
@@ -132,25 +138,27 @@ public class Replicate extends AbstractCompareCommand {
         writer.getRedisSupportCheck().getConsumers().add(this::unsupportedRedis);
     }
 
-    private RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> step(String name, RedisItemReader<byte[], byte[]> reader) {
-        RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> step = step(name, reader, targetWriter());
-        step.processor(keyValueFilter());
-        step.addReadListener(new ReplicateMetricsReadListener<>());
+    private StepFactoryBean<KeyValue<byte[]>, KeyValue<byte[]>> replicateStep(String name,
+            RedisItemReader<byte[], byte[]> reader) {
+        configureSource(reader);
+        StepFactoryBean<KeyValue<byte[]>, KeyValue<byte[]>> step = step(name, reader, targetWriter());
+        step.setItemProcessor(keyValueFilter());
+        step.addListener(new ReplicateMetricsReadListener<>());
         if (logKeys) {
             log.info("Adding key logger");
-            step.addWriteListener(new ReplicateWriteLogger<>(log, reader.getCodec()));
-            step.addReadListener(new ReplicateReadLogger<>(log, reader.getCodec()));
+            step.addListener(new ReplicateWriteLogger<>(log, reader.getCodec()));
+            step.addListener(new ReplicateReadLogger<>(log, reader.getCodec()));
         }
-        step.addWriteListener(new ReplicateMetricsWriteListener<>());
+        step.addListener(new ReplicateMetricsWriteListener<>());
         return step;
     }
 
-    protected RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> scanStep() {
-        return step(SCAN_STEP, new RedisScanItemReader<>(CODEC, readOperation()));
+    protected StepFactoryBean<KeyValue<byte[]>, KeyValue<byte[]>> scanStep() {
+        return replicateStep(SCAN_STEP, new RedisScanItemReader<>(CODEC, readOperation()));
     }
 
-    protected RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> liveStep() {
-        return step(LIVE_STEP, new RedisLiveItemReader<>(CODEC, readOperation()));
+    protected StepFactoryBean<KeyValue<byte[]>, KeyValue<byte[]>> liveStep() {
+        return replicateStep(LIVE_STEP, new RedisLiveItemReader<>(CODEC, readOperation()));
     }
 
     protected ItemWriter<KeyValue<byte[]>> targetWriter() {
@@ -164,7 +172,6 @@ public class Replicate extends AbstractCompareCommand {
             return new CompositeItemWriter<>(writer, sourceDelete);
         }
         return writer;
-
     }
 
     private <T> RedisItemWriter<byte[], byte[], T> writer(RedisOperation<byte[], byte[], T, Object> operation) {

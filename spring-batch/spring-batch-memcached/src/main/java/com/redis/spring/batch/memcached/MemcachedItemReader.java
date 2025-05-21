@@ -1,11 +1,18 @@
 package com.redis.spring.batch.memcached;
 
+import com.redis.spring.batch.item.AbstractCountingItemReader;
+import com.redis.spring.batch.memcached.reader.LruCrawlerMetadumpOperation.Callback;
+import com.redis.spring.batch.memcached.reader.LruCrawlerMetadumpOperationImpl;
+import com.redis.spring.batch.memcached.reader.LruMetadumpEntry;
+import net.spy.memcached.MemcachedClient;
+import net.spy.memcached.ops.OperationStatus;
+import net.spy.memcached.transcoders.Transcoder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.util.ClassUtils;
+
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -13,20 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.StreamSupport;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
-import org.springframework.util.ClassUtils;
-
-import com.redis.spring.batch.memcached.reader.LruCrawlerMetadumpOperation.Callback;
-import com.redis.spring.batch.memcached.reader.LruCrawlerMetadumpOperationImpl;
-import com.redis.spring.batch.memcached.reader.LruMetadumpEntry;
-
-import net.spy.memcached.MemcachedClient;
-import net.spy.memcached.ops.OperationStatus;
-import net.spy.memcached.transcoders.Transcoder;
-
-public class MemcachedItemReader extends AbstractItemCountingItemStreamItemReader<MemcachedEntry> {
+public class MemcachedItemReader extends AbstractCountingItemReader<MemcachedEntry> {
 
     public static final int DEFAULT_QUEUE_CAPACITY = 10000;
 
@@ -55,7 +49,6 @@ public class MemcachedItemReader extends AbstractItemCountingItemStreamItemReade
     private Iterator<MemcachedEntry> iterator = Collections.emptyIterator();
 
     public MemcachedItemReader(Supplier<MemcachedClient> clientSupplier) {
-        setName(ClassUtils.getShortName(getClass()));
         this.clientSupplier = clientSupplier;
     }
 

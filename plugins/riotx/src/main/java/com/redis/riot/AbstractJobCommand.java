@@ -1,9 +1,10 @@
 package com.redis.riot;
 
-import com.redis.riot.core.job.CompositeFlow;
+import com.redis.riot.core.job.FlowFactoryBean;
 import com.redis.riot.core.job.JobExecutor;
-import com.redis.riot.core.job.RiotFlow;
-import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.StepFlowFactoryBean;
+import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
 import com.redis.spring.batch.item.redis.reader.KeyComparisonItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
@@ -14,8 +15,6 @@ import org.springframework.util.ClassUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 
-import java.util.Arrays;
-import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 @Command
@@ -35,16 +34,16 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         super.initialize();
     }
 
-    protected Job job(RiotFlow flow) {
+    protected Job job(StepFactoryBean<?, ?> step) throws Exception {
+        return job(stepFlow(step));
+    }
+
+    protected <I, O> StepFlowFactoryBean<I, O> stepFlow(StepFactoryBean<I, O> step) {
+        return new StepFlowFactoryBean<>(step);
+    }
+
+    protected Job job(FlowFactoryBean flow) throws Exception {
         return jobExecutor.job(jobName(), flow);
-    }
-
-    protected Job job(Iterable<RiotStep<?, ?>> steps) {
-        return job(CompositeFlow.sequential("mainFlow", steps));
-    }
-
-    protected Job job(RiotStep<?, ?>... steps) {
-        return job(Arrays.asList(steps));
     }
 
     private String jobName() {
@@ -54,44 +53,56 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         return commandSpec.name();
     }
 
-    protected <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
-        RiotStep<I, O> step = new RiotStep<>(name, reader, writer);
-        step.setChunkSize(stepArgs.getChunkSize());
+    protected <I, O> StepFactoryBean<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
+        StepFactoryBean<I, O> step = new StepFactoryBean<>();
+        step.setBeanName(name == null ? jobName() : name);
+        step.setItemReader(reader);
+        step.setItemWriter(writer);
+        step.setJobRepository(jobExecutor.getJobRepository());
+        step.setTransactionManager(jobExecutor.getTransactionManager());
         step.setDryRun(stepArgs.isDryRun());
-        step.setRetryLimit(stepArgs.getRetryLimit());
-        step.setRetryPolicy(stepArgs.getRetryPolicy());
-        step.setSkipLimit(stepArgs.getSkipLimit());
-        step.setSkipPolicy(stepArgs.getSkipPolicy());
         step.setSleep(stepArgs.getSleep());
         step.setThreads(stepArgs.getThreads());
+        step.setCommitInterval(stepArgs.getChunkSize());
+        step.setRetryLimit(stepArgs.getRetryLimit());
+        step.setSkipLimit(stepArgs.getSkipLimit());
         if (shouldShowProgress()) {
-            ProgressStepExecutionListener<O> listener = new ProgressStepExecutionListener<>();
+            ProgressStepExecutionListener<?> listener = new ProgressStepExecutionListener<>();
             listener.setTaskName(taskName(step));
-            listener.setInitialMax(maxItemCount(step.getReader()));
+            listener.setInitialMax(() -> itemReaderSize(step.getItemReader()));
             listener.setExtraMessage(extraMessage(step));
             listener.setProgressStyle(progressArgs.getStyle());
             listener.setUpdateInterval(progressArgs.getUpdateInterval());
-            step.addExecutionListener(listener);
-            step.addWriteListener(listener);
+            step.addListener(listener);
         }
         return step;
     }
 
-    protected <I, O> Supplier<String> extraMessage(RiotStep<I, O> step) {
-        return null;
-    }
-
-    protected LongSupplier maxItemCount(ItemReader<?> reader) {
+    public long itemReaderSize(ItemReader<?> reader) {
+        if (reader instanceof AbstractCountingItemReader) {
+            int count = ((AbstractCountingItemReader<?>) reader).getMaxItemCount();
+            if (count != Integer.MAX_VALUE) {
+                return count;
+            }
+        }
         if (reader instanceof RedisScanItemReader) {
-            return BatchUtils.scanSizeEstimator((RedisScanItemReader<?, ?>) reader);
+            return size((RedisScanItemReader<?, ?>) reader);
         }
         if (reader instanceof KeyComparisonItemReader<?, ?>) {
-            return maxItemCount(((KeyComparisonItemReader<?, ?>) reader).getSourceReader());
+            return size(((KeyComparisonItemReader<?, ?>) reader).getSourceReader());
         }
+        return -1;
+    }
+
+    private long size(RedisScanItemReader<?, ?> reader) {
+        return BatchUtils.scanSizeEstimator(reader).getAsLong();
+    }
+
+    protected Supplier<String> extraMessage(StepFactoryBean<?, ?> step) {
         return null;
     }
 
-    protected abstract String taskName(RiotStep<?, ?> step);
+    protected abstract String taskName(StepFactoryBean<?, ?> step);
 
     @Override
     protected void execute() throws Exception {

@@ -1,31 +1,21 @@
 package com.redis.spring.batch.item.redis.gen;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.redis.lettucemod.timeseries.Sample;
+import com.redis.spring.batch.item.AbstractCountingItemReader;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.common.Range;
+import io.lettuce.core.ScoredValue;
+import io.lettuce.core.StreamMessage;
+
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
-import org.springframework.util.ClassUtils;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.redis.lettucemod.timeseries.Sample;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.Range;
-
-import io.lettuce.core.ScoredValue;
-import io.lettuce.core.StreamMessage;
-
-public class GeneratorItemReader extends AbstractItemCountingItemStreamItemReader<KeyValue<String>> {
+public class GeneratorItemReader extends AbstractCountingItemReader<KeyValue<String>> {
 
 	public static final String EVENT = "datagen";
 	public static final String DEFAULT_KEYSPACE = "gen";
@@ -55,10 +45,6 @@ public class GeneratorItemReader extends AbstractItemCountingItemStreamItemReade
 	private StringOptions stringOptions = new StringOptions();
 	private ZsetOptions zsetOptions = new ZsetOptions();
 	private List<ItemType> types = defaultTypes();
-
-	public GeneratorItemReader() {
-		setName(ClassUtils.getShortName(getClass()));
-	}
 
 	private String key() {
 		return key(index(keyRange));

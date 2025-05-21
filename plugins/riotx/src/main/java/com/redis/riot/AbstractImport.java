@@ -5,17 +5,15 @@ import com.redis.riot.core.QuietMapAccessor;
 import com.redis.riot.core.RedisContext;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.PredicateOperator;
-import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.operation.*;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.MultiOperation;
 import com.redis.spring.batch.item.redis.common.RedisOperation;
+import com.redis.riot.core.job.StepFactoryBean;
 import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -36,8 +34,6 @@ public abstract class AbstractImport extends AbstractJobCommand {
 
     public static final String VAR_REDIS = "redis";
 
-    private static final String STEP_NAME = "import";
-
     @ArgGroup(exclusive = false)
     private RedisWriterArgs targetRedisWriterArgs = new RedisWriterArgs();
 
@@ -57,7 +53,7 @@ public abstract class AbstractImport extends AbstractJobCommand {
     private StandardEvaluationContext evaluationContext;
 
     @Override
-    protected String taskName(RiotStep<?, ?> step) {
+    protected String taskName(StepFactoryBean<?, ?> step) {
         return TASK_NAME;
     }
 
@@ -93,13 +89,6 @@ public abstract class AbstractImport extends AbstractJobCommand {
         return !CollectionUtils.isEmpty(importOperationCommands);
     }
 
-    protected <S> RiotStep<S, Map<String, Object>> operationStep(ItemReader<S> reader) {
-        Assert.isTrue(hasOperations(), "No Redis command specified");
-        RedisItemWriter<String, String, Map<String, Object>> writer = operationWriter();
-        configureTargetRedisWriter(writer);
-        return step(STEP_NAME, reader, writer);
-    }
-
     protected ItemProcessor<Map<String, Object>, Map<String, Object>> operationProcessor() {
         return processor(evaluationContext, processorArgs);
     }
@@ -119,10 +108,13 @@ public abstract class AbstractImport extends AbstractJobCommand {
     }
 
     protected RedisItemWriter<String, String, Map<String, Object>> operationWriter() {
-        return RedisItemWriter.operation(new MultiOperation<>(operations()));
+        RedisItemWriter<String, String, Map<String, Object>> writer = RedisItemWriter.operation(
+                new MultiOperation<>(operations()));
+        configureTarget(writer);
+        return writer;
     }
 
-    protected void configureTargetRedisWriter(RedisItemWriter<?, ?, ?> writer) {
+    protected void configureTarget(RedisItemWriter<?, ?, ?> writer) {
         targetRedisContext.configure(writer);
         log.info("Configuring target Redis writer with {}", targetRedisWriterArgs);
         targetRedisWriterArgs.configure(writer);

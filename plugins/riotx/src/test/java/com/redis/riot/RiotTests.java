@@ -8,6 +8,8 @@ import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.riot.core.CompareMode;
 import com.redis.riot.core.ReplicationMode;
+import com.redis.riot.replicate.Replicate;
+import com.redis.riot.replicate.ReplicateWriteLogger;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.common.Range;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;

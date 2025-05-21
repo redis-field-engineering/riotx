@@ -1,4 +1,4 @@
-package com.redis.riot;
+package com.redis.riot.replicate;
 
 import java.util.function.Function;
 

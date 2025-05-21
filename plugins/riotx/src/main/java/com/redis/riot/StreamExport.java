@@ -1,15 +1,13 @@
 package com.redis.riot;
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redis.riot.core.RiotUtils;
-import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.core.function.KeyValueToStreamMessage;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.KeyEventItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
 import com.redis.spring.batch.item.redis.writer.impl.Xadd;
+import com.redis.riot.core.job.StepFactoryBean;
 import io.lettuce.core.StreamMessage;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
@@ -18,8 +16,6 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.function.Supplier;
 
 @Command(name = "stream-export", description = "Export Redis data to a Redis stream.")
@@ -31,7 +27,7 @@ public class StreamExport extends AbstractRedisTargetExport {
 
     private static final String TASK_NAME = "Exporting";
 
-    private static final ObjectMapper jsonMapper = jsonMapper();
+    private static final String STEP_NAME = "stream-export-step";
 
     @ArgGroup(exclusive = false)
     private RedisWriterArgs targetRedisWriterArgs = new RedisWriterArgs();
@@ -39,15 +35,8 @@ public class StreamExport extends AbstractRedisTargetExport {
     @Option(names = "--stream", description = "Target stream key (default: ${DEFAULT-VALUE}).", paramLabel = "<key>")
     private String stream = DEFAULT_STREAM;
 
-    private static ObjectMapper jsonMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.setSerializationInclusion(Include.NON_NULL);
-        mapper.setSerializationInclusion(Include.NON_DEFAULT);
-        return mapper;
-    }
-
     @Override
-    protected Job job() {
+    protected Job job() throws Exception {
         return job(step());
     }
 
@@ -58,53 +47,30 @@ public class StreamExport extends AbstractRedisTargetExport {
         super.configureTarget(writer);
     }
 
-    private RiotStep<KeyValue<String>, StreamMessage<String, String>> step() {
+    private StepFactoryBean<KeyValue<String>, StreamMessage<String, String>> step() {
         RedisLiveItemReader<String, String> reader = RedisLiveItemReader.struct();
         configureSource(reader);
         RedisItemWriter<String, String, StreamMessage<String, String>> writer = writer();
         configureTarget(writer);
-        RiotStep<KeyValue<String>, StreamMessage<String, String>> step = step("stream-export", reader, writer);
-        ItemProcessor<KeyValue<String>, StreamMessage<String, String>> processor = this::process;
-        step.processor(RiotUtils.processor(keyValueFilter(), processor));
+        ItemProcessor<KeyValue<String>, StreamMessage<String, String>> processor = RiotUtils.processor(keyValueFilter(),
+                new KeyValueToStreamMessage(stream));
+        StepFactoryBean<KeyValue<String>, StreamMessage<String, String>> step = step(STEP_NAME, reader, writer);
+        step.setItemProcessor(processor);
         return step;
     }
 
     @Override
-    protected String taskName(RiotStep<?, ?> step) {
+    protected String taskName(StepFactoryBean<?, ?> step) {
         return TASK_NAME;
     }
 
     @Override
-    protected <I, O> Supplier<String> extraMessage(RiotStep<I, O> step) {
-        return () -> liveExtraMessage((RedisLiveItemReader<?, ?>) step.getReader());
+    protected Supplier<String> extraMessage(StepFactoryBean<?, ?> step) {
+        return () -> liveExtraMessage((RedisLiveItemReader<?, ?>) step.getItemReader());
     }
 
     private RedisItemWriter<String, String, StreamMessage<String, String>> writer() {
         return RedisItemWriter.operation(new Xadd<>(t -> stream, Arrays::asList));
-    }
-
-    private StreamMessage<String, String> process(KeyValue<String> struct) throws JsonProcessingException {
-        Map<String, String> body = new LinkedHashMap<>();
-        body.put("key", struct.getKey());
-        body.put("time", String.valueOf(struct.getTimestamp()));
-        body.put("type", struct.getType());
-        body.put("ttl", String.valueOf(struct.getTtl()));
-        body.put("mem", String.valueOf(struct.getMemoryUsage()));
-        body.put("value", value(struct));
-        return new StreamMessage<>(stream, null, body);
-    }
-
-    private String value(KeyValue<String> struct) throws JsonProcessingException {
-        if (struct.getType() == null) {
-            return null;
-        }
-        switch (struct.getType()) {
-            case KeyValue.TYPE_STRING:
-            case KeyValue.TYPE_JSON:
-                return (String) struct.getValue();
-            default:
-                return jsonMapper.writeValueAsString(struct.getValue());
-        }
     }
 
     private String liveExtraMessage(RedisLiveItemReader<?, ?> reader) {

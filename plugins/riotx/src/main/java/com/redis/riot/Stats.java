@@ -1,12 +1,10 @@
 package com.redis.riot;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
-
-import com.redis.riot.core.job.RiotStep;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.reader.KeyEventListenerContainer;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
+import com.redis.riot.core.job.StepFactoryBean;
+import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.StepExecution;
@@ -16,16 +14,15 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.support.AbstractItemStreamItemWriter;
 import org.springframework.util.unit.DataSize;
-
-import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.reader.KeyEventListenerContainer;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-
-import io.lettuce.core.codec.StringCodec;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 @Command(name = "stats", description = "Analyze a Redis database and report statistics.")
 public class Stats extends AbstractRedisCommand {
@@ -33,6 +30,8 @@ public class Stats extends AbstractRedisCommand {
     public static final DataSize DEFAULT_BIG_THRESHOLD = DataSize.ofMegabytes(1);
 
     private static final String TASK_NAME = "Analyzing";
+
+    private static final String STEP_NAME = "stats-step";
 
     @ArgGroup(exclusive = false)
     private RedisReaderArgs readerArgs = new RedisReaderArgs();
@@ -56,12 +55,12 @@ public class Stats extends AbstractRedisCommand {
     private short[] quantiles = StatsPrinter.DEFAULT_QUANTILES;
 
     @Override
-    protected String taskName(RiotStep<?, ?> step) {
+    protected String taskName(StepFactoryBean<?, ?> step) {
         return TASK_NAME;
     }
 
     @Override
-    protected Job job() {
+    protected Job job() throws Exception {
         RedisScanItemReader<String, String> reader = RedisScanItemReader.type();
         reader.setMemoryLimit(-1);
         reader.setMemoryUsageSamples(memoryUsageSamples);
@@ -73,8 +72,8 @@ public class Stats extends AbstractRedisCommand {
                 getRedisContext().client(), StringCodec.UTF8);
         int database = getRedisContext().uri().getDatabase();
         StatsWriter writer = new StatsWriter(stats, listenerContainer, database, readerArgs.getKeyPattern());
-        RiotStep<KeyValue<String>, KeyValue<String>> step = step("stats", reader, writer);
-        step.addExecutionListener(new ExecutionListener(statsPrinter(stats)));
+        StepFactoryBean<KeyValue<String>, KeyValue<String>> step = step(STEP_NAME, reader, writer);
+        step.addListener(new ExecutionListener(statsPrinter(stats)));
         return job(step);
     }
 

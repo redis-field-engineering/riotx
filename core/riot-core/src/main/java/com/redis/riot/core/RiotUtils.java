@@ -1,14 +1,18 @@
 package com.redis.riot.core;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.function.FunctionItemProcessor;
+import org.springframework.batch.item.support.CompositeItemProcessor;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.ObjectUtils;
 
-import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
@@ -20,16 +24,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Timer;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.function.FunctionItemProcessor;
-import org.springframework.batch.item.support.CompositeItemProcessor;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.ObjectUtils;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public abstract class RiotUtils {
 
@@ -58,7 +53,6 @@ public abstract class RiotUtils {
         return processor(functions.toArray(new Function[0]));
     }
 
-    @SuppressWarnings("unchecked")
     public static <S, T> ItemProcessor<S, T> processor(Function<?, ?>... functions) {
         return processor(
                 Stream.of(functions).filter(Objects::nonNull).map(FunctionItemProcessor::new).toArray(ItemProcessor[]::new));
@@ -95,11 +89,7 @@ public abstract class RiotUtils {
     }
 
     public static PrintStream newPrintStream(OutputStream out, boolean autoFlush) {
-        try {
-            return new PrintStream(out, autoFlush, UTF_8.name());
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalArgumentException(e);
-        }
+        return new PrintStream(out, autoFlush, UTF_8);
     }
 
     public static PrintWriter newPrintWriter(OutputStream out) {
@@ -111,11 +101,7 @@ public abstract class RiotUtils {
     }
 
     public static String toString(ByteArrayOutputStream out) {
-        try {
-            return out.toString(UTF_8.name());
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalArgumentException(e);
-        }
+        return out.toString(UTF_8);
     }
 
     public static void registerFunction(StandardEvaluationContext context, String functionName, Class<?> clazz,
@@ -143,6 +129,14 @@ public abstract class RiotUtils {
     public static void latencyTimer(MeterRegistry registry, String name, String description, Duration duration, Tags tags) {
         Timer lag = Timer.builder(name).description(description).tags(tags).register(registry);
         lag.record(duration);
+    }
+
+    public static ThreadPoolTaskExecutor threadPoolTaskExecutor(int poolSize) {
+        ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
+        taskExecutor.setMaxPoolSize(poolSize);
+        taskExecutor.setCorePoolSize(poolSize);
+        taskExecutor.initialize();
+        return taskExecutor;
     }
 
 }

@@ -4,7 +4,7 @@ import com.redis.riot.core.OffsetStore;
 import com.redis.riot.core.RedisStringOffsetStore;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.RiotVersion;
-import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.core.job.StepFactoryBean;
 import com.redis.riot.db.DatabaseObject;
 import com.redis.riot.db.SnowflakeStreamItemReader;
 import com.redis.riot.db.SnowflakeStreamRow;
@@ -30,6 +30,7 @@ import picocli.CommandLine.Parameters;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @CommandLine.Command(name = "snowflake-import", description = "Import from a snowflake table (uses Snowflake Streams to track changes).")
@@ -93,23 +94,37 @@ public class SnowflakeImport extends AbstractRedisImport {
     private String offsetKey = DEFAULT_OFFSET_KEY;
 
     @Override
-    protected Job job() {
+    protected <I, O> StepFactoryBean<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
+        StepFactoryBean<I, O> step = super.step(name, reader, writer);
+        step.setFlushInterval(flushInterval);
+        step.setIdleTimeout(idleTimeout);
+        return step;
+    }
+
+    @Override
+    protected Job job() throws Exception {
         return job(step());
     }
 
-    private RiotStep<?, ?> step() {
+    private StepFactoryBean<?, ?> step() {
         if (hasOperations()) {
             SnowflakeStreamItemReader reader = reader();
             reader.setOffsetStore(stringOffsetStore());
-            return operationStep(reader).processor(
-                    RiotUtils.processor(new RowFilter(), new FunctionItemProcessor<>(SnowflakeStreamRow::getColumns),
-                            operationProcessor()));
+            ItemProcessor<SnowflakeStreamRow, Map<String, Object>> processor = RiotUtils.processor(new RowFilter(),
+                    new FunctionItemProcessor<>(SnowflakeStreamRow::getColumns), operationProcessor());
+            StepFactoryBean<SnowflakeStreamRow, Map<String, Object>> step = step(STEP_NAME, reader, operationWriter());
+            step.setItemProcessor(processor);
+            return step;
         }
         SnowflakeStreamItemReader reader = reader();
         reader.setOffsetStore(rdiOffsetStore());
         RedisItemWriter<String, String, StreamMessage<String, String>> writer = rdiWriter();
-        configureTargetRedisWriter(writer);
-        return step(RDI_STEP_NAME, reader(), writer).processor(rdiProcessor());
+        configureTarget(writer);
+        ItemProcessor<SnowflakeStreamRow, StreamMessage<String, String>> processor = RiotUtils.processor(new RowFilter(),
+                new FunctionItemProcessor<>(this::changeEvent), new ChangeEventToStreamMessage(rdiStream()));
+        StepFactoryBean<SnowflakeStreamRow, StreamMessage<String, String>> step = step(STEP_NAME, reader, writer);
+        step.setItemProcessor(processor);
+        return step;
     }
 
     private OffsetStore rdiOffsetStore() {
@@ -121,11 +136,6 @@ public class SnowflakeImport extends AbstractRedisImport {
     private OffsetStore stringOffsetStore() {
         String key = String.format("%s:%s", offsetPrefix, table.fullName());
         return new RedisStringOffsetStore(targetRedisContext.client(), key);
-    }
-
-    private ItemProcessor<SnowflakeStreamRow, StreamMessage<String, String>> rdiProcessor() {
-        return RiotUtils.processor(new RowFilter(), new FunctionItemProcessor<>(this::changeEvent),
-                new ChangeEventToStreamMessage(rdiStream()));
     }
 
     private static class RowFilter implements ItemProcessor<SnowflakeStreamRow, SnowflakeStreamRow> {
@@ -205,14 +215,6 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     private String rdiStream() {
         return String.format("%s:%s", RDI_STREAM_PREFIX, table.fullName());
-    }
-
-    @Override
-    protected <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
-        RiotStep<I, O> step = super.step(name, reader, writer);
-        step.flushInterval(flushInterval);
-        step.idleTimeout(idleTimeout);
-        return step;
     }
 
     protected SnowflakeStreamItemReader reader() {

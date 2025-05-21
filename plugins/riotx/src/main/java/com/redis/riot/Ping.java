@@ -1,42 +1,42 @@
 package com.redis.riot;
 
+import com.redis.riot.core.PingExecution;
+import com.redis.riot.core.PingExecutionItemReader;
+import com.redis.riot.core.PrefixedNumber;
+import com.redis.riot.core.job.StepFactoryBean;
+import io.lettuce.core.metrics.CommandMetrics.CommandLatency;
+import io.lettuce.core.metrics.DefaultCommandLatencyCollectorOptions;
+import org.HdrHistogram.Histogram;
+import org.LatencyUtils.LatencyStats;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.item.Chunk;
+import org.springframework.batch.item.ItemWriter;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.ParentCommand;
+
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.function.LongSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
-
-import com.redis.riot.core.PingExecution;
-import com.redis.riot.core.PingExecutionItemReader;
-import com.redis.riot.core.job.RiotStep;
-import org.HdrHistogram.Histogram;
-import org.LatencyUtils.LatencyStats;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.item.Chunk;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.ItemWriter;
-
-import io.lettuce.core.metrics.CommandMetrics.CommandLatency;
-import io.lettuce.core.metrics.DefaultCommandLatencyCollectorOptions;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.ParentCommand;
 
 @Command(name = "ping", description = "Test connectivity to a Redis server.")
 public class Ping extends AbstractRedisCommand {
 
     private static final String TASK_NAME = "Pinging";
 
-    public static final int DEFAULT_COUNT = 1000;
+    public static final long DEFAULT_COUNT = 1000;
 
     public static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
 
     private static final List<Double> DEFAULT_PERCENTILES = DoubleStream.of(
-            DefaultCommandLatencyCollectorOptions.DEFAULT_TARGET_PERCENTILES).boxed().collect(Collectors.toList());
+            DefaultCommandLatencyCollectorOptions.DEFAULT_TARGET_PERCENTILES).boxed().toList();
+
+    private static final String STEP_NAME = "ping-step";
 
     @ParentCommand
     IO parent;
@@ -48,25 +48,26 @@ public class Ping extends AbstractRedisCommand {
     private Set<Double> percentiles = defaultPercentiles();
 
     @Option(names = "--count", description = "Number of pings to execute (default: ${DEFAULT-VALUE}).", paramLabel = "<count>")
-    private int count = DEFAULT_COUNT;
+    private PrefixedNumber count = PrefixedNumber.of(DEFAULT_COUNT);
 
     @Override
-    protected String taskName(RiotStep<?, ?> step) {
+    protected String taskName(StepFactoryBean<?, ?> step) {
         return TASK_NAME;
     }
 
     @Override
-    protected LongSupplier maxItemCount(ItemReader<?> reader) {
-        return this::getCount;
+    protected Job job() throws Exception {
+        return job(step(STEP_NAME, reader(), writer()));
     }
 
-    @Override
-    protected Job job() {
+    private PingLatencyItemWriter writer() {
+        return new PingLatencyItemWriter();
+    }
+
+    private PingExecutionItemReader reader() {
         PingExecutionItemReader reader = new PingExecutionItemReader(commands());
-        reader.setMaxItemCount(count);
-        PingLatencyItemWriter writer = new PingLatencyItemWriter();
-        RiotStep<PingExecution, PingExecution> step = step("ping", reader, writer);
-        return job(step);
+        reader.setMaxItemCount(count.intValue());
+        return reader;
     }
 
     public static Set<Double> defaultPercentiles() {
@@ -101,12 +102,12 @@ public class Ping extends AbstractRedisCommand {
 
     }
 
-    public int getCount() {
-        return count;
+    public long getCount() {
+        return count.getValue();
     }
 
     public void setCount(int count) {
-        this.count = count;
+        this.count = PrefixedNumber.of(count);
     }
 
     public TimeUnit getTimeUnit() {

@@ -1,4 +1,4 @@
 dependencies {
-    implementation 'org.springframework.batch:spring-batch-infrastructure'
+    implementation project(':spring-batch-redis-infrastructure')
     api group: 'net.datafaker', name: 'datafaker', version: datafakerVersion
 }

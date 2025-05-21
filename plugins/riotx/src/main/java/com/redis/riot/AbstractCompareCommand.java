@@ -4,7 +4,7 @@ import com.redis.riot.core.CompareStepListener;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.StringKeyValue;
 import com.redis.riot.core.function.ToStringKeyValue;
-import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.core.job.StepFactoryBean;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.*;
 import io.lettuce.core.codec.ByteArrayCodec;
@@ -19,6 +19,7 @@ import picocli.CommandLine.Option;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
@@ -46,11 +47,19 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
     private KeyValueProcessorArgs processorArgs = new KeyValueProcessorArgs();
 
     @Override
-    protected String taskName(RiotStep<?, ?> step) {
+    protected String taskName(StepFactoryBean<?, ?> step) {
         if (step.getName().equals(COMPARE_STEP_NAME)) {
             return COMPARE_TASK_NAME;
         }
         return null;
+    }
+
+    @Override
+    protected Supplier<String> extraMessage(StepFactoryBean<?, ?> step) {
+        if (COMPARE_STEP_NAME.equals(step.getName())) {
+            return () -> compareExtraMessage(step);
+        }
+        return super.extraMessage(step);
     }
 
     protected abstract boolean isStruct();
@@ -77,15 +86,17 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
         return evaluationContext;
     }
 
-    private <K> String compareMessage(KeyComparisonStatsWriter<K> stats) {
-        return CompareStepListener.statsByStatus(stats).stream().map(this::formatStatus).collect(Collectors.joining(" | "));
+    @SuppressWarnings("unchecked")
+    private <K> String compareExtraMessage(StepFactoryBean<?, ?> step) {
+        KeyComparisonStatsWriter<byte[]> writer = (KeyComparisonStatsWriter<byte[]>) step.getItemWriter();
+        return CompareStepListener.statsByStatus(writer).stream().map(this::formatStatus).collect(Collectors.joining(" | "));
     }
 
     private String formatStatus(Map.Entry<KeyComparison.Status, List<KeyComparisonStat>> e) {
         return String.format("%s %d", e.getKey(), e.getValue().stream().mapToLong(KeyComparisonStat::getCount).sum());
     }
 
-    protected RiotStep<KeyComparison<byte[]>, KeyComparison<byte[]>> compareStep() {
+    protected StepFactoryBean<KeyComparison<byte[]>, KeyComparison<byte[]>> compareStep() {
         RedisScanItemReader<byte[], byte[]> sourceReader = compareReader();
         configureSource(sourceReader);
         RedisScanItemReader<byte[], byte[]> targetReader = compareReader();
@@ -95,12 +106,12 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
         reader.setComparator(keyComparator());
         reader.setProcessor(RiotUtils.processor(keyValueFilter(), processor()));
         KeyComparisonStatsWriter<byte[]> writer = new KeyComparisonStatsWriter<>();
-        RiotStep<KeyComparison<byte[]>, KeyComparison<byte[]>> step = step(COMPARE_STEP_NAME, reader, writer);
+        StepFactoryBean<KeyComparison<byte[]>, KeyComparison<byte[]>> step = step(COMPARE_STEP_NAME, reader, writer);
         if (showDiffs) {
             log.info("Adding key diff logger");
-            step.addWriteListener(new CompareLoggingWriteListener<>(CODEC));
+            step.addListener(new CompareLoggingWriteListener<>(CODEC));
         }
-        step.addExecutionListener(new CompareStepListener(writer));
+        step.addListener(new CompareStepListener(writer));
         return step;
     }
 

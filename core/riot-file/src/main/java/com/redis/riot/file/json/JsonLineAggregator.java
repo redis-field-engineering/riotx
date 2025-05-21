@@ -1,4 +1,4 @@
-package com.redis.riot.file;
+package com.redis.riot.file.json;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

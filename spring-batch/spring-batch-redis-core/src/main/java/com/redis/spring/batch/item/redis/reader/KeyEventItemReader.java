@@ -1,29 +1,27 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.batch.core.observability.BatchMetrics;
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
-import org.springframework.data.util.Predicates;
-import org.springframework.util.ClassUtils;
-
 import com.redis.spring.batch.BatchRedisMetrics;
 import com.redis.spring.batch.UniqueBlockingQueue;
+import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.spring.batch.item.PollableItemReader;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
-
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.codec.RedisCodec;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.batch.core.observability.BatchMetrics;
+import org.springframework.data.util.Predicates;
+import org.springframework.util.ClassUtils;
 
-public class KeyEventItemReader<K, V> extends AbstractItemCountingItemStreamItemReader<KeyEvent<K>>
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+
+public class KeyEventItemReader<K, V> extends AbstractCountingItemReader<KeyEvent<K>>
         implements PollableItemReader<KeyEvent<K>> {
 
     public static final int DEFAULT_QUEUE_CAPACITY = 10000;
@@ -49,7 +47,6 @@ public class KeyEventItemReader<K, V> extends AbstractItemCountingItemStreamItem
     protected BlockingQueue<KeyEvent<K>> queue;
 
     public KeyEventItemReader(AbstractRedisClient client, RedisCodec<K, V> codec) {
-        setName(ClassUtils.getShortName(getClass()));
         this.listenerContainer = KeyEventListenerContainer.create(client, codec);
     }
 

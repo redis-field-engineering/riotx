@@ -1,23 +1,19 @@
 package com.redis.riot.parquet;
 
-import java.util.Map;
-
+import com.redis.spring.batch.item.AbstractCountingItemReader;
 import org.apache.parquet.hadoop.ParquetReader;
 import org.springframework.batch.item.file.ResourceAwareItemReaderItemStream;
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
 import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
-public class ParquetFileItemReader extends AbstractItemCountingItemStreamItemReader<Map<String, Object>>
+import java.util.Map;
+
+public class ParquetFileItemReader extends AbstractCountingItemReader<Map<String, Object>>
 		implements ResourceAwareItemReaderItemStream<Map<String, Object>> {
 
 	private Resource resource;
 	private ParquetReader<Map<String, Object>> reader;
-
-	public ParquetFileItemReader() {
-		setName(ClassUtils.getShortName(ParquetFileItemReader.class));
-	}
 
 	@Override
 	public void setResource(Resource resource) {

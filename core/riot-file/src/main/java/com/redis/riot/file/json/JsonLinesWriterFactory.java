@@ -1,5 +1,7 @@
-package com.redis.riot.file;
+package com.redis.riot.file.json;
 
+import com.redis.riot.file.AbstractWriterFactory;
+import com.redis.riot.file.WriteOptions;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.core.io.WritableResource;
 

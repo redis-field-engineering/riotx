@@ -3,6 +3,8 @@ package com.redis.riot.file;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.redis.riot.file.json.JsonLinesReaderFactory;
+import com.redis.riot.file.json.JsonReaderFactory;
 import org.springframework.util.MimeType;
 
 public class FileReaderRegistry {

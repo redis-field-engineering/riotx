@@ -1,28 +1,33 @@
 package com.redis.riot;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.LongSupplier;
-
-import com.redis.riot.core.job.RiotStep;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.util.StringUtils;
-
 import com.redis.lettucemod.search.CreateOptions;
 import com.redis.lettucemod.search.Field;
+import com.redis.riot.core.PrefixedNumber;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
 import com.redis.spring.batch.item.redis.gen.ItemType;
-
+import com.redis.riot.core.job.StepFactoryBean;
+import org.springframework.batch.core.Job;
+import org.springframework.util.StringUtils;
+import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Command(name = "gen", aliases = "generate", description = "Generate Redis data structures.")
 public class Generate extends AbstractRedisCommand {
 
+    public static final int DEFAULT_COUNT = 1000;
+
     private static final String TASK_NAME = "Generating";
+
+    private static final String STEP_NAME = "generate-step";
+
+    @CommandLine.Option(names = "--count", description = "Number of items to generate, e.g. 100 10k 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    private PrefixedNumber count = PrefixedNumber.of(DEFAULT_COUNT);
 
     @ArgGroup(exclusive = false)
     private GenerateArgs generateArgs = new GenerateArgs();
@@ -31,21 +36,17 @@ public class Generate extends AbstractRedisCommand {
     private RedisWriterArgs redisWriterArgs = new RedisWriterArgs();
 
     @Override
-    protected Job job() {
+    protected Job job() throws Exception {
         if (StringUtils.hasLength(generateArgs.getIndex())) {
             commands().ftCreate(generateArgs.getIndex(), indexCreateOptions(), indexFields());
         }
-        return job(step("generate", reader(), writer()));
+        StepFactoryBean<KeyValue<String>, KeyValue<String>> step = step(STEP_NAME, reader(), writer());
+        return job(step);
     }
 
     @Override
-    protected String taskName(RiotStep<?, ?> step) {
+    protected String taskName(StepFactoryBean<?, ?> step) {
         return TASK_NAME;
-    }
-
-    @Override
-    protected LongSupplier maxItemCount(ItemReader<?> reader) {
-        return generateArgs::getCount;
     }
 
     private RedisItemWriter<String, String, KeyValue<String>> writer() {
@@ -101,7 +102,7 @@ public class Generate extends AbstractRedisCommand {
 
     private GeneratorItemReader reader() {
         GeneratorItemReader reader = new GeneratorItemReader();
-        reader.setMaxItemCount(generateArgs.getCount());
+        reader.setMaxItemCount(count.intValue());
         generateArgs.configure(reader);
         return reader;
     }
@@ -120,6 +121,14 @@ public class Generate extends AbstractRedisCommand {
 
     public void setGenerateArgs(GenerateArgs args) {
         this.generateArgs = args;
+    }
+
+    public long getCount() {
+        return count.getValue();
+    }
+
+    public void setCount(long count) {
+        this.count = PrefixedNumber.of(count);
     }
 
 }
