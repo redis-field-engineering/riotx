@@ -1,22 +1,23 @@
 package com.redis.spring.batch.step;
 
-import org.springframework.batch.core.step.factory.SimpleStepFactoryBean;
+import org.springframework.batch.core.step.factory.FaultTolerantStepFactoryBean;
 
 import java.time.Duration;
 
-public class FlushingStepFactoryBean<T, S> extends SimpleStepFactoryBean<T, S> {
+public class FlushingFaultTolerantStepFactoryBean<T, S> extends FaultTolerantStepFactoryBean<T, S> {
 
-    public static final Duration DEFAULT_FLUSH_INTERVAL = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
+    private static final Duration DEFAULT_FLUSH_INTERVAL = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
 
-    public static final Duration DEFAULT_IDLE_TIMEOUT = FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT;
+    private static final Duration DEFAULT_IDLE_TIMEOUT = FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT;
 
     private Duration flushInterval = DEFAULT_FLUSH_INTERVAL;
 
     private Duration idleTimeout = DEFAULT_IDLE_TIMEOUT;
 
     @Override
-    protected FlushingStepBuilder<T, S> createBuilder(String name) {
-        FlushingStepBuilder<T, S> flushingStepBuilder = new FlushingStepBuilder<>(super.createBuilder(name));
+    protected FlushingFaultTolerantStepBuilder<T, S> createBuilder(String name) {
+        FlushingFaultTolerantStepBuilder<T, S> flushingStepBuilder = new FlushingFaultTolerantStepBuilder<>(
+                super.createBuilder(name));
         flushingStepBuilder.flushInterval(flushInterval);
         flushingStepBuilder.idleTimeout(idleTimeout);
         return flushingStepBuilder;

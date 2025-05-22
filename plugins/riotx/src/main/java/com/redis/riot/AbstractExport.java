@@ -2,7 +2,7 @@ package com.redis.riot;
 
 import com.redis.riot.core.KeyValueFilter;
 import com.redis.riot.core.RedisContext;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
@@ -50,8 +50,8 @@ public abstract class AbstractExport extends AbstractJobCommand {
     }
 
     @Override
-    protected <I, O> StepFactoryBean<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
-        StepFactoryBean<I, O> step = super.step(name, reader, writer);
+    protected <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
+        RiotStep<I, O> step = super.step(name, reader, writer);
         step.setFlushInterval(flushInterval);
         step.setIdleTimeout(idleTimeout);
         return step;

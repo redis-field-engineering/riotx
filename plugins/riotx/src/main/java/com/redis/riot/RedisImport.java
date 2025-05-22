@@ -5,7 +5,7 @@ import com.redis.riot.core.function.KeyValueMap;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
@@ -39,7 +39,7 @@ public class RedisImport extends AbstractTargetRedisImport {
     @Override
     protected Job job() throws Exception {
         Assert.isTrue(hasOperations(), "No Redis command specified");
-        StepFactoryBean<KeyValue<String>, Map<String, Object>> step = step(STEP_NAME, reader(), operationWriter());
+        RiotStep<KeyValue<String>, Map<String, Object>> step = step(STEP_NAME, reader(), operationWriter());
         step.setItemProcessor(RiotUtils.processor(keyValueProcessor(), operationProcessor()));
         return job(step);
     }

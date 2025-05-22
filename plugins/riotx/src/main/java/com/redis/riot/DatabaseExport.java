@@ -3,7 +3,7 @@ package com.redis.riot;
 import com.redis.riot.core.RiotUtils;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
@@ -36,7 +36,7 @@ public class DatabaseExport extends AbstractRedisExport {
 
     @Override
     protected Job job() throws Exception {
-        StepFactoryBean<KeyValue<String>, Map<String, Object>> step = step(STEP_NAME, reader(), writer());
+        RiotStep<KeyValue<String>, Map<String, Object>> step = step(STEP_NAME, reader(), writer());
         step.setItemProcessor(RiotUtils.processor(keyValueFilter(), mapProcessor()));
         return job(step);
     }

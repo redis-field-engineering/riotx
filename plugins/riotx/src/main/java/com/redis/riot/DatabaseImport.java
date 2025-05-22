@@ -2,7 +2,7 @@ package com.redis.riot;
 
 import com.redis.riot.db.JdbcReaderFactory;
 import com.redis.riot.db.SnowflakeColumnMapRowMapper;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
@@ -30,7 +30,7 @@ public class DatabaseImport extends AbstractRedisImport {
 
     @Override
     protected Job job() throws Exception {
-        StepFactoryBean<Map<String, Object>, Map<String, Object>> step = step(STEP_NAME, reader(), operationWriter());
+        RiotStep<Map<String, Object>, Map<String, Object>> step = step(STEP_NAME, reader(), operationWriter());
         step.setItemProcessor(operationProcessor());
         return job(step);
     }

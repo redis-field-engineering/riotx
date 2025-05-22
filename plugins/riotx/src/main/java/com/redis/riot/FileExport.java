@@ -1,7 +1,7 @@
 package com.redis.riot;
 
 import com.redis.riot.core.RiotUtils;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.file.*;
 import com.redis.riot.parquet.ParquetFieldType;
 import com.redis.riot.parquet.ParquetFileItemWriter;
@@ -87,7 +87,7 @@ public class FileExport extends AbstractRedisExport {
     protected Job job() throws Exception {
         WritableResource resource = resourceFactory.writableResource(file, writeOptions);
         MimeType type = mimeType(resource);
-        StepFactoryBean<KeyValue<String>, ?> step = step(STEP_NAME, reader(), writer(resource, type));
+        RiotStep<KeyValue<String>, ?> step = step(STEP_NAME, reader(), writer(resource, type));
         step.setItemProcessor(RiotUtils.processor(keyValueFilter(), processor(type)));
         return job(step);
     }

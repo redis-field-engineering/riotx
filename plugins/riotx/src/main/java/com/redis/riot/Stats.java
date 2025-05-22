@@ -3,7 +3,7 @@ package com.redis.riot;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.KeyEventListenerContainer;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Job;
@@ -45,8 +45,8 @@ public class Stats extends AbstractRedisCommand {
     @Option(names = "--mem", description = "Memory usage above which a key is considered big (default: ${DEFAULT-VALUE}).", paramLabel = "<size>")
     private DataSize memUsage = DEFAULT_BIG_THRESHOLD;
 
-    @Option(names = "--rate", description = "Write bandwidth above which a key is considered potentially problematic (default: ${DEFAULT-VALUE}).", paramLabel = "<size>")
-    private DataSize rate = StatsPrinter.DEFAULT_WRITE_BANDWIDTH_THRESHOLD;
+    @Option(names = "--byterate", description = "Write bandwidth above which a key is considered potentially problematic (default: ${DEFAULT-VALUE}).", paramLabel = "<size>")
+    private DataSize bandwidth = StatsPrinter.DEFAULT_WRITE_BANDWIDTH_THRESHOLD;
 
     @Option(names = "--keyspace", description = "Regular expression to extract the keyspace from a key (default: ${DEFAULT-VALUE}).", paramLabel = "<reg>")
     private Pattern keyspacePattern = Pattern.compile(RedisStats.DEFAULT_KEYSPACE_REGEX);
@@ -55,7 +55,7 @@ public class Stats extends AbstractRedisCommand {
     private short[] quantiles = StatsPrinter.DEFAULT_QUANTILES;
 
     @Override
-    protected String taskName(StepFactoryBean<?, ?> step) {
+    protected String taskName(RiotStep<?, ?> step) {
         return TASK_NAME;
     }
 
@@ -72,7 +72,7 @@ public class Stats extends AbstractRedisCommand {
                 getRedisContext().client(), StringCodec.UTF8);
         int database = getRedisContext().uri().getDatabase();
         StatsWriter writer = new StatsWriter(stats, listenerContainer, database, readerArgs.getKeyPattern());
-        StepFactoryBean<KeyValue<String>, KeyValue<String>> step = step(STEP_NAME, reader, writer);
+        RiotStep<KeyValue<String>, KeyValue<String>> step = step(STEP_NAME, reader, writer);
         step.addListener(new ExecutionListener(statsPrinter(stats)));
         return job(step);
     }
@@ -84,7 +84,7 @@ public class Stats extends AbstractRedisCommand {
 
     private StatsPrinter statsPrinter(RedisStats stats) {
         StatsPrinter printer = new StatsPrinter(stats, System.out);
-        printer.setWriteBandwidthThreshold(rate);
+        printer.setWriteBandwidthThreshold(bandwidth);
         printer.setQuantiles(quantiles);
         printer.setTableBorder(tableBorder);
         return printer;
@@ -221,12 +221,12 @@ public class Stats extends AbstractRedisCommand {
         this.readerArgs = readerArgs;
     }
 
-    public DataSize getRate() {
-        return rate;
+    public DataSize getBandwidth() {
+        return bandwidth;
     }
 
-    public void setRate(DataSize rate) {
-        this.rate = rate;
+    public void setBandwidth(DataSize bandwidth) {
+        this.bandwidth = bandwidth;
     }
 
 }

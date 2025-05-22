@@ -5,7 +5,7 @@ import com.redis.riot.core.MemcachedContext;
 import com.redis.spring.batch.memcached.MemcachedEntry;
 import com.redis.spring.batch.memcached.MemcachedItemReader;
 import com.redis.spring.batch.memcached.MemcachedItemWriter;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -50,7 +50,7 @@ public class MemcachedReplicate extends AbstractJobCommand {
     private MemcachedContext targetMemcachedContext;
 
     @Override
-    protected String taskName(StepFactoryBean<?, ?> step) {
+    protected String taskName(RiotStep<?, ?> step) {
         return TASK_NAME;
     }
 
@@ -81,7 +81,7 @@ public class MemcachedReplicate extends AbstractJobCommand {
     protected Job job() throws Exception {
         MemcachedItemReader reader = new MemcachedItemReader(sourceMemcachedContext::safeMemcachedClient);
         MemcachedItemWriter writer = new MemcachedItemWriter(targetMemcachedContext::safeMemcachedClient);
-        StepFactoryBean<MemcachedEntry, MemcachedEntry> step = step(STEP_NAME, reader, writer);
+        RiotStep<MemcachedEntry, MemcachedEntry> step = step(STEP_NAME, reader, writer);
         step.setItemProcessor(this::process);
         step.noSkip(TimeoutException.class);
         step.retry(TimeoutException.class);

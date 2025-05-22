@@ -28,7 +28,16 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public abstract class RiotUtils {
 
+    public static final int NAME_MAX_LENGTH = 80;
+
     private RiotUtils() {
+    }
+
+    public static String normalizeName(String name) {
+        if (name.length() > NAME_MAX_LENGTH) {
+            return name.substring(0, 69) + "…" + name.substring(name.length() - 10);
+        }
+        return name;
     }
 
     public static String mask(char[] password) {

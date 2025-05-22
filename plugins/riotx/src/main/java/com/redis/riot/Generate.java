@@ -7,7 +7,7 @@ import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
 import com.redis.spring.batch.item.redis.gen.ItemType;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 import org.springframework.util.StringUtils;
 import picocli.CommandLine;
@@ -40,12 +40,12 @@ public class Generate extends AbstractRedisCommand {
         if (StringUtils.hasLength(generateArgs.getIndex())) {
             commands().ftCreate(generateArgs.getIndex(), indexCreateOptions(), indexFields());
         }
-        StepFactoryBean<KeyValue<String>, KeyValue<String>> step = step(STEP_NAME, reader(), writer());
+        RiotStep<KeyValue<String>, KeyValue<String>> step = step(STEP_NAME, reader(), writer());
         return job(step);
     }
 
     @Override
-    protected String taskName(StepFactoryBean<?, ?> step) {
+    protected String taskName(RiotStep<?, ?> step) {
         return TASK_NAME;
     }
 

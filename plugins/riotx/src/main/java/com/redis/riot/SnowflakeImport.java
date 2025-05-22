@@ -1,7 +1,7 @@
 package com.redis.riot;
 
 import com.redis.riot.core.*;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.db.DatabaseObject;
 import com.redis.riot.db.SnowflakeStreamItemReader;
 import com.redis.riot.db.SnowflakeStreamRow;
@@ -20,6 +20,8 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.batch.item.support.CompositeItemWriter;
+import org.springframework.retry.backoff.BackOffPolicy;
+import org.springframework.retry.backoff.BackOffPolicyBuilder;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
@@ -44,13 +46,13 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     private static final String STEP_NAME = "snowflake-import";
 
-    private static final String RDI_STEP_NAME = "rdi-forward";
-
     private static final Object RDI_STREAM_PREFIX = "rdi";
 
     public static final String DEFAULT_OFFSET_PREFIX = "riotx:offset";
 
     public static final String DEFAULT_OFFSET_KEY = RdiOffsetStore.DEFAULT_KEY;
+
+    public static final int DEFAULT_RETRY_LIMIT = 10; // with default back-off policy we reach max delay after 10 attempts
 
     @ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
@@ -95,11 +97,29 @@ public class SnowflakeImport extends AbstractRedisImport {
     private long rdiStreamLimit = StreamLengthBackpressureStatusSupplier.DEFAULT_LIMIT;
 
     @Override
-    protected <I, O> StepFactoryBean<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
-        StepFactoryBean<I, O> step = super.step(name, reader, writer);
+    protected int defaultRetryLimit() {
+        return DEFAULT_RETRY_LIMIT;
+    }
+
+    @CommandLine.ArgGroup(exclusive = false)
+    private BackOffArgs backOffArgs = new BackOffArgs();
+
+    @Override
+    protected <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
+        RiotStep<I, O> step = super.step(name, reader, writer);
         step.setFlushInterval(flushInterval);
         step.setIdleTimeout(idleTimeout);
+        step.setBackOffPolicy(backOffPolicy());
         return step;
+    }
+
+    private BackOffPolicy backOffPolicy() {
+        return switch (backOffArgs.getPolicy()) {
+            case EXPONENTIAL -> BackOffPolicyBuilder.newBuilder().delay(backOffArgs.getDelay().toMillis())
+                    .maxDelay(backOffArgs.getMaxDelay().toMillis()).multiplier(backOffArgs.getMultiplier()).build();
+            case FIXED -> BackOffPolicyBuilder.newBuilder().delay(backOffArgs.getDelay().toMillis()).build();
+            default -> null;
+        };
     }
 
     @Override
@@ -107,13 +127,13 @@ public class SnowflakeImport extends AbstractRedisImport {
         return job(step());
     }
 
-    private StepFactoryBean<?, ?> step() {
+    private RiotStep<?, ?> step() {
         if (hasOperations()) {
             SnowflakeStreamItemReader reader = reader();
             reader.setOffsetStore(stringOffsetStore());
             ItemProcessor<SnowflakeStreamRow, Map<String, Object>> processor = RiotUtils.processor(new RowFilter(),
                     new FunctionItemProcessor<>(SnowflakeStreamRow::getColumns), operationProcessor());
-            StepFactoryBean<SnowflakeStreamRow, Map<String, Object>> step = step(STEP_NAME, reader, operationWriter());
+            RiotStep<SnowflakeStreamRow, Map<String, Object>> step = step(STEP_NAME, reader, operationWriter());
             step.setItemProcessor(processor);
             return step;
         }
@@ -121,7 +141,7 @@ public class SnowflakeImport extends AbstractRedisImport {
         reader.setOffsetStore(rdiOffsetStore());
         ItemProcessor<SnowflakeStreamRow, StreamMessage<String, String>> processor = RiotUtils.processor(new RowFilter(),
                 new FunctionItemProcessor<>(this::changeEvent), new ChangeEventToStreamMessage(rdiStream()));
-        StepFactoryBean<SnowflakeStreamRow, StreamMessage<String, String>> step = step(STEP_NAME, reader, rdiWriter());
+        RiotStep<SnowflakeStreamRow, StreamMessage<String, String>> step = step(STEP_NAME, reader, rdiWriter());
         step.setItemProcessor(processor);
         return step;
     }
@@ -211,17 +231,16 @@ public class SnowflakeImport extends AbstractRedisImport {
     }
 
     private ChangeEventValue.Operation operation(SnowflakeStreamRow row) {
-        switch (row.getAction()) {
-            case INSERT:
+        return switch (row.getAction()) {
+            case INSERT -> {
                 if (row.isUpdate()) {
-                    return ChangeEventValue.Operation.UPDATE;
+                    yield ChangeEventValue.Operation.UPDATE;
                 }
-                return ChangeEventValue.Operation.CREATE;
-            case DELETE:
-                return ChangeEventValue.Operation.DELETE;
-            default:
-                throw new IllegalArgumentException("Unknown action: " + row.getAction());
-        }
+                yield ChangeEventValue.Operation.CREATE;
+            }
+            case DELETE -> ChangeEventValue.Operation.DELETE;
+            default -> throw new IllegalArgumentException("Unknown action: " + row.getAction());
+        };
     }
 
     private RedisItemWriter<String, String, StreamMessage<String, String>> rdiWriter(String stream) {
@@ -355,6 +374,15 @@ public class SnowflakeImport extends AbstractRedisImport {
     }
 
     public void setRdiStreamLimit(long rdiStreamLimit) {
+        this.rdiStreamLimit = rdiStreamLimit;
+    }
+
+    public BackOffArgs getBackOffArgs() {
+        return backOffArgs;
+    }
+
+    public void setBackOffArgs(BackOffArgs backOffArgs) {
+        this.backOffArgs = backOffArgs;
     }
 
 }

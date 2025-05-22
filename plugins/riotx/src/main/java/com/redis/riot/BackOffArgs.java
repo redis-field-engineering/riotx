@@ -4,18 +4,40 @@ import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import picocli.CommandLine;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 public class BackOffArgs {
 
-    @CommandLine.Option(names = "--backoff-delay", description = "The initial backoff duration (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
-    private Duration delay = Duration.ofMillis(ExponentialBackOffPolicy.DEFAULT_INITIAL_INTERVAL);
+    public enum Policy {
+        EXPONENTIAL, FIXED, NONE;
+    }
 
-    @CommandLine.Option(names = "--backoff-max", description = "The maximum backoff duration (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
-    private Duration maxDelay = Duration.ofMillis(ExponentialBackOffPolicy.DEFAULT_MAX_INTERVAL);
+    private static final Policy DEFAULT_POLICY = Policy.EXPONENTIAL;
 
-    @CommandLine.Option(names = "--backoff-mult", description = "Backoff duration increment for each retry attempt (default: ${DEFAULT-VALUE} i.e. 100% increase per backoff).", paramLabel = "<num>")
-    private double multiplier = ExponentialBackOffPolicy.DEFAULT_MULTIPLIER;
+    public static final Duration DEFAULT_DELAY = Duration.ofMillis(ExponentialBackOffPolicy.DEFAULT_INITIAL_INTERVAL);
+
+    public static final Duration DEFAULT_MAX_DELAY = Duration.ofMillis(ExponentialBackOffPolicy.DEFAULT_MAX_INTERVAL);
+
+    public static final double DEFAULT_MULTIPLIER = ExponentialBackOffPolicy.DEFAULT_MULTIPLIER;
+
+    @CommandLine.Option(names = "--backoff", description = "Backoff policy: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<name>")
+    private Policy policy = DEFAULT_POLICY;
+
+    @CommandLine.Option(names = "--backoff-delay", description = "Exponential backoff initial duration or fixed backoff duration (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
+    private Duration delay = DEFAULT_DELAY;
+
+    @CommandLine.Option(names = "--backoff-max", description = "Exponential backoff max duration (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
+    private Duration maxDelay = DEFAULT_MAX_DELAY;
+
+    @CommandLine.Option(names = "--backoff-x", description = "Exponential backoff duration increment for each retry attempt (default: ${DEFAULT-VALUE} i.e. 100% increase per backoff).", paramLabel = "<num>")
+    private double multiplier = DEFAULT_MULTIPLIER;
+
+    public Policy getPolicy() {
+        return policy;
+    }
+
+    public void setPolicy(Policy policy) {
+        this.policy = policy;
+    }
 
     public Duration getDelay() {
         return delay;

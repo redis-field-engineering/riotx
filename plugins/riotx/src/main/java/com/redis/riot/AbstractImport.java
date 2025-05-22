@@ -9,7 +9,7 @@ import com.redis.riot.operation.*;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.MultiOperation;
 import com.redis.spring.batch.item.redis.common.RedisOperation;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.expression.EvaluationContext;
@@ -53,7 +53,7 @@ public abstract class AbstractImport extends AbstractJobCommand {
     private StandardEvaluationContext evaluationContext;
 
     @Override
-    protected String taskName(StepFactoryBean<?, ?> step) {
+    protected String taskName(RiotStep<?, ?> step) {
         return TASK_NAME;
     }
 

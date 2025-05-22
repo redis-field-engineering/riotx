@@ -8,7 +8,7 @@ import com.redis.riot.core.RedisContext;
 import com.redis.riot.core.ReplicationMode;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.job.FlowFactoryBean;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.job.StepFlowFactoryBean;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
@@ -25,6 +25,7 @@ import com.redis.spring.batch.item.redis.writer.impl.Del;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.support.CompositeItemWriter;
+import org.springframework.retry.policy.MaxAttemptsRetryPolicy;
 import org.springframework.util.StringUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -35,13 +36,13 @@ import java.util.Arrays;
 @Command(name = "replicate", aliases = "sync", description = "Replicate a Redis database into another Redis database.")
 public class Replicate extends AbstractCompareCommand {
 
-    private static final String SCAN_STEP = "scanStep";
-
-    private static final String LIVE_STEP = "liveStep";
-
     public enum Type {
         STRUCT, DUMP
     }
+
+    private static final String SCAN_STEP = "scanStep";
+
+    private static final String LIVE_STEP = "liveStep";
 
     public static final Type DEFAULT_TYPE = Type.DUMP;
 
@@ -52,6 +53,8 @@ public class Replicate extends AbstractCompareCommand {
     private static final String LIVE_TASK_NAME = "Listening";
 
     public static final ReplicationMode DEFAULT_REPLICATION_MODE = ReplicationMode.SCAN;
+
+    public static final int DEFAULT_RETRY_LIMIT = MaxAttemptsRetryPolicy.DEFAULT_MAX_ATTEMPTS;
 
     @Option(names = "--mode", description = "Replication mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE})", paramLabel = "<name>")
     private ReplicationMode mode = DEFAULT_REPLICATION_MODE;
@@ -74,6 +77,11 @@ public class Replicate extends AbstractCompareCommand {
     }
 
     @Override
+    protected int defaultRetryLimit() {
+        return DEFAULT_RETRY_LIMIT;
+    }
+
+    @Override
     protected boolean isQuickCompare() {
         return compareMode == CompareMode.QUICK;
     }
@@ -90,15 +98,12 @@ public class Replicate extends AbstractCompareCommand {
     }
 
     @Override
-    protected String taskName(StepFactoryBean<?, ?> step) {
-        switch (step.getName()) {
-            case SCAN_STEP:
-                return SCAN_TASK_NAME;
-            case LIVE_STEP:
-                return LIVE_TASK_NAME;
-            default:
-                return super.taskName(step);
-        }
+    protected String taskName(RiotStep<?, ?> step) {
+        return switch (step.getName()) {
+            case SCAN_STEP -> SCAN_TASK_NAME;
+            case LIVE_STEP -> LIVE_TASK_NAME;
+            default -> super.taskName(step);
+        };
     }
 
     private FlowFactoryBean flow() {
@@ -112,14 +117,11 @@ public class Replicate extends AbstractCompareCommand {
     }
 
     public FlowFactoryBean replicateFlow() {
-        switch (mode) {
-            case LIVE:
-                return FlowFactoryBean.parallel("scanLiveFlow", scanFlow(), liveFlow());
-            case LIVEONLY:
-                return liveFlow();
-            default:
-                return scanFlow();
-        }
+        return switch (mode) {
+            case LIVE -> FlowFactoryBean.parallel("scanLiveFlow", scanFlow(), liveFlow());
+            case LIVEONLY -> liveFlow();
+            default -> scanFlow();
+        };
     }
 
     private FlowFactoryBean scanFlow() {
@@ -138,10 +140,9 @@ public class Replicate extends AbstractCompareCommand {
         writer.getRedisSupportCheck().getConsumers().add(this::unsupportedRedis);
     }
 
-    private StepFactoryBean<KeyValue<byte[]>, KeyValue<byte[]>> replicateStep(String name,
-            RedisItemReader<byte[], byte[]> reader) {
+    private RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> replicateStep(String name, RedisItemReader<byte[], byte[]> reader) {
         configureSource(reader);
-        StepFactoryBean<KeyValue<byte[]>, KeyValue<byte[]>> step = step(name, reader, targetWriter());
+        RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> step = step(name, reader, targetWriter());
         step.setItemProcessor(keyValueFilter());
         step.addListener(new ReplicateMetricsReadListener<>());
         if (logKeys) {
@@ -153,11 +154,11 @@ public class Replicate extends AbstractCompareCommand {
         return step;
     }
 
-    protected StepFactoryBean<KeyValue<byte[]>, KeyValue<byte[]>> scanStep() {
+    protected RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> scanStep() {
         return replicateStep(SCAN_STEP, new RedisScanItemReader<>(CODEC, readOperation()));
     }
 
-    protected StepFactoryBean<KeyValue<byte[]>, KeyValue<byte[]>> liveStep() {
+    protected RiotStep<KeyValue<byte[]>, KeyValue<byte[]>> liveStep() {
         return replicateStep(LIVE_STEP, new RedisLiveItemReader<>(CODEC, readOperation()));
     }
 

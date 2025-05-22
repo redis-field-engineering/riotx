@@ -2,7 +2,7 @@ package com.redis.riot;
 
 import com.redis.riot.core.job.FlowFactoryBean;
 import com.redis.riot.core.job.JobExecutor;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.job.StepFlowFactoryBean;
 import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.spring.batch.item.redis.common.BatchUtils;
@@ -11,9 +11,8 @@ import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
-import org.springframework.retry.backoff.BackOffPolicy;
-import org.springframework.retry.backoff.BackOffPolicyBuilder;
 import org.springframework.util.ClassUtils;
+import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 
@@ -22,11 +21,21 @@ import java.util.function.Supplier;
 @Command
 public abstract class AbstractJobCommand extends AbstractCallableCommand {
 
+    @ArgGroup(exclusive = false)
+    private ProgressArgs progressArgs = new ProgressArgs();
+
     @ArgGroup(exclusive = false, heading = "Job options%n")
     private StepArgs stepArgs = new StepArgs();
 
-    @ArgGroup(exclusive = false)
-    private ProgressArgs progressArgs = new ProgressArgs();
+    @CommandLine.Option(names = "--skip", description = "Number of skips tolerated before failing.", paramLabel = "<int>")
+    private int skipLimit;
+
+    @CommandLine.Option(names = "--retry", description = "Number of times to try failed items. 0 and 1 both mean no retry (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    private int retryLimit = defaultRetryLimit();
+
+    protected int defaultRetryLimit() {
+        return 0;
+    }
 
     private final JobExecutor jobExecutor = new JobExecutor();
 
@@ -36,11 +45,11 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         super.initialize();
     }
 
-    protected Job job(StepFactoryBean<?, ?> step) throws Exception {
+    protected Job job(RiotStep<?, ?> step) throws Exception {
         return job(stepFlow(step));
     }
 
-    protected <I, O> StepFlowFactoryBean<I, O> stepFlow(StepFactoryBean<I, O> step) {
+    protected <I, O> StepFlowFactoryBean<I, O> stepFlow(RiotStep<I, O> step) {
         return new StepFlowFactoryBean<>(step);
     }
 
@@ -55,20 +64,21 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         return commandSpec.name();
     }
 
-    protected <I, O> StepFactoryBean<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
-        StepFactoryBean<I, O> step = new StepFactoryBean<>();
-        step.setBeanName(name == null ? jobName() : name);
+    protected <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
+        RiotStep<I, O> step = new RiotStep<>();
+        step.setName(name);
         step.setItemReader(reader);
         step.setItemWriter(writer);
+        step.setDryRun(stepArgs.isDryRun());
+        if (stepArgs.getWritesPerSecond() != null) {
+            step.setWritesPerSecond(stepArgs.getWritesPerSecond().intValue());
+        }
+        step.setThreads(stepArgs.getThreads());
         step.setJobRepository(jobExecutor.getJobRepository());
         step.setTransactionManager(jobExecutor.getTransactionManager());
-        step.setDryRun(stepArgs.isDryRun());
-        step.setSleep(stepArgs.getSleep());
-        step.setThreads(stepArgs.getThreads());
         step.setCommitInterval(stepArgs.getChunkSize());
-        step.setRetryLimit(stepArgs.getRetryLimit());
-        step.setSkipLimit(stepArgs.getSkipLimit());
-        step.setBackOffPolicy(backOffPolicy(stepArgs.getBackOffArgs()));
+        step.setRetryLimit(retryLimit);
+        step.setSkipLimit(skipLimit);
         if (shouldShowProgress()) {
             ProgressStepExecutionListener<?> listener = new ProgressStepExecutionListener<>();
             listener.setTaskName(taskName(step));
@@ -79,14 +89,6 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
             step.addListener(listener);
         }
         return step;
-    }
-
-    private BackOffPolicy backOffPolicy(BackOffArgs args) {
-        BackOffPolicyBuilder builder = BackOffPolicyBuilder.newBuilder();
-        builder.delay(args.getDelay().toMillis());
-        builder.maxDelay(args.getMaxDelay().toMillis());
-        builder.multiplier(args.getMultiplier());
-        return builder.build();
     }
 
     public long itemReaderSize(ItemReader<?> reader) {
@@ -109,11 +111,11 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         return BatchUtils.scanSizeEstimator(reader).getAsLong();
     }
 
-    protected Supplier<String> extraMessage(StepFactoryBean<?, ?> step) {
+    protected Supplier<String> extraMessage(RiotStep<?, ?> step) {
         return null;
     }
 
-    protected abstract String taskName(StepFactoryBean<?, ?> step);
+    protected abstract String taskName(RiotStep<?, ?> step);
 
     @Override
     protected void execute() throws Exception {
@@ -152,6 +154,22 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
 
     public JobExecutor getJobExecutor() {
         return jobExecutor;
+    }
+
+    public int getRetryLimit() {
+        return retryLimit;
+    }
+
+    public void setRetryLimit(int retryLimit) {
+        this.retryLimit = retryLimit;
+    }
+
+    public int getSkipLimit() {
+        return skipLimit;
+    }
+
+    public void setSkipLimit(int skipLimit) {
+        this.skipLimit = skipLimit;
     }
 
 }

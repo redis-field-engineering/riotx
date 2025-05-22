@@ -86,7 +86,7 @@ public class MetricsArgs {
         };
     }
 
-    public void setEnabled(boolean enabled) throws IOException {
+    public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 

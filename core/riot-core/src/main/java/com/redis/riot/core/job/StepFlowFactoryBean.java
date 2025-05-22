@@ -1,20 +1,21 @@
 package com.redis.riot.core.job;
 
+import com.redis.riot.core.RiotUtils;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.flow.Flow;
 import org.springframework.batch.core.job.flow.support.SimpleFlow;
 
 public class StepFlowFactoryBean<T, S> implements FlowFactoryBean {
 
-    private final StepFactoryBean<T, S> step;
+    private final RiotStep<T, S> step;
 
-    public StepFlowFactoryBean(StepFactoryBean<T, S> step) {
+    public StepFlowFactoryBean(RiotStep<T, S> step) {
         this.step = step;
     }
 
     @Override
     public String getName() {
-        return step.getName() + "-flow";
+        return RiotUtils.normalizeName(step.getName() + "-flow");
     }
 
     @Override
@@ -29,7 +30,7 @@ public class StepFlowFactoryBean<T, S> implements FlowFactoryBean {
         return SimpleFlow.class;
     }
 
-    public StepFactoryBean<T, S> getStep() {
+    public RiotStep<T, S> getStep() {
         return step;
     }
 

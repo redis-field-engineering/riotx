@@ -6,7 +6,7 @@ import com.redis.riot.core.function.MapToFieldFunction;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
 import com.redis.riot.core.function.ToMapFunction;
 import com.redis.riot.core.job.FlowFactoryBean;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.file.*;
 import com.redis.riot.parquet.ParquetFileItemReader;
 import com.redis.riot.parquet.ParquetFileNameMap;
@@ -103,7 +103,7 @@ public class FileImport extends AbstractRedisImport {
 
     @Override
     protected Job job() throws Exception {
-        List<StepFactoryBean<?, ?>> steps = new ArrayList<>();
+        List<RiotStep<?, ?>> steps = new ArrayList<>();
         for (String file : files) {
             steps.add(step(resourceFactory.resource(file, readOptions)));
         }
@@ -111,12 +111,12 @@ public class FileImport extends AbstractRedisImport {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private StepFactoryBean step(Resource resource) {
+    private RiotStep step(Resource resource) {
         MimeType type = contentType(resource);
         ReaderFactory readerFactory = readerRegistry.getReaderFactory(type);
         Assert.notNull(readerFactory, () -> String.format("No reader found for file %s", resource.getFilename()));
         ItemReader reader = readerFactory.create(resource, readOptions);
-        StepFactoryBean step = step(resource.getFilename(), reader, writer(type));
+        RiotStep step = step(resource.getFilename(), reader, writer(type));
         if (hasOperations()) {
             step.setItemProcessor(operationProcessor());
         }
@@ -147,7 +147,7 @@ public class FileImport extends AbstractRedisImport {
     }
 
     @Override
-    protected String taskName(StepFactoryBean<?, ?> step) {
+    protected String taskName(RiotStep<?, ?> step) {
         return String.format("Importing %s", step.getName());
     }
 

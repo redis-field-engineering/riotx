@@ -4,7 +4,7 @@ import com.redis.riot.core.RedisContext;
 import com.redis.riot.core.function.KeyValueMap;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
 import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import picocli.CommandLine.ArgGroup;
@@ -24,7 +24,7 @@ public abstract class AbstractRedisExport extends AbstractExport {
     private static final String TASK_NAME = "Exporting";
 
     @Override
-    protected String taskName(StepFactoryBean<?, ?> step) {
+    protected String taskName(RiotStep<?, ?> step) {
         return TASK_NAME;
     }
 

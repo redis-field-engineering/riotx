@@ -3,7 +3,7 @@ package com.redis.riot;
 import com.redis.riot.core.PingExecution;
 import com.redis.riot.core.PingExecutionItemReader;
 import com.redis.riot.core.PrefixedNumber;
-import com.redis.riot.core.job.StepFactoryBean;
+import com.redis.riot.core.job.RiotStep;
 import io.lettuce.core.metrics.CommandMetrics.CommandLatency;
 import io.lettuce.core.metrics.DefaultCommandLatencyCollectorOptions;
 import org.HdrHistogram.Histogram;
@@ -51,7 +51,7 @@ public class Ping extends AbstractRedisCommand {
     private PrefixedNumber count = PrefixedNumber.of(DEFAULT_COUNT);
 
     @Override
-    protected String taskName(StepFactoryBean<?, ?> step) {
+    protected String taskName(RiotStep<?, ?> step) {
         return TASK_NAME;
     }
 
