@@ -27,10 +27,10 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
     @ArgGroup(exclusive = false, heading = "Job options%n")
     private StepArgs stepArgs = new StepArgs();
 
-    @CommandLine.Option(names = "--skip", description = "Number of skips tolerated before failing.", paramLabel = "<int>")
+    @CommandLine.Option(names = "--skip", description = "Number of failed items before failing the job (default: ${DEFAULT-VALUE}). Use -1 to always skip failed items.", paramLabel = "<int>")
     private int skipLimit;
 
-    @CommandLine.Option(names = "--retry", description = "Number of times to try failed items. 0 and 1 both mean no retry (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    @CommandLine.Option(names = "--retry", description = "Number of times to retry failed items (default: ${DEFAULT-VALUE}). 0 and 1 both mean no retry. Use -1 to always retry.", paramLabel = "<int>")
     private int retryLimit = defaultRetryLimit();
 
     protected int defaultRetryLimit() {

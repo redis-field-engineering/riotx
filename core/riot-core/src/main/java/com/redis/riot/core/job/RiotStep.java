@@ -17,6 +17,9 @@ import org.springframework.batch.core.StepListener;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.factory.FaultTolerantStepFactoryBean;
 import org.springframework.batch.core.step.factory.SimpleStepFactoryBean;
+import org.springframework.batch.core.step.skip.AlwaysSkipItemSkipPolicy;
+import org.springframework.batch.core.step.skip.NeverSkipItemSkipPolicy;
+import org.springframework.batch.core.step.skip.SkipPolicy;
 import org.springframework.batch.core.step.tasklet.TaskletStep;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
@@ -25,7 +28,10 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.support.SynchronizedItemReader;
 import org.springframework.batch.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.FactoryBean;
+import org.springframework.retry.RetryPolicy;
 import org.springframework.retry.backoff.BackOffPolicy;
+import org.springframework.retry.policy.AlwaysRetryPolicy;
+import org.springframework.retry.policy.NeverRetryPolicy;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.text.ParseException;
@@ -94,13 +100,6 @@ public class RiotStep<T, S> implements FactoryBean<Step> {
             factory.setThrottleLimit(threads);
             factory.setItemReader(synchronizedItemReader());
         }
-        if (factory instanceof FaultTolerantStepFactoryBean<T, S> ftBean) {
-            ftBean.setRetryLimit(retryLimit);
-            ftBean.setSkipLimit(skipLimit);
-            ftBean.setRetryableExceptionClasses(retryableExceptions());
-            ftBean.setSkippableExceptionClasses(skippableExceptions());
-            ftBean.setBackOffPolicy(backOffPolicy);
-        }
         return factory.getObject();
     }
 
@@ -110,7 +109,7 @@ public class RiotStep<T, S> implements FactoryBean<Step> {
     }
 
     protected boolean isFaultTolerant() {
-        return retryLimit > 0 || skipLimit > 0;
+        return retryLimit != 0 || skipLimit != 0;
     }
 
     private SimpleStepFactoryBean<T, S> factoryBean() {
@@ -119,6 +118,7 @@ public class RiotStep<T, S> implements FactoryBean<Step> {
                 FlushingFaultTolerantStepFactoryBean<T, S> factoryBean = new FlushingFaultTolerantStepFactoryBean<>();
                 factoryBean.setFlushInterval(flushInterval);
                 factoryBean.setIdleTimeout(idleTimeout);
+                configureFaultTolerantStepFactoryBean(factoryBean);
                 return factoryBean;
             }
             FlushingStepFactoryBean<T, S> factoryBean = new FlushingStepFactoryBean<>();
@@ -127,9 +127,41 @@ public class RiotStep<T, S> implements FactoryBean<Step> {
             return factoryBean;
         }
         if (isFaultTolerant()) {
-            return new FaultTolerantStepFactoryBean<>();
+            FaultTolerantStepFactoryBean<T, S> factoryBean = new FaultTolerantStepFactoryBean<>();
+            configureFaultTolerantStepFactoryBean(factoryBean);
+            return factoryBean;
         }
         return new SimpleStepFactoryBean<>();
+    }
+
+    private void configureFaultTolerantStepFactoryBean(FaultTolerantStepFactoryBean<T, S> factoryBean) {
+        if (retryLimit > 0) {
+            factoryBean.setRetryLimit(retryLimit);
+        } else {
+            factoryBean.setRetryPolicy(retryPolicy());
+        }
+        if (skipLimit > 0) {
+            factoryBean.setSkipLimit(skipLimit);
+        } else {
+            factoryBean.setSkipPolicy(skipPolicy());
+        }
+        factoryBean.setRetryableExceptionClasses(retryableExceptions());
+        factoryBean.setSkippableExceptionClasses(skippableExceptions());
+        factoryBean.setBackOffPolicy(backOffPolicy);
+    }
+
+    private SkipPolicy skipPolicy() {
+        if (skipLimit < 0) {
+            return new AlwaysSkipItemSkipPolicy();
+        }
+        return new NeverSkipItemSkipPolicy();
+    }
+
+    private RetryPolicy retryPolicy() {
+        if (retryLimit < 0) {
+            return new AlwaysRetryPolicy();
+        }
+        return new NeverRetryPolicy();
     }
 
     public static Set<Class<? extends Throwable>> defaultSkippableExceptions() {
