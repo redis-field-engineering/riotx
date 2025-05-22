@@ -6,7 +6,7 @@ import java.util.function.Supplier;
 
 public class StreamLengthBackpressureStatusSupplier implements Supplier<BackpressureStatus> {
 
-    public static final long DEFAULT_LIMIT = 1000;
+    public static final long DEFAULT_LIMIT = 10000;
 
     private final StatefulRedisModulesConnection<String, String> connection;
 
