@@ -19,17 +19,10 @@ import java.time.Duration;
 
 public abstract class AbstractExport extends AbstractJobCommand {
 
-    public static final Duration DEFAULT_FLUSH_INTERVAL = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
-
-    public static final Duration DEFAULT_IDLE_TIMEOUT = FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT;
-
     private static final String VAR_SOURCE = "source";
 
-    @Option(names = "--flush-interval", description = "Max duration between flushes in live mode (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
-    private Duration flushInterval = DEFAULT_FLUSH_INTERVAL;
-
-    @Option(names = "--idle-timeout", description = "Min duration to consider reader complete in live mode, for example 3s 5m (default: no timeout).", paramLabel = "<dur>")
-    private Duration idleTimeout = DEFAULT_IDLE_TIMEOUT;
+    @ArgGroup(exclusive = false)
+    private FlushingStepArgs flushingStepArgs = new FlushingStepArgs();
 
     @ArgGroup(exclusive = false)
     private RedisReaderArgs readerArgs = new RedisReaderArgs();
@@ -52,8 +45,7 @@ public abstract class AbstractExport extends AbstractJobCommand {
     @Override
     protected <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
         RiotStep<I, O> step = super.step(name, reader, writer);
-        step.setFlushInterval(flushInterval);
-        step.setIdleTimeout(idleTimeout);
+        flushingStepArgs.configure(step);
         return step;
     }
 
@@ -97,20 +89,12 @@ public abstract class AbstractExport extends AbstractJobCommand {
         this.readerArgs = args;
     }
 
-    public Duration getFlushInterval() {
-        return flushInterval;
+    public FlushingStepArgs getFlushingStepArgs() {
+        return flushingStepArgs;
     }
 
-    public void setFlushInterval(Duration interval) {
-        this.flushInterval = interval;
-    }
-
-    public Duration getIdleTimeout() {
-        return idleTimeout;
-    }
-
-    public void setIdleTimeout(Duration idleTimeout) {
-        this.idleTimeout = idleTimeout;
+    public void setFlushingStepArgs(FlushingStepArgs flushingStepArgs) {
+        this.flushingStepArgs = flushingStepArgs;
     }
 
     public DataSize getMemoryLimit() {

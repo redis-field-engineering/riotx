@@ -7,6 +7,8 @@ import java.time.Duration;
 
 public class BackOffArgs {
 
+    public static final int DEFAULT_RETRY_LIMIT = 10;
+
     public enum Policy {
         EXPONENTIAL, FIXED, NONE;
     }
