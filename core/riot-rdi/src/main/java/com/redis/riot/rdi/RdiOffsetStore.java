@@ -45,6 +45,7 @@ public class RdiOffsetStore implements OffsetStore {
         return mapper.writeValueAsString(field);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Map<String, Object> getOffset() throws JsonProcessingException {
         try (StatefulRedisModulesConnection<String, String> connection = connection()) {
