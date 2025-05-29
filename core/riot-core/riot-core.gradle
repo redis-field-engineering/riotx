@@ -8,6 +8,9 @@ dependencies {
     api 'org.springframework.batch:spring-batch-infrastructure'
     api 'io.micrometer:micrometer-registry-prometheus'
     api 'io.prometheus:prometheus-metrics-exporter-httpserver'
+    implementation group: 'io.github.resilience4j', name: 'resilience4j-ratelimiter', version: resilience4jVersion
+
+    testImplementation project(':spring-batch-redis-test')
 }
 
 project.rootProject.gradle.addBuildListener(new BuildAdapter() {

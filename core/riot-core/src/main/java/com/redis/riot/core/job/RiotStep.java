@@ -1,223 +1,246 @@
 package com.redis.riot.core.job;
 
-import com.redis.spring.batch.step.FlushingChunkProvider;
-import lombok.ToString;
-import org.springframework.batch.core.ItemProcessListener;
-import org.springframework.batch.core.ItemReadListener;
-import org.springframework.batch.core.ItemWriteListener;
-import org.springframework.batch.core.StepExecutionListener;
+import com.redis.riot.core.NoopItemWriter;
+import com.redis.riot.core.RiotUtils;
+import com.redis.riot.core.ThrottledItemWriter;
+import com.redis.spring.batch.item.PollableItemReader;
+import com.redis.spring.batch.item.redis.common.BatchUtils;
+import com.redis.spring.batch.item.redis.common.RedisOOMException;
+import com.redis.spring.batch.step.FlushingFaultTolerantStepFactoryBean;
+import com.redis.spring.batch.step.FlushingStepFactoryBean;
+import io.lettuce.core.RedisBusyException;
+import io.lettuce.core.RedisCommandExecutionException;
+import io.lettuce.core.RedisCommandTimeoutException;
+import io.lettuce.core.RedisLoadingException;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.StepListener;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.factory.FaultTolerantStepFactoryBean;
+import org.springframework.batch.core.step.factory.SimpleStepFactoryBean;
+import org.springframework.batch.core.step.skip.AlwaysSkipItemSkipPolicy;
+import org.springframework.batch.core.step.skip.NeverSkipItemSkipPolicy;
+import org.springframework.batch.core.step.skip.SkipPolicy;
+import org.springframework.batch.core.step.tasklet.TaskletStep;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemStreamReader;
 import org.springframework.batch.item.ItemWriter;
-import org.springframework.retry.policy.MaxAttemptsRetryPolicy;
+import org.springframework.batch.item.support.SynchronizedItemReader;
+import org.springframework.batch.item.support.SynchronizedItemStreamReader;
+import org.springframework.beans.factory.FactoryBean;
+import org.springframework.retry.RetryPolicy;
+import org.springframework.retry.backoff.BackOffPolicy;
+import org.springframework.retry.policy.AlwaysRetryPolicy;
+import org.springframework.retry.policy.NeverRetryPolicy;
+import org.springframework.transaction.PlatformTransactionManager;
 
+import java.text.ParseException;
 import java.time.Duration;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 
-@ToString
-public class RiotStep<I, O> {
-
-    public static final int DEFAULT_CHUNK_SIZE = 50;
+public class RiotStep<T, S> implements FactoryBean<Step> {
 
     public static final int DEFAULT_THREADS = 1;
 
-    public static final RetryPolicy DEFAULT_RETRY_POLICY = RetryPolicy.NEVER;
+    public static final int DEFAULT_COMMIT_INTERVAL = 50;
 
-    public static final SkipPolicy DEFAULT_SKIP_POLICY = SkipPolicy.NEVER;
-
-    public static final int DEFAULT_RETRY_LIMIT = MaxAttemptsRetryPolicy.DEFAULT_MAX_ATTEMPTS;
-
-    private String name;
-
-    private final ItemReader<I> reader;
-
-    private final ItemWriter<O> writer;
-
-    private ItemProcessor<I, O> processor;
-
-    private final Set<StepExecutionListener> executionListeners = new LinkedHashSet<>();
-
-    private final Set<ItemReadListener<I>> readListeners = new LinkedHashSet<>();
-
-    private final Set<ItemProcessListener<I, O>> processListeners = new LinkedHashSet<>();
-
-    private final Set<ItemWriteListener<O>> writeListeners = new LinkedHashSet<>();
-
-    private Duration flushInterval = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
-
-    private Duration idleTimeout = FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT;
-
-    private final Set<Class<? extends Throwable>> skip = new HashSet<>();
+    private final Set<Class<? extends Throwable>> skip = defaultSkippableExceptions();
 
     private final Set<Class<? extends Throwable>> noSkip = new HashSet<>();
 
-    private final Set<Class<? extends Throwable>> retry = new HashSet<>();
+    private final Set<Class<? extends Throwable>> retry = defaultRetriableExceptions();
 
-    private final Set<Class<? extends Throwable>> noRetry = new HashSet<>();
+    private final Set<Class<? extends Throwable>> noRetry = defaultNonRetriableExceptions();
 
-    private Duration sleep;
+    private final Set<StepListener> listeners = new LinkedHashSet<>();
+
+    private String name;
+
+    private ItemReader<? extends T> itemReader;
+
+    private ItemProcessor<? super T, ? extends S> itemProcessor;
+
+    private ItemWriter<? super S> itemWriter;
+
+    private PlatformTransactionManager transactionManager;
+
+    protected JobRepository jobRepository;
+
+    private int commitInterval = DEFAULT_COMMIT_INTERVAL;
 
     private int threads = DEFAULT_THREADS;
 
-    private int chunkSize = DEFAULT_CHUNK_SIZE;
-
     private boolean dryRun;
 
-    private SkipPolicy skipPolicy = DEFAULT_SKIP_POLICY;
+    private int writesPerSecond;
+
+    private Duration flushInterval = FlushingStepFactoryBean.DEFAULT_FLUSH_INTERVAL;
+
+    private Duration idleTimeout = FlushingStepFactoryBean.DEFAULT_IDLE_TIMEOUT;
+
+    private int retryLimit;
 
     private int skipLimit;
 
-    private RetryPolicy retryPolicy = DEFAULT_RETRY_POLICY;
+    private BackOffPolicy backOffPolicy;
 
-    private int retryLimit = DEFAULT_RETRY_LIMIT;
-
-    public RiotStep(String name, ItemReader<I> reader, ItemWriter<O> writer) {
-        this.name = name;
-        this.reader = reader;
-        this.writer = writer;
+    @Override
+    public Step getObject() throws Exception {
+        SimpleStepFactoryBean<T, S> factory = factoryBean();
+        factory.setBeanName(RiotUtils.normalizeName(name));
+        factory.setCommitInterval(commitInterval);
+        factory.setItemProcessor(itemProcessor);
+        factory.setItemReader(itemReader);
+        factory.setItemWriter(itemWriter());
+        factory.setJobRepository(jobRepository);
+        factory.setListeners(listeners.toArray(new StepListener[0]));
+        factory.setTransactionManager(transactionManager);
+        if (threads > 1) {
+            factory.setTaskExecutor(RiotUtils.threadPoolTaskExecutor(threads));
+            factory.setThrottleLimit(threads);
+            factory.setItemReader(synchronizedItemReader());
+        }
+        return factory.getObject();
     }
 
-    public RiotStep<I, O> addReadListener(ItemReadListener<I> listener) {
-        this.readListeners.add(listener);
-        return this;
+    @Override
+    public Class<TaskletStep> getObjectType() {
+        return TaskletStep.class;
     }
 
-    public RiotStep<I, O> addProcessListener(ItemProcessListener<I, O> listener) {
-        this.processListeners.add(listener);
-        return this;
+    protected boolean isFaultTolerant() {
+        return retryLimit != 0 || skipLimit != 0;
     }
 
-    public RiotStep<I, O> addWriteListener(ItemWriteListener<O> listener) {
-        writeListeners.add(listener);
-        return this;
+    private SimpleStepFactoryBean<T, S> factoryBean() {
+        if (itemReader instanceof PollableItemReader) {
+            if (isFaultTolerant()) {
+                FlushingFaultTolerantStepFactoryBean<T, S> factoryBean = new FlushingFaultTolerantStepFactoryBean<>();
+                factoryBean.setFlushInterval(flushInterval);
+                factoryBean.setIdleTimeout(idleTimeout);
+                configureFaultTolerantStepFactoryBean(factoryBean);
+                return factoryBean;
+            }
+            FlushingStepFactoryBean<T, S> factoryBean = new FlushingStepFactoryBean<>();
+            factoryBean.setFlushInterval(flushInterval);
+            factoryBean.setIdleTimeout(idleTimeout);
+            return factoryBean;
+        }
+        if (isFaultTolerant()) {
+            FaultTolerantStepFactoryBean<T, S> factoryBean = new FaultTolerantStepFactoryBean<>();
+            configureFaultTolerantStepFactoryBean(factoryBean);
+            return factoryBean;
+        }
+        return new SimpleStepFactoryBean<>();
     }
 
-    public RiotStep<I, O> addExecutionListener(StepExecutionListener listener) {
-        executionListeners.add(listener);
-        return this;
+    private void configureFaultTolerantStepFactoryBean(FaultTolerantStepFactoryBean<T, S> factoryBean) {
+        if (retryLimit > 0) {
+            factoryBean.setRetryLimit(retryLimit);
+        } else {
+            factoryBean.setRetryPolicy(retryPolicy());
+        }
+        if (skipLimit > 0) {
+            factoryBean.setSkipLimit(skipLimit);
+        } else {
+            factoryBean.setSkipPolicy(skipPolicy());
+        }
+        factoryBean.setRetryableExceptionClasses(retryableExceptions());
+        factoryBean.setSkippableExceptionClasses(skippableExceptions());
+        factoryBean.setBackOffPolicy(backOffPolicy);
     }
 
-    public RiotStep<I, O> skip(Class<? extends Throwable> exception) {
-        skip.add(exception);
-        return this;
+    private SkipPolicy skipPolicy() {
+        if (skipLimit < 0) {
+            return new AlwaysSkipItemSkipPolicy();
+        }
+        return new NeverSkipItemSkipPolicy();
     }
 
-    public RiotStep<I, O> retry(Class<? extends Throwable> exception) {
-        retry.add(exception);
-        return this;
+    private RetryPolicy retryPolicy() {
+        if (retryLimit < 0) {
+            return new AlwaysRetryPolicy();
+        }
+        return new NeverRetryPolicy();
     }
 
-    public RiotStep<I, O> noSkip(Class<? extends Throwable> exception) {
-        noSkip.add(exception);
-        return this;
+    public static Set<Class<? extends Throwable>> defaultSkippableExceptions() {
+        return BatchUtils.asSet(ParseException.class, org.springframework.batch.item.ParseException.class);
     }
 
-    public RiotStep<I, O> noRetry(Class<? extends Throwable> exception) {
-        noRetry.add(exception);
-        return this;
+    public static Set<Class<? extends Throwable>> defaultRetriableExceptions() {
+        return BatchUtils.asSet(RedisCommandTimeoutException.class, RedisLoadingException.class, RedisBusyException.class,
+                RedisOOMException.class);
     }
 
-    public String getName() {
-        return name;
+    public static Set<Class<? extends Throwable>> defaultNonRetriableExceptions() {
+        Set<Class<? extends Throwable>> exceptions = BatchUtils.asSet(RedisCommandExecutionException.class);
+        exceptions.addAll(defaultSkippableExceptions());
+        return exceptions;
     }
 
-    public RiotStep<I, O> name(String name) {
-        this.name = name;
-        return this;
-    }
-
-    public ItemProcessor<I, O> getProcessor() {
-        return processor;
-    }
-
-    public RiotStep<I, O> processor(ItemProcessor<I, O> processor) {
-        this.processor = processor;
-        return this;
-    }
-
-    public Set<StepExecutionListener> getExecutionListeners() {
-        return executionListeners;
-    }
-
-    public Set<ItemProcessListener<I, O>> getProcessListeners() {
-        return processListeners;
-    }
-
-    public Set<ItemReadListener<I>> getReadListeners() {
-        return readListeners;
-    }
-
-    public Set<ItemWriteListener<O>> getWriteListeners() {
-        return writeListeners;
-    }
-
-    public Duration getFlushInterval() {
-        return flushInterval;
-    }
-
-    public RiotStep<I, O> flushInterval(Duration flushInterval) {
-        this.flushInterval = flushInterval;
-        return this;
-    }
-
-    public Duration getIdleTimeout() {
-        return idleTimeout;
-    }
-
-    public RiotStep<I, O> idleTimeout(Duration idleTimeout) {
-        this.idleTimeout = idleTimeout;
-        return this;
-    }
-
-    public Collection<Class<? extends Throwable>> getSkip() {
-        return skip;
-    }
-
-    public Collection<Class<? extends Throwable>> getNoSkip() {
-        return noSkip;
-    }
-
-    public Collection<Class<? extends Throwable>> getRetry() {
-        return retry;
-    }
-
-    public Collection<Class<? extends Throwable>> getNoRetry() {
-        return noRetry;
-    }
-
-    public ItemReader<I> getReader() {
-        return reader;
-    }
-
-    public ItemWriter<O> getWriter() {
+    private ItemWriter<? super S> rateLimit(ItemWriter<? super S> writer) {
+        if (writesPerSecond > 0) {
+            return new ThrottledItemWriter<>(writer, writesPerSecond);
+        }
         return writer;
     }
 
-    public Duration getSleep() {
-        return sleep;
+    private ItemWriter<? super S> dryRun(ItemWriter<? super S> writer) {
+        if (dryRun) {
+            return new NoopItemWriter<>();
+        }
+        return writer;
     }
 
-    public void setSleep(Duration sleep) {
-        this.sleep = sleep;
+    protected ItemReader<? extends T> synchronizedItemReader() {
+        if (itemReader instanceof PollableItemReader) {
+            return itemReader;
+        }
+        if (itemReader instanceof ItemStreamReader) {
+            SynchronizedItemStreamReader<T> synchronizedReader = new SynchronizedItemStreamReader<>();
+            synchronizedReader.setDelegate((ItemStreamReader<T>) itemReader);
+            return synchronizedReader;
+        }
+        return new SynchronizedItemReader<>(itemReader);
     }
 
-    public int getThreads() {
-        return threads;
+    protected ItemWriter<? super S> itemWriter() {
+        return rateLimit(dryRun(itemWriter));
     }
 
-    public void setThreads(int threads) {
-        this.threads = threads;
+    private Map<Class<? extends Throwable>, Boolean> retryableExceptions() {
+        Map<Class<? extends Throwable>, Boolean> exceptionClasses = new LinkedHashMap<>();
+        noRetry.forEach(e -> exceptionClasses.put(e, false));
+        retry.forEach(e -> exceptionClasses.put(e, true));
+        return exceptionClasses;
     }
 
-    public int getChunkSize() {
-        return chunkSize;
+    private Map<Class<? extends Throwable>, Boolean> skippableExceptions() {
+        Map<Class<? extends Throwable>, Boolean> exceptionClasses = new LinkedHashMap<>();
+        noSkip.forEach(e -> exceptionClasses.put(e, false));
+        skip.forEach(e -> exceptionClasses.put(e, true));
+        return exceptionClasses;
     }
 
-    public void setChunkSize(int chunkSize) {
-        this.chunkSize = chunkSize;
+    public void skip(Class<? extends Throwable> exception) {
+        skip.add(exception);
+    }
+
+    public void retry(Class<? extends Throwable> exception) {
+        retry.add(exception);
+    }
+
+    public void noSkip(Class<? extends Throwable> exception) {
+        noSkip.add(exception);
+    }
+
+    public void noRetry(Class<? extends Throwable> exception) {
+        noRetry.add(exception);
+    }
+
+    public void addListener(StepListener listener) {
+        listeners.add(listener);
     }
 
     public boolean isDryRun() {
@@ -228,12 +251,92 @@ public class RiotStep<I, O> {
         this.dryRun = dryRun;
     }
 
-    public int getSkipLimit() {
-        return skipLimit;
+    public int getThreads() {
+        return threads;
     }
 
-    public void setSkipLimit(int skipLimit) {
-        this.skipLimit = skipLimit;
+    public void setThreads(int threads) {
+        this.threads = threads;
+    }
+
+    public int getWritesPerSecond() {
+        return writesPerSecond;
+    }
+
+    public void setWritesPerSecond(int writesPerSecond) {
+        this.writesPerSecond = writesPerSecond;
+    }
+
+    public Duration getFlushInterval() {
+        return flushInterval;
+    }
+
+    public void setFlushInterval(Duration flushInterval) {
+        this.flushInterval = flushInterval;
+    }
+
+    public Duration getIdleTimeout() {
+        return idleTimeout;
+    }
+
+    public void setIdleTimeout(Duration idleTimeout) {
+        this.idleTimeout = idleTimeout;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public ItemReader<? extends T> getItemReader() {
+        return itemReader;
+    }
+
+    public void setItemReader(ItemReader<? extends T> itemReader) {
+        this.itemReader = itemReader;
+    }
+
+    public ItemProcessor<? super T, ? extends S> getItemProcessor() {
+        return itemProcessor;
+    }
+
+    public void setItemProcessor(ItemProcessor<? super T, ? extends S> itemProcessor) {
+        this.itemProcessor = itemProcessor;
+    }
+
+    public ItemWriter<? super S> getItemWriter() {
+        return itemWriter;
+    }
+
+    public void setItemWriter(ItemWriter<? super S> itemWriter) {
+        this.itemWriter = itemWriter;
+    }
+
+    public PlatformTransactionManager getTransactionManager() {
+        return transactionManager;
+    }
+
+    public void setTransactionManager(PlatformTransactionManager transactionManager) {
+        this.transactionManager = transactionManager;
+    }
+
+    public JobRepository getJobRepository() {
+        return jobRepository;
+    }
+
+    public void setJobRepository(JobRepository jobRepository) {
+        this.jobRepository = jobRepository;
+    }
+
+    public int getCommitInterval() {
+        return commitInterval;
+    }
+
+    public void setCommitInterval(int commitInterval) {
+        this.commitInterval = commitInterval;
     }
 
     public int getRetryLimit() {
@@ -244,20 +347,20 @@ public class RiotStep<I, O> {
         this.retryLimit = retryLimit;
     }
 
-    public SkipPolicy getSkipPolicy() {
-        return skipPolicy;
+    public int getSkipLimit() {
+        return skipLimit;
     }
 
-    public void setSkipPolicy(SkipPolicy skipPolicy) {
-        this.skipPolicy = skipPolicy;
+    public void setSkipLimit(int skipLimit) {
+        this.skipLimit = skipLimit;
     }
 
-    public RetryPolicy getRetryPolicy() {
-        return retryPolicy;
+    public BackOffPolicy getBackOffPolicy() {
+        return backOffPolicy;
     }
 
-    public void setRetryPolicy(RetryPolicy retryPolicy) {
-        this.retryPolicy = retryPolicy;
+    public void setBackOffPolicy(BackOffPolicy backOffPolicy) {
+        this.backOffPolicy = backOffPolicy;
     }
 
 }

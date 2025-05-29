@@ -5,6 +5,7 @@ import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.MapToFieldFunction;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
 import com.redis.riot.core.function.ToMapFunction;
+import com.redis.riot.core.job.FlowFactoryBean;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.file.*;
 import com.redis.riot.parquet.ParquetFileItemReader;
@@ -24,8 +25,6 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-import java.io.IOException;
-import java.text.ParseException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -103,35 +102,41 @@ public class FileImport extends AbstractRedisImport {
     }
 
     @Override
-    protected Job job() {
-        return job(files.stream().map(this::step).collect(Collectors.toList()));
+    protected Job job() throws Exception {
+        List<RiotStep<?, ?>> steps = new ArrayList<>();
+        for (String file : files) {
+            steps.add(step(resourceFactory.resource(file, readOptions)));
+        }
+        return job(FlowFactoryBean.sequential("importFlow", steps.stream().map(this::stepFlow).collect(Collectors.toList())));
     }
 
-    private RiotStep<?, ?> step(String location) {
-        Resource resource;
-        try {
-            resource = resourceFactory.resource(location, readOptions);
-        } catch (IOException e) {
-            throw new RuntimeIOException(String.format("Could not create resource from %s", location), e);
-        }
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private RiotStep step(Resource resource) {
         MimeType type = contentType(resource);
         ReaderFactory readerFactory = readerRegistry.getReaderFactory(type);
-        Assert.notNull(readerFactory, () -> String.format("No reader found for file %s", location));
-        ItemReader<?> reader = readerFactory.create(resource, readOptions);
-        RedisItemWriter<?, ?, ?> writer = writer();
-        configureTargetRedisWriter(writer);
-        RiotStep<?, ?> step = step(resource.getFilename(), reader, writer);
-        step.name(location);
+        Assert.notNull(readerFactory, () -> String.format("No reader found for file %s", resource.getFilename()));
+        ItemReader reader = readerFactory.create(resource, readOptions);
+        RiotStep step = step(resource.getFilename(), reader, writer(type));
         if (hasOperations()) {
-            step.processor(RiotUtils.processor(operationProcessor(), regexProcessor()));
-        } else {
-            Assert.isTrue(keyValueTypes.contains(type), "No Redis operation specified");
+            step.setItemProcessor(operationProcessor());
         }
-        step.skip(ParseException.class);
-        step.skip(org.springframework.batch.item.ParseException.class);
-        step.noRetry(ParseException.class);
-        step.noRetry(org.springframework.batch.item.ParseException.class);
         return step;
+    }
+
+    private RedisItemWriter<String, String, ?> writer(MimeType type) {
+        if (hasOperations()) {
+            return operationWriter();
+        }
+        Assert.isTrue(keyValueTypes.contains(type), "No Redis operation specified");
+        RedisItemWriter<String, String, ?> writer = RedisItemWriter.struct();
+        configureTarget(writer);
+        return writer;
+
+    }
+
+    @Override
+    protected ItemProcessor<Map<String, Object>, Map<String, Object>> operationProcessor() {
+        return RiotUtils.processor(super.operationProcessor(), regexProcessor());
     }
 
     private MimeType contentType(Resource resource) {
@@ -159,13 +164,6 @@ public class FileImport extends AbstractRedisImport {
             return Map.class;
         }
         return KeyValue.class;
-    }
-
-    private RedisItemWriter<?, ?, ?> writer() {
-        if (hasOperations()) {
-            return operationWriter();
-        }
-        return RedisItemWriter.struct();
     }
 
     private ItemProcessor<Map<String, Object>, Map<String, Object>> regexProcessor() {

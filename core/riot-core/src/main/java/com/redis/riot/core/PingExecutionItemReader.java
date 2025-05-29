@@ -1,16 +1,14 @@
 package com.redis.riot.core;
 
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
+import com.redis.spring.batch.item.AbstractCountingItemReader;
+import io.lettuce.core.api.sync.RedisCommands;
 import org.springframework.util.ClassUtils;
 
-import io.lettuce.core.api.sync.RedisCommands;
-
-public class PingExecutionItemReader extends AbstractItemCountingItemStreamItemReader<PingExecution> {
+public class PingExecutionItemReader extends AbstractCountingItemReader<PingExecution> {
 
 	private final RedisCommands<String, String> redisCommands;
 
 	public PingExecutionItemReader(RedisCommands<String, String> redisCommands) {
-		setName(ClassUtils.getShortName(getClass()));
 		this.redisCommands = redisCommands;
 	}
 

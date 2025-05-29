@@ -1,5 +1,7 @@
-package com.redis.riot.file;
+package com.redis.riot.file.json;
 
+import com.redis.riot.file.AbstractReaderFactory;
+import com.redis.riot.file.ReadOptions;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.json.JacksonJsonObjectReader;
 import org.springframework.batch.item.json.builder.JsonItemReaderBuilder;

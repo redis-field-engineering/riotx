@@ -1,5 +1,6 @@
 package com.redis.spring.batch.item.redis;
 
+import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.common.OperationExecutor;
 import com.redis.spring.batch.item.redis.common.RedisOperation;
@@ -10,7 +11,6 @@ import io.lettuce.core.ReadFrom;
 import io.lettuce.core.codec.RedisCodec;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
 import org.springframework.data.util.Predicates;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
@@ -19,7 +19,7 @@ import org.springframework.util.unit.DataSize;
 import java.util.List;
 import java.util.function.Predicate;
 
-public abstract class RedisItemReader<K, V> extends AbstractItemCountingItemStreamItemReader<KeyValue<K>> {
+public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<KeyValue<K>> {
 
     public static final int DEFAULT_POOL_SIZE = OperationExecutor.DEFAULT_POOL_SIZE;
 
@@ -48,7 +48,6 @@ public abstract class RedisItemReader<K, V> extends AbstractItemCountingItemStre
     private Predicate<K> keyFilter = Predicates.isTrue();
 
     protected RedisItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> operation) {
-        setName(ClassUtils.getShortName(getClass()));
         this.codec = codec;
         this.operation = operation;
     }

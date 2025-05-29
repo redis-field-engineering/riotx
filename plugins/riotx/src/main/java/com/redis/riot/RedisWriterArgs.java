@@ -14,8 +14,6 @@ public class RedisWriterArgs {
 
     public static final Duration DEFAULT_WAIT_TIMEOUT = Wait.DEFAULT_TIMEOUT;
 
-    public static final int DEFAULT_POOL_SIZE = RedisItemWriter.DEFAULT_POOL_SIZE;
-
     @Option(names = "--multi-exec", description = "Enable MULTI/EXEC writes.")
     private boolean multiExec;
 

@@ -1,12 +1,10 @@
 package com.redis.riot;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
-
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.reader.KeyEventListenerContainer;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.riot.core.job.RiotStep;
+import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.StepExecution;
@@ -16,16 +14,15 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.support.AbstractItemStreamItemWriter;
 import org.springframework.util.unit.DataSize;
-
-import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.reader.KeyEventListenerContainer;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-
-import io.lettuce.core.codec.StringCodec;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 @Command(name = "stats", description = "Analyze a Redis database and report statistics.")
 public class Stats extends AbstractRedisCommand {
@@ -33,6 +30,8 @@ public class Stats extends AbstractRedisCommand {
     public static final DataSize DEFAULT_BIG_THRESHOLD = DataSize.ofMegabytes(1);
 
     private static final String TASK_NAME = "Analyzing";
+
+    private static final String STEP_NAME = "stats-step";
 
     @ArgGroup(exclusive = false)
     private RedisReaderArgs readerArgs = new RedisReaderArgs();
@@ -46,8 +45,8 @@ public class Stats extends AbstractRedisCommand {
     @Option(names = "--mem", description = "Memory usage above which a key is considered big (default: ${DEFAULT-VALUE}).", paramLabel = "<size>")
     private DataSize memUsage = DEFAULT_BIG_THRESHOLD;
 
-    @Option(names = "--rate", description = "Write bandwidth above which a key is considered potentially problematic (default: ${DEFAULT-VALUE}).", paramLabel = "<size>")
-    private DataSize rate = StatsPrinter.DEFAULT_WRITE_BANDWIDTH_THRESHOLD;
+    @Option(names = "--byterate", description = "Write bandwidth above which a key is considered potentially problematic (default: ${DEFAULT-VALUE}).", paramLabel = "<size>")
+    private DataSize bandwidth = StatsPrinter.DEFAULT_WRITE_BANDWIDTH_THRESHOLD;
 
     @Option(names = "--keyspace", description = "Regular expression to extract the keyspace from a key (default: ${DEFAULT-VALUE}).", paramLabel = "<reg>")
     private Pattern keyspacePattern = Pattern.compile(RedisStats.DEFAULT_KEYSPACE_REGEX);
@@ -61,7 +60,7 @@ public class Stats extends AbstractRedisCommand {
     }
 
     @Override
-    protected Job job() {
+    protected Job job() throws Exception {
         RedisScanItemReader<String, String> reader = RedisScanItemReader.type();
         reader.setMemoryLimit(-1);
         reader.setMemoryUsageSamples(memoryUsageSamples);
@@ -73,8 +72,8 @@ public class Stats extends AbstractRedisCommand {
                 getRedisContext().client(), StringCodec.UTF8);
         int database = getRedisContext().uri().getDatabase();
         StatsWriter writer = new StatsWriter(stats, listenerContainer, database, readerArgs.getKeyPattern());
-        RiotStep<KeyValue<String>, KeyValue<String>> step = step("stats", reader, writer);
-        step.addExecutionListener(new ExecutionListener(statsPrinter(stats)));
+        RiotStep<KeyValue<String>, KeyValue<String>> step = step(STEP_NAME, reader, writer);
+        step.addListener(new ExecutionListener(statsPrinter(stats)));
         return job(step);
     }
 
@@ -85,7 +84,7 @@ public class Stats extends AbstractRedisCommand {
 
     private StatsPrinter statsPrinter(RedisStats stats) {
         StatsPrinter printer = new StatsPrinter(stats, System.out);
-        printer.setWriteBandwidthThreshold(rate);
+        printer.setWriteBandwidthThreshold(bandwidth);
         printer.setQuantiles(quantiles);
         printer.setTableBorder(tableBorder);
         return printer;
@@ -222,12 +221,12 @@ public class Stats extends AbstractRedisCommand {
         this.readerArgs = readerArgs;
     }
 
-    public DataSize getRate() {
-        return rate;
+    public DataSize getBandwidth() {
+        return bandwidth;
     }
 
-    public void setRate(DataSize rate) {
-        this.rate = rate;
+    public void setBandwidth(DataSize bandwidth) {
+        this.bandwidth = bandwidth;
     }
 
 }

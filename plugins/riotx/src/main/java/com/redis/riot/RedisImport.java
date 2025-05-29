@@ -3,9 +3,9 @@ package com.redis.riot;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.KeyValueMap;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
-import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
@@ -22,6 +22,8 @@ public class RedisImport extends AbstractTargetRedisImport {
 
     private static final String TASK_NAME = "Migrating";
 
+    private static final String STEP_NAME = "redis-import-step";
+
     @ArgGroup(exclusive = false)
     private RedisReaderArgs sourceRedisReaderArgs = new RedisReaderArgs();
 
@@ -35,11 +37,10 @@ public class RedisImport extends AbstractTargetRedisImport {
     }
 
     @Override
-    protected Job job() {
+    protected Job job() throws Exception {
         Assert.isTrue(hasOperations(), "No Redis command specified");
-        RedisScanItemReader<String, String> reader = reader();
-        RiotStep<KeyValue<String>, Map<String, Object>> step = step("redis-import", reader, operationWriter());
-        step.processor(RiotUtils.processor(keyValueProcessor(), operationProcessor()));
+        RiotStep<KeyValue<String>, Map<String, Object>> step = step(STEP_NAME, reader(), operationWriter());
+        step.setItemProcessor(RiotUtils.processor(keyValueProcessor(), operationProcessor()));
         return job(step);
     }
 

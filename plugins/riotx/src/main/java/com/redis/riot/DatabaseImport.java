@@ -2,6 +2,7 @@ package com.redis.riot;
 
 import com.redis.riot.db.JdbcReaderFactory;
 import com.redis.riot.db.SnowflakeColumnMapRowMapper;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
@@ -16,6 +17,8 @@ import java.util.Map;
 @Command(name = "db-import", description = "Import from a relational database.")
 public class DatabaseImport extends AbstractRedisImport {
 
+    private static final String STEP_NAME = "db-import-step";
+
     @ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
 
@@ -26,8 +29,10 @@ public class DatabaseImport extends AbstractRedisImport {
     private DatabaseReaderArgs readerArgs = new DatabaseReaderArgs();
 
     @Override
-    protected Job job() {
-        return job(operationStep(reader()));
+    protected Job job() throws Exception {
+        RiotStep<Map<String, Object>, Map<String, Object>> step = step(STEP_NAME, reader(), operationWriter());
+        step.setItemProcessor(operationProcessor());
+        return job(step);
     }
 
     protected JdbcCursorItemReader<Map<String, Object>> reader() {

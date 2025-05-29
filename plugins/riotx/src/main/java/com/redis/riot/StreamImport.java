@@ -1,25 +1,24 @@
 package com.redis.riot;
 
-import java.util.Map;
-
-import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.RiotUtils;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.function.FunctionItemProcessor;
-import org.springframework.util.Assert;
-
+import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader;
-
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.XReadArgs.StreamOffset;
 import io.lettuce.core.codec.StringCodec;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.item.function.FunctionItemProcessor;
+import org.springframework.util.Assert;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
+import java.util.Map;
+
 @Command(name = "stream-import", description = "Import data from a Redis stream.")
 public class StreamImport extends AbstractTargetRedisImport {
+
+    private static final String STEP_NAME = "stream-import-step";
 
     @Parameters(arity = "1..*", mapFallbackValue = "0", description = "Stream(s) and corresponding offsets to import, in the form key=offset. If not specified offset defaults to ${MAP-FALLBACK-VALUE}.", paramLabel = "STREAM")
     private Map<String, String> streams;
@@ -28,13 +27,13 @@ public class StreamImport extends AbstractTargetRedisImport {
     private StreamReaderArgs streamReaderArgs = new StreamReaderArgs();
 
     @Override
-    protected Job job() {
+    protected Job job() throws Exception {
         Assert.isTrue(hasOperations(), "No Redis command specified");
         StreamItemReader<String, String> reader = reader();
-        RiotStep<StreamMessage<String, String>, Map<String, Object>> step = step("stream-import", reader, operationWriter());
-        step.processor(streamMessageProcessor());
-        step.flushInterval(reader.getBlock());
-        step.idleTimeout(reader.getPollTimeout());
+        RiotStep<StreamMessage<String, String>, Map<String, Object>> step = step(STEP_NAME, reader, operationWriter());
+        step.setItemProcessor(RiotUtils.processor(new FunctionItemProcessor<>(this::messageBody), operationProcessor()));
+        step.setFlushInterval(reader.getBlock());
+        step.setIdleTimeout(reader.getPollTimeout());
         return job(step);
     }
 
@@ -52,10 +51,6 @@ public class StreamImport extends AbstractTargetRedisImport {
     private StreamOffset<String>[] streamOffsets() {
         Assert.notEmpty(streams, "No stream specified");
         return streams.entrySet().stream().map(e -> StreamOffset.from(e.getKey(), e.getValue())).toArray(StreamOffset[]::new);
-    }
-
-    protected ItemProcessor<StreamMessage<String, String>, Map<String, Object>> streamMessageProcessor() {
-        return RiotUtils.processor(new FunctionItemProcessor<>(this::messageBody), operationProcessor());
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })

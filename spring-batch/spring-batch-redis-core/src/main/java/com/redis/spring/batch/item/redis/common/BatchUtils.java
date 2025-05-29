@@ -5,10 +5,7 @@ import com.redis.spring.batch.BatchRedisMetrics;
 import com.redis.spring.batch.item.redis.reader.KeyEvent;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
-import io.lettuce.core.RedisFuture;
-import io.lettuce.core.ScanArgs;
-import io.lettuce.core.ScanIterator;
-import io.lettuce.core.ScanStream;
+import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
@@ -27,11 +24,7 @@ import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
@@ -134,26 +127,37 @@ public abstract class BatchUtils {
         return futures;
     }
 
-    public static <T> List<T> getAll(Duration timeout, Iterable<RedisFuture<T>> futures)
-            throws TimeoutException, InterruptedException, ExecutionException {
-        List<T> items = new ArrayList<>();
-        long nanos = timeout.toNanos();
-        long time = System.nanoTime();
-        for (RedisFuture<T> f : futures) {
-            if (timeout.isNegative()) {
-                items.add(f.get());
-            } else {
-                if (nanos < 0) {
-                    throw new TimeoutException(String.format("Timed out after %s", timeout));
+    public static <T> List<T> getAll(Duration timeout, Iterable<RedisFuture<T>> futures) {
+        try {
+            List<T> items = new ArrayList<>();
+            long nanos = timeout.toNanos();
+            long time = System.nanoTime();
+            for (RedisFuture<T> f : futures) {
+                if (timeout.isNegative()) {
+                    items.add(f.get());
+                } else {
+                    if (nanos < 0) {
+                        throw new RedisCommandTimeoutException(String.format("Timed out after %s", timeout));
+                    }
+                    T item = f.get(nanos, TimeUnit.NANOSECONDS);
+                    items.add(item);
+                    long now = System.nanoTime();
+                    nanos -= now - time;
+                    time = now;
                 }
-                T item = f.get(nanos, TimeUnit.NANOSECONDS);
-                items.add(item);
-                long now = System.nanoTime();
-                nanos -= now - time;
-                time = now;
             }
+            return items;
+        } catch (TimeoutException e) {
+            throw new RedisCommandTimeoutException(e.getMessage());
+        } catch (Exception e) {
+            throw Exceptions.fromSynchronization(e);
         }
-        return items;
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <T> Set<T> asSet(T... elements) {
+        return new HashSet<>(Arrays.asList(elements));
     }
 
 }

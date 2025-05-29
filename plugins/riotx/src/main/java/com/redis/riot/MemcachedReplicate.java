@@ -2,10 +2,10 @@ package com.redis.riot;
 
 import com.redis.riot.core.InetSocketAddressList;
 import com.redis.riot.core.MemcachedContext;
-import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.memcached.MemcachedEntry;
 import com.redis.spring.batch.memcached.MemcachedItemReader;
 import com.redis.spring.batch.memcached.MemcachedItemWriter;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -18,6 +18,8 @@ import java.util.concurrent.TimeoutException;
 public class MemcachedReplicate extends AbstractJobCommand {
 
     private static final String TASK_NAME = "Replicating";
+
+    private static final String STEP_NAME = "memcached-replicate-step";
 
     @Parameters(arity = "1", index = "0", description = "Source server address(es) int the form host:port.", paramLabel = "SOURCE")
     private InetSocketAddressList sourceAddressList;
@@ -76,11 +78,11 @@ public class MemcachedReplicate extends AbstractJobCommand {
     }
 
     @Override
-    protected Job job() {
+    protected Job job() throws Exception {
         MemcachedItemReader reader = new MemcachedItemReader(sourceMemcachedContext::safeMemcachedClient);
         MemcachedItemWriter writer = new MemcachedItemWriter(targetMemcachedContext::safeMemcachedClient);
-        RiotStep<MemcachedEntry, MemcachedEntry> step = step("memcached-replicate", reader, writer);
-        step.processor(this::process);
+        RiotStep<MemcachedEntry, MemcachedEntry> step = step(STEP_NAME, reader, writer);
+        step.setItemProcessor(this::process);
         step.noSkip(TimeoutException.class);
         step.retry(TimeoutException.class);
         return job(step);

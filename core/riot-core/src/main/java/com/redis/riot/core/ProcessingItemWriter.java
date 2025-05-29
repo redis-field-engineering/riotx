@@ -25,7 +25,6 @@ public class ProcessingItemWriter<S, T> extends ItemStreamSupport implements Ite
 	public void open(ExecutionContext executionContext) throws ItemStreamException {
 		if (processor instanceof ItemStream) {
 			((ItemStream) processor).open(executionContext);
-
 		}
 		if (writer instanceof ItemStream) {
 			((ItemStream) writer).open(executionContext);

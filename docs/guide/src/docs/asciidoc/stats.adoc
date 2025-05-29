@@ -18,12 +18,12 @@ For the full usage, run:
 
 `--mem <size>`:: Memory usage threshold above which a key is considered big
 
-`--rate <size>`:: Write bandwidth above which a key is considered problematic.
+`--byterate <size>`:: Write bandwidth above which a key is considered problematic.
 
 
 .Example: Keys over 3MB in memory usage and 10MB in write rate
 [source,console,subs="verbatim,attributes"]
 ----
-{app} stats --mem 3mb --rate 10mb
+{app} stats --mem 3mb --byterate 10mb
 ----
 

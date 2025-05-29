@@ -1,6 +1,11 @@
 package com.redis.riot;
 
+import com.redis.riot.core.RiotUtils;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
+import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -18,6 +23,8 @@ public class DatabaseExport extends AbstractRedisExport {
 
     public static final boolean DEFAULT_ASSERT_UPDATES = true;
 
+    private static final String STEP_NAME = "db-export-step";
+
     @ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
 
@@ -28,8 +35,16 @@ public class DatabaseExport extends AbstractRedisExport {
     private boolean assertUpdates = DEFAULT_ASSERT_UPDATES;
 
     @Override
-    protected Job job() {
-        return job(step(mapProcessor(), writer()));
+    protected Job job() throws Exception {
+        RiotStep<KeyValue<String>, Map<String, Object>> step = step(STEP_NAME, reader(), writer());
+        step.setItemProcessor(RiotUtils.processor(keyValueFilter(), mapProcessor()));
+        return job(step);
+    }
+
+    private ItemReader<KeyValue<String>> reader() {
+        RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
+        configureSource(reader);
+        return reader;
     }
 
     private JdbcBatchItemWriter<Map<String, Object>> writer() {
@@ -45,7 +60,6 @@ public class DatabaseExport extends AbstractRedisExport {
         writer.afterPropertiesSet();
         return writer;
     }
-
 
     private static class NullableSqlParameterSource extends MapSqlParameterSource {
 

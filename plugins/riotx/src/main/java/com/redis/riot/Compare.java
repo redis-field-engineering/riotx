@@ -30,7 +30,7 @@ public class Compare extends AbstractCompareCommand {
 	}
 
 	@Override
-	protected Job job() {
+	protected Job job() throws Exception {
 		return job(compareStep());
 	}
 

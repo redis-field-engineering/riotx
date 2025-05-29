@@ -1,13 +1,13 @@
 package com.redis.spring.batch.memcached;
 
+import com.redis.spring.batch.item.AbstractCountingItemReader;
+import org.springframework.batch.item.file.transform.Range;
+import org.springframework.util.ClassUtils;
+
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.springframework.batch.item.file.transform.Range;
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
-import org.springframework.util.ClassUtils;
-
-public class MemcachedGeneratorItemReader extends AbstractItemCountingItemStreamItemReader<MemcachedEntry> {
+public class MemcachedGeneratorItemReader extends AbstractCountingItemReader<MemcachedEntry> {
 
     public static final String DEFAULT_KEYSPACE = "gen";
 
@@ -30,10 +30,6 @@ public class MemcachedGeneratorItemReader extends AbstractItemCountingItemStream
     private Range stringLength = DEFAULT_STRING_LENGTH;
 
     private int startTime;
-
-    public MemcachedGeneratorItemReader() {
-        setName(ClassUtils.getShortName(getClass()));
-    }
 
     private String key() {
         int index = keyRange.getMin() + (getCurrentItemCount() - 1) % (keyRange.getMax() - keyRange.getMin());

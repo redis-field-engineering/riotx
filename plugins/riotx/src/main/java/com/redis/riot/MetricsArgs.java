@@ -86,7 +86,7 @@ public class MetricsArgs {
         };
     }
 
-    public void setEnabled(boolean enabled) throws IOException {
+    public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
@@ -132,6 +132,18 @@ public class MetricsArgs {
 
     public void setProperties(Map<String, String> properties) {
         this.properties = properties;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDecriptions(boolean decriptions) {
+        this.decriptions = decriptions;
     }
 
     public void configure(RedisContext context) {

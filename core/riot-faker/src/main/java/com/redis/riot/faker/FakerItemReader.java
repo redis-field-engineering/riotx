@@ -1,26 +1,20 @@
 package com.redis.riot.faker;
 
-import java.util.AbstractMap;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
+import com.redis.spring.batch.item.AbstractCountingItemReader;
+import net.datafaker.Faker;
+import org.springframework.batch.item.ItemReader;
+import org.springframework.util.Assert;
+
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
-
-import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-
-import net.datafaker.Faker;
 
 /**
  * {@link ItemReader} that generates HashMaps using Faker.
  *
  * @author Julien Ruaux
  */
-public class FakerItemReader extends AbstractItemCountingItemStreamItemReader<Map<String, Object>> {
+public class FakerItemReader extends AbstractCountingItemReader<Map<String, Object>> {
 
 	public static final Locale DEFAULT_LOCALE = Locale.getDefault();
 
@@ -31,10 +25,6 @@ public class FakerItemReader extends AbstractItemCountingItemStreamItemReader<Ma
 
 	private Faker faker;
 	private Map<String, String> fields;
-
-	public FakerItemReader() {
-		setName(ClassUtils.getShortName(getClass()));
-	}
 
 	public void setLocale(Locale locale) {
 		this.locale = locale;

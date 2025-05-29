@@ -1,21 +1,18 @@
 package com.redis.spring.batch.item.redis.reader;
 
+import com.redis.spring.batch.item.AbstractCountingItemReader;
+import com.redis.spring.batch.item.redis.common.KeyValue;
+import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemStreamException;
+import org.springframework.util.Assert;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemStreamException;
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
-import org.springframework.batch.item.support.PassThroughItemProcessor;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-
-import com.redis.spring.batch.item.redis.common.KeyValue;
-
-public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStreamItemReader<KeyComparison<K>> {
+public class KeyComparisonItemReader<K, V> extends AbstractCountingItemReader<KeyComparison<K>> {
 
     public static final int DEFAULT_BATCH_SIZE = 50;
 
@@ -23,7 +20,7 @@ public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStrea
 
     private final RedisScanItemReader<K, V> targetReader;
 
-    private ItemProcessor<KeyValue<K>, KeyValue<K>> processor = new PassThroughItemProcessor<>();
+    private ItemProcessor<KeyValue<K>, KeyValue<K>> processor;
 
     private int batchSize = DEFAULT_BATCH_SIZE;
 
@@ -32,7 +29,6 @@ public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStrea
     private Iterator<KeyComparison<K>> iterator = Collections.emptyIterator();
 
     public KeyComparisonItemReader(RedisScanItemReader<K, V> sourceReader, RedisScanItemReader<K, V> targetReader) {
-        setName(ClassUtils.getShortName(getClass()));
         this.sourceReader = sourceReader;
         this.targetReader = targetReader;
         this.comparator = new DefaultKeyComparator<>(sourceReader.getCodec());
@@ -77,7 +73,7 @@ public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStrea
         List<KeyValue<K>> sourceValues = new ArrayList<>();
         KeyValue<K> sourceValue;
         while (sourceValues.size() < batchSize && (sourceValue = sourceReader.read()) != null) {
-            KeyValue<K> processedKeyValue = processor.process(sourceValue);
+            KeyValue<K> processedKeyValue = process(sourceValue);
             if (processedKeyValue != null) {
                 sourceValues.add(processedKeyValue);
             }
@@ -93,6 +89,13 @@ public class KeyComparisonItemReader<K, V> extends AbstractItemCountingItemStrea
             return iterator.next();
         }
         return null;
+    }
+
+    private KeyValue<K> process(KeyValue<K> keyValue) throws Exception {
+        if (processor == null) {
+            return keyValue;
+        }
+        return processor.process(keyValue);
     }
 
     public RedisScanItemReader<K, V> getSourceReader() {

@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.redis.riot.core.CompareMode;
+import com.redis.riot.replicate.Replicate;
+import com.redis.riot.replicate.ReplicateWriteLogger;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.simple.SimpleLogger;
 

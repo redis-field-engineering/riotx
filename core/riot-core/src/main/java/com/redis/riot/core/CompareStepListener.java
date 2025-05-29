@@ -51,8 +51,8 @@ public class CompareStepListener implements StepExecutionListener {
         return builder.toString();
     }
 
-    public static Set<Entry<Status, List<KeyComparisonStat>>> statsByStatus(KeyComparisonStatsWriter<?> stats) {
-        Map<Status, List<KeyComparisonStat>> map = stats.allStats().stream()
+    public static Set<Entry<Status, List<KeyComparisonStat>>> statsByStatus(KeyComparisonStatsWriter<?> writer) {
+        Map<Status, List<KeyComparisonStat>> map = writer.allStats().stream()
                 .collect(Collectors.groupingBy(KeyComparisonStat::getStatus));
         List<Status> statuses = new ArrayList<>(map.keySet());
         statuses.sort(CompareStepListener::compareStatus);

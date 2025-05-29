@@ -14,6 +14,7 @@ import com.redis.riot.core.QuietMapAccessor;
 import com.redis.riot.file.xml.XmlItemReader;
 import com.redis.riot.file.xml.XmlItemReaderBuilder;
 import com.redis.riot.file.xml.XmlObjectReader;
+import com.redis.riot.replicate.Replicate;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
 import com.redis.spring.batch.item.redis.gen.ItemType;
@@ -463,7 +464,7 @@ class StackRiotTests extends RiotTests {
     void fakerImportXadd(TestInfo info) throws Exception {
         execute(info, "faker-xadd");
         List<StreamMessage<String, String>> messages = redisCommands.xrange("teststream:1", Range.unbounded());
-        Assertions.assertTrue(messages.size() > 0);
+        Assertions.assertFalse(messages.isEmpty());
     }
 
     @Test
@@ -477,14 +478,14 @@ class StackRiotTests extends RiotTests {
     @Test
     void generateTypes(TestInfo info) throws Exception {
         execute(info, "generate");
-        Assertions.assertEquals(Math.min(GenerateArgs.DEFAULT_COUNT, GeneratorItemReader.DEFAULT_KEY_RANGE.getMax()),
+        Assertions.assertEquals(Math.min(Generate.DEFAULT_COUNT, GeneratorItemReader.DEFAULT_KEY_RANGE.getMax()),
                 redisCommands.dbsize());
     }
 
     @Test
     void generateJsonIndex(TestInfo info) throws Exception {
         execute(info, "generate-json-index");
-        int keyCount = Math.min(GenerateArgs.DEFAULT_COUNT, GeneratorItemReader.DEFAULT_KEY_RANGE.getMax());
+        int keyCount = Math.min(Generate.DEFAULT_COUNT, GeneratorItemReader.DEFAULT_KEY_RANGE.getMax());
         Assertions.assertEquals(keyCount, redisCommands.dbsize());
         IndexInfo indexInfo = IndexInfo.parse(redisCommands.ftInfo("jsonIdx"));
         List<Field<String>> expectedFields = new ArrayList<>();
@@ -498,7 +499,7 @@ class StackRiotTests extends RiotTests {
     @Test
     void generateHashIndex(TestInfo info) throws Exception {
         execute(info, "generate-hash-index");
-        int keyCount = Math.min(GenerateArgs.DEFAULT_COUNT, GeneratorItemReader.DEFAULT_KEY_RANGE.getMax());
+        int keyCount = Math.min(Generate.DEFAULT_COUNT, GeneratorItemReader.DEFAULT_KEY_RANGE.getMax());
         Assertions.assertEquals(keyCount, redisCommands.dbsize());
         IndexInfo indexInfo = IndexInfo.parse(redisCommands.ftInfo("hashIdx"));
         List<Field<String>> expectedFields = new ArrayList<>();
@@ -555,7 +556,7 @@ class StackRiotTests extends RiotTests {
     }
 
     @Test
-    void replication(TestInfo info) throws Throwable {
+    void replicateAPI(TestInfo info) throws Throwable {
         generate(info, generator(73));
         Assertions.assertTrue(redisCommands.dbsize() > 0);
         Replicate replication = new Replicate();

@@ -1,1 +1,1 @@
-riotx snowflake-import tb_101.raw_pos.incremental_order_header --role riotx_cdc --warehouse compute_wh --cdc-schema raw_pos_cdc --jdbc-url "jdbc:snowflake://<accountid>.snowflakecomputing.com" --user riotx_cdc --jdbc-pass pass
+riotx snowflake-import tb_101.raw_pos.incremental_order_header --role riotx_cdc --warehouse compute_wh --cdc-schema raw_pos_cdc --jdbc-url "jdbc:snowflake://<accountid>.snowflakecomputing.com" --jdbc-user riotx_cdc --jdbc-pass pass

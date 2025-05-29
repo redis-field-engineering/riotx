@@ -1,7 +1,5 @@
 package com.redis.riot;
 
-import java.util.Map;
-
 import com.redis.riot.core.RedisContext;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 
@@ -53,16 +51,9 @@ public abstract class AbstractTargetRedisImport extends AbstractImport {
     }
 
     @Override
-    protected void configureTargetRedisWriter(RedisItemWriter<?, ?, ?> writer) {
-        super.configureTargetRedisWriter(writer);
+    protected void configureTarget(RedisItemWriter<?, ?, ?> writer) {
+        super.configureTarget(writer);
         writer.setPoolSize(targetRedisArgs.getPoolSize());
-    }
-
-    @Override
-    protected RedisItemWriter<String, String, Map<String, Object>> operationWriter() {
-        RedisItemWriter<String, String, Map<String, Object>> writer = super.operationWriter();
-        configureTargetRedisWriter(writer);
-        return writer;
     }
 
     public SingleRedisArgs getSourceRedisArgs() {

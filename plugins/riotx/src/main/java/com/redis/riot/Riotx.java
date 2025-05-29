@@ -1,6 +1,7 @@
 package com.redis.riot;
 
 import com.redis.riot.operation.OperationCommand;
+import com.redis.riot.replicate.Replicate;
 import picocli.AutoComplete.GenerateCompletion;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;

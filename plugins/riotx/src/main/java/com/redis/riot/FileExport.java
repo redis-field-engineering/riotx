@@ -1,5 +1,6 @@
 package com.redis.riot;
 
+import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.file.*;
 import com.redis.riot.parquet.ParquetFieldType;
@@ -26,11 +27,12 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-import java.io.IOException;
 import java.util.*;
 
 @Command(name = "file-export", description = "Export Redis data to files.")
 public class FileExport extends AbstractRedisExport {
+
+    private static final String STEP_NAME = "file-export-step";
 
     public enum ContentType {
         STRUCT, MAP
@@ -82,19 +84,31 @@ public class FileExport extends AbstractRedisExport {
     }
 
     @Override
-    protected Job job() throws IOException {
-        return job(step());
+    protected Job job() throws Exception {
+        WritableResource resource = resourceFactory.writableResource(file, writeOptions);
+        MimeType type = mimeType(resource);
+        RiotStep<KeyValue<String>, ?> step = step(STEP_NAME, reader(), writer(resource, type));
+        step.setItemProcessor(RiotUtils.processor(keyValueFilter(), processor(type)));
+        return job(step);
     }
 
-    @SuppressWarnings("unchecked")
-    private RiotStep<KeyValue<String>, ?> step() throws IOException {
-        WritableResource resource = resourceFactory.writableResource(file, writeOptions);
-        MimeType type =
-                writeOptions.getContentType() == null ? resourceMap.getContentTypeFor(resource) : writeOptions.getContentType();
+    private ItemWriter<?> writer(WritableResource resource, MimeType type) {
         WriterFactory writerFactory = writerRegistry.getWriterFactory(type);
         Assert.notNull(writerFactory, String.format("No writer found for file %s", file));
-        ItemWriter<?> writer = writerFactory.create(resource, writeOptions);
-        return step(processor(type), writer);
+        return writerFactory.create(resource, writeOptions);
+    }
+
+    private MimeType mimeType(WritableResource resource) {
+        if (writeOptions.getContentType() == null) {
+            return resourceMap.getContentTypeFor(resource);
+        }
+        return writeOptions.getContentType();
+    }
+
+    private RedisScanItemReader<String, String> reader() {
+        RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
+        configureSource(reader);
+        return reader;
     }
 
     @Override
@@ -107,8 +121,7 @@ public class FileExport extends AbstractRedisExport {
                 || ResourceMap.TEXT.equals(type) || ParquetFileNameMap.MIME_TYPE_PARQUET.equals(type);
     }
 
-    @SuppressWarnings("rawtypes")
-    private ItemProcessor processor(MimeType type) {
+    private ItemProcessor<KeyValue<String>, ?> processor(MimeType type) {
         if (isFlatFile(type) || contentType == ContentType.MAP) {
             return mapProcessor();
         }
