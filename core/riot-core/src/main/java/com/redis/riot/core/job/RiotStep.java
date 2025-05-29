@@ -1,5 +1,6 @@
 package com.redis.riot.core.job;
 
+import com.redis.riot.core.BackpressureException;
 import com.redis.riot.core.NoopItemWriter;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.ThrottledItemWriter;
@@ -170,7 +171,7 @@ public class RiotStep<T, S> implements FactoryBean<Step> {
 
     public static Set<Class<? extends Throwable>> defaultRetriableExceptions() {
         return BatchUtils.asSet(RedisCommandTimeoutException.class, RedisLoadingException.class, RedisBusyException.class,
-                RedisOOMException.class);
+                RedisOOMException.class, BackpressureException.class);
     }
 
     public static Set<Class<? extends Throwable>> defaultNonRetriableExceptions() {
