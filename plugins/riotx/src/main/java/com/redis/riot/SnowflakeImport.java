@@ -57,10 +57,10 @@ public class SnowflakeImport extends AbstractRedisImport {
     @ArgGroup(exclusive = false)
     private DebeziumStreamArgs debeziumStreamArgs = new DebeziumStreamArgs();
 
-    @CommandLine.Option(names = "--offset-prefix", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}", paramLabel = "<str>")
+    @CommandLine.Option(names = "--offset-prefix", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
     private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
 
-    @CommandLine.Option(names = "--offset-key", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}", paramLabel = "<name>")
+    @CommandLine.Option(names = "--offset-key", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
     private String offsetKey = DEFAULT_OFFSET_KEY;
 
     @Option(names = "--snapshot", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")

@@ -12,7 +12,7 @@ public class DebeziumStreamArgs {
 
     public static final long DEFAULT_STREAM_LIMIT = StreamLengthBackpressureStatusSupplier.DEFAULT_LIMIT;
 
-    @CommandLine.Option(names = "--stream-prefix", description = "Key prefix for stream containing change events (default: ${DEFAULT-VALUE}", paramLabel = "<str>")
+    @CommandLine.Option(names = "--stream-prefix", description = "Key prefix for stream containing change events (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
     private String streamPrefix = DEFAULT_STREAM_PREFIX;
 
     @CommandLine.Option(names = "--stream-limit", description = "Max length of RDI stream (default: ${DEFAULT-VALUE}). Use 0 for no limit.", paramLabel = "<int>")
