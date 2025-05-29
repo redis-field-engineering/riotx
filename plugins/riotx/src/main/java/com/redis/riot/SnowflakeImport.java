@@ -9,9 +9,10 @@ import com.redis.riot.rdi.ChangeEvent;
 import com.redis.riot.rdi.ChangeEventToStreamMessage;
 import com.redis.riot.rdi.ChangeEventValue;
 import com.redis.riot.rdi.RdiOffsetStore;
+import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
 import com.redis.spring.batch.item.redis.writer.impl.Xadd;
-import com.redis.spring.batch.step.FlushingChunkProvider;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
@@ -20,39 +21,29 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.batch.item.support.CompositeItemWriter;
-import org.springframework.retry.backoff.BackOffPolicy;
-import org.springframework.retry.backoff.BackOffPolicyBuilder;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 @CommandLine.Command(name = "snowflake-import", description = "Import from a snowflake table (uses Snowflake Streams to track changes).")
 public class SnowflakeImport extends AbstractRedisImport {
 
     public static final String SNOWFLAKE_DRIVER = "net.snowflake.client.jdbc.SnowflakeDriver";
 
-    public static final Duration DEFAULT_IDLE_TIMEOUT = FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT;
-
-    public static final Duration DEFAULT_FLUSH_INTERVAL = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
-
     public static final SnowflakeStreamItemReader.SnapshotMode DEFAULT_SNAPSHOT_MODE = SnowflakeStreamItemReader.SnapshotMode.INITIAL;
 
     private static final String STEP_NAME = "snowflake-import";
 
-    private static final Object RDI_STREAM_PREFIX = "rdi";
-
-    public static final String DEFAULT_OFFSET_PREFIX = "riotx:offset";
+    public static final String DEFAULT_OFFSET_PREFIX = "riotx:offset:";
 
     public static final String DEFAULT_OFFSET_KEY = RdiOffsetStore.DEFAULT_KEY;
 
-    public static final int DEFAULT_RETRY_LIMIT = 10; // with default back-off policy we reach max delay after 10 attempts
+    private static final String SOURCE_NAME = "snowflake";
 
     @ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
@@ -63,8 +54,20 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Parameters(arity = "1", description = "Fully qualified Snowflake Table or Materialized View, eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
     private DatabaseObject table;
 
+    @ArgGroup(exclusive = false)
+    private DebeziumStreamArgs debeziumStreamArgs = new DebeziumStreamArgs();
+
+    @CommandLine.Option(names = "--offset-prefix", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}", paramLabel = "<str>")
+    private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
+
+    @CommandLine.Option(names = "--offset-key", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}", paramLabel = "<name>")
+    private String offsetKey = DEFAULT_OFFSET_KEY;
+
     @Option(names = "--snapshot", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SnowflakeStreamItemReader.SnapshotMode snapshotMode = DEFAULT_SNAPSHOT_MODE;
+
+    @Option(names = "--gen", description = "Simulate CDC activity instead of connecting to database")
+    private boolean gen;
 
     @Option(names = "--role", description = "Snowflake role to use", paramLabel = "<str>")
     private String role;
@@ -81,45 +84,20 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Option(names = "--poll", description = "Snowflake stream polling interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration pollInterval = SnowflakeStreamItemReader.DEFAULT_POLL_INTERVAL;
 
-    @Option(names = "--flush-interval", description = "Max duration between batch flushes (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
-    private Duration flushInterval = DEFAULT_FLUSH_INTERVAL;
-
-    @Option(names = "--idle-timeout", description = "Min duration to consider reader complete, for example 3s 5m (default: no timeout).", paramLabel = "<dur>")
-    private Duration idleTimeout = DEFAULT_IDLE_TIMEOUT;
-
-    @Option(names = "--offset-prefix", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}", paramLabel = "<str>")
-    private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
-
-    @Option(names = "--offset-key", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}", paramLabel = "<name>")
-    private String offsetKey = DEFAULT_OFFSET_KEY;
-
-    @Option(names = "--stream-limit", description = "Max length of RDI stream (default: ${DEFAULT-VALUE}). Use 0 for no limit.", paramLabel = "<int>")
-    private long rdiStreamLimit = StreamLengthBackpressureStatusSupplier.DEFAULT_LIMIT;
+    @ArgGroup(exclusive = false)
+    private FlushingStepArgs flushingStepArgs = new FlushingStepArgs();
 
     @Override
     protected int defaultRetryLimit() {
-        return DEFAULT_RETRY_LIMIT;
+        return BackOffArgs.DEFAULT_RETRY_LIMIT;
     }
-
-    @CommandLine.ArgGroup(exclusive = false)
-    private BackOffArgs backOffArgs = new BackOffArgs();
 
     @Override
     protected <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
         RiotStep<I, O> step = super.step(name, reader, writer);
-        step.setFlushInterval(flushInterval);
-        step.setIdleTimeout(idleTimeout);
-        step.setBackOffPolicy(backOffPolicy());
+        flushingStepArgs.configure(step);
+        debeziumStreamArgs.configure(step);
         return step;
-    }
-
-    private BackOffPolicy backOffPolicy() {
-        return switch (backOffArgs.getPolicy()) {
-            case EXPONENTIAL -> BackOffPolicyBuilder.newBuilder().delay(backOffArgs.getDelay().toMillis())
-                    .maxDelay(backOffArgs.getMaxDelay().toMillis()).multiplier(backOffArgs.getMultiplier()).build();
-            case FIXED -> BackOffPolicyBuilder.newBuilder().delay(backOffArgs.getDelay().toMillis()).build();
-            default -> null;
-        };
     }
 
     @Override
@@ -129,32 +107,29 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     private RiotStep<?, ?> step() {
         if (hasOperations()) {
-            SnowflakeStreamItemReader reader = reader();
-            reader.setOffsetStore(stringOffsetStore());
+            ItemReader<SnowflakeStreamRow> reader = reader();
             ItemProcessor<SnowflakeStreamRow, Map<String, Object>> processor = RiotUtils.processor(new RowFilter(),
                     new FunctionItemProcessor<>(SnowflakeStreamRow::getColumns), operationProcessor());
             RiotStep<SnowflakeStreamRow, Map<String, Object>> step = step(STEP_NAME, reader, operationWriter());
             step.setItemProcessor(processor);
             return step;
         }
-        SnowflakeStreamItemReader reader = reader();
-        reader.setOffsetStore(rdiOffsetStore());
+        ItemReader<SnowflakeStreamRow> reader = reader();
         ItemProcessor<SnowflakeStreamRow, StreamMessage<String, String>> processor = RiotUtils.processor(new RowFilter(),
-                new FunctionItemProcessor<>(this::changeEvent), new ChangeEventToStreamMessage(rdiStream()));
+                new FunctionItemProcessor<>(this::changeEvent), new ChangeEventToStreamMessage(rdiStreamKey()));
         RiotStep<SnowflakeStreamRow, StreamMessage<String, String>> step = step(STEP_NAME, reader, rdiWriter());
         step.setItemProcessor(processor);
         return step;
     }
 
     private ItemWriter<StreamMessage<String, String>> rdiWriter() {
-        String stream = rdiStream();
-        RedisItemWriter<String, String, StreamMessage<String, String>> writer = rdiWriter(stream);
+        RedisItemWriter<String, String, StreamMessage<String, String>> writer = rdiWriter(rdiStreamKey());
         configureTarget(writer);
-        if (rdiStreamLimit > 0) {
-            BackpressureWriter<StreamMessage<String, String>> backpressureWriter = new BackpressureWriter<>();
+        if (debeziumStreamArgs.getStreamLimit() > 0) {
+            BackpressureItemWriter<StreamMessage<String, String>> backpressureWriter = new BackpressureItemWriter<>();
             StreamLengthBackpressureStatusSupplier statusSupplier = new StreamLengthBackpressureStatusSupplier(
-                    targetRedisContext.getConnection(), stream);
-            statusSupplier.setLimit(rdiStreamLimit);
+                    targetRedisContext.getConnection(), rdiStreamKey());
+            statusSupplier.setLimit(debeziumStreamArgs.getStreamLimit());
             backpressureWriter.setStatusSupplier(statusSupplier);
             CompositeItemWriter<StreamMessage<String, String>> composite = new CompositeItemWriter<>();
             composite.setDelegates(Arrays.asList(backpressureWriter, writer));
@@ -163,15 +138,8 @@ public class SnowflakeImport extends AbstractRedisImport {
         return writer;
     }
 
-    private OffsetStore rdiOffsetStore() {
-        RdiOffsetStore store = new RdiOffsetStore(targetRedisContext.client());
-        store.setKey(offsetKey);
-        return store;
-    }
-
-    private OffsetStore stringOffsetStore() {
-        String key = String.format("%s:%s", offsetPrefix, table.fullName());
-        return new RedisStringOffsetStore(targetRedisContext.client(), key);
+    private String rdiStreamKey() {
+        return debeziumStreamArgs.streamKey(table.fullName());
     }
 
     private static class RowFilter implements ItemProcessor<SnowflakeStreamRow, SnowflakeStreamRow> {
@@ -189,45 +157,12 @@ public class SnowflakeImport extends AbstractRedisImport {
     }
 
     private ChangeEvent changeEvent(SnowflakeStreamRow row) {
-        ChangeEvent event = new ChangeEvent();
-        event.setKey(row.getColumns());
-        event.setValue(changeEventValue(row));
+        ChangeEvent event = ChangeEvent.builder().key(row.getColumns()).columns(row.getColumns()).operation(operation(row))
+                .source(SOURCE_NAME).connector(SOURCE_NAME).build();
+        event.getValue().getSource().setDb(table.getDatabase());
+        event.getValue().getSource().setTable(table.getTable());
+        event.getValue().getSource().setSchema(table.getSchema());
         return event;
-    }
-
-    private ChangeEventValue changeEventValue(SnowflakeStreamRow row) {
-        ChangeEventValue value = new ChangeEventValue();
-        value.setAfter(row.getColumns());
-        value.setOp(operation(row));
-        Instant instant = Instant.now();
-        value.setTs_ms(instant.toEpochMilli());
-        value.setTs_us(micros(instant));
-        value.setTs_ns(nanos(instant));
-        value.setSource(source());
-        return value;
-    }
-
-    private long nanos(Instant instant) {
-        return TimeUnit.SECONDS.toNanos(instant.getEpochSecond()) + instant.getNano();
-    }
-
-    private long micros(Instant instant) {
-        return TimeUnit.SECONDS.toMicros(instant.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(instant.getNano());
-    }
-
-    private ChangeEventValue.Source source() {
-        ChangeEventValue.Source source = new ChangeEventValue.Source();
-        source.setConnector("snowflake");
-        source.setVersion(RiotVersion.getVersion());
-        source.setName("RIOT-X");
-        Instant instant = Instant.now();
-        source.setTs_ms(instant.toEpochMilli());
-        source.setTs_us(micros(instant));
-        source.setTs_ns(nanos(instant));
-        source.setDb(table.getDatabase());
-        source.setTable(table.getTable());
-        source.setSchema(table.getSchema());
-        return source;
     }
 
     private ChangeEventValue.Operation operation(SnowflakeStreamRow row) {
@@ -239,7 +174,6 @@ public class SnowflakeImport extends AbstractRedisImport {
                 yield ChangeEventValue.Operation.CREATE;
             }
             case DELETE -> ChangeEventValue.Operation.DELETE;
-            default -> throw new IllegalArgumentException("Unknown action: " + row.getAction());
         };
     }
 
@@ -247,11 +181,10 @@ public class SnowflakeImport extends AbstractRedisImport {
         return new RedisItemWriter<>(StringCodec.UTF8, new Xadd<>(m -> stream, Arrays::asList));
     }
 
-    private String rdiStream() {
-        return String.format("%s:%s", RDI_STREAM_PREFIX, table.fullName());
-    }
-
-    protected SnowflakeStreamItemReader reader() {
+    protected ItemReader<SnowflakeStreamRow> reader() {
+        if (gen) {
+            return new SnowflakeStreamRowGeneratorItemReader();
+        }
         SnowflakeStreamItemReader reader = new SnowflakeStreamItemReader();
         reader.setReaderOptions(readerArgs.readerOptions());
         reader.setStreamDatabase(cdcDatabase);
@@ -262,7 +195,81 @@ public class SnowflakeImport extends AbstractRedisImport {
         reader.setWarehouse(warehouse);
         reader.setSnapshotMode(snapshotMode);
         reader.setTable(table.fullName());
+        reader.setOffsetStore(offsetStore());
         return reader;
+    }
+
+    private OffsetStore offsetStore() {
+        if (hasOperations()) {
+            String key = offsetPrefix + table.fullName();
+            return new RedisStringOffsetStore(targetRedisContext.client(), key);
+        }
+        RdiOffsetStore store = new RdiOffsetStore(targetRedisContext.client());
+        store.setKey(offsetKey);
+        return store;
+    }
+
+    private static class SnowflakeStreamRowGeneratorItemReader extends AbstractCountingItemReader<SnowflakeStreamRow> {
+
+        public static final String[] DEFAULT_COLUMN_NAMES = { "order_id", "customer_id", "product_id" };
+
+        public static final int DEFAULT_COLUMN_SIZE = 10;
+
+        private Set<String> columnNames = defaultColumnNames();
+
+        private int columnSize = DEFAULT_COLUMN_SIZE;
+
+        private final AtomicLong rowId = new AtomicLong();
+
+        public static Set<String> defaultColumnNames() {
+            return new HashSet<>(Arrays.asList(DEFAULT_COLUMN_NAMES));
+        }
+
+        @Override
+        protected SnowflakeStreamRow doRead() throws Exception {
+            Map<String, Object> columns = generateColumns();
+            SnowflakeStreamRow row = new SnowflakeStreamRow();
+            row.setColumns(columns);
+            row.setUpdate(false);
+            row.setAction(SnowflakeStreamRow.Action.INSERT);
+            row.setRowId(String.valueOf(rowId.incrementAndGet()));
+            return row;
+        }
+
+        private Map<String, Object> generateColumns() {
+            Map<String, Object> columns = new HashMap<>();
+            for (String columnName : columnNames) {
+                columns.put(columnName, GeneratorItemReader.string(columnSize));
+            }
+            return columns;
+        }
+
+        @Override
+        protected void doOpen() {
+            // do nothing
+        }
+
+        @Override
+        protected void doClose() {
+            // do nothing
+        }
+
+        public Set<String> getColumnNames() {
+            return columnNames;
+        }
+
+        public void setColumnNames(Set<String> columnNames) {
+            this.columnNames = columnNames;
+        }
+
+        public int getColumnSize() {
+            return columnSize;
+        }
+
+        public void setColumnSize(int columnSize) {
+            this.columnSize = columnSize;
+        }
+
     }
 
     public Duration getPollInterval() {
@@ -337,28 +344,20 @@ public class SnowflakeImport extends AbstractRedisImport {
         this.dataSourceArgs = dataSourceArgs;
     }
 
-    public Duration getFlushInterval() {
-        return flushInterval;
+    public FlushingStepArgs getFlushingStepArgs() {
+        return flushingStepArgs;
     }
 
-    public void setFlushInterval(Duration flushInterval) {
-        this.flushInterval = flushInterval;
+    public void setFlushingStepArgs(FlushingStepArgs flushingStepArgs) {
+        this.flushingStepArgs = flushingStepArgs;
     }
 
-    public Duration getIdleTimeout() {
-        return idleTimeout;
+    public DebeziumStreamArgs getDebeziumStreamArgs() {
+        return debeziumStreamArgs;
     }
 
-    public void setIdleTimeout(Duration idleTimeout) {
-        this.idleTimeout = idleTimeout;
-    }
-
-    public String getOffsetKey() {
-        return offsetKey;
-    }
-
-    public void setOffsetKey(String offsetKey) {
-        this.offsetKey = offsetKey;
+    public void setDebeziumStreamArgs(DebeziumStreamArgs debeziumStreamArgs) {
+        this.debeziumStreamArgs = debeziumStreamArgs;
     }
 
     public String getOffsetPrefix() {
@@ -369,20 +368,20 @@ public class SnowflakeImport extends AbstractRedisImport {
         this.offsetPrefix = offsetPrefix;
     }
 
-    public long getRdiStreamLimit() {
-        return rdiStreamLimit;
+    public String getOffsetKey() {
+        return offsetKey;
     }
 
-    public void setRdiStreamLimit(long rdiStreamLimit) {
-        this.rdiStreamLimit = rdiStreamLimit;
+    public void setOffsetKey(String offsetKey) {
+        this.offsetKey = offsetKey;
     }
 
-    public BackOffArgs getBackOffArgs() {
-        return backOffArgs;
+    public boolean isGen() {
+        return gen;
     }
 
-    public void setBackOffArgs(BackOffArgs backOffArgs) {
-        this.backOffArgs = backOffArgs;
+    public void setGen(boolean gen) {
+        this.gen = gen;
     }
 
 }
