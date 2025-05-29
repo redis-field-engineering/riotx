@@ -70,7 +70,7 @@ public abstract class AbstractRiotApplicationTestBase extends AbstractRiotTestBa
                     configure(((AbstractRedisImport) command).getRedisArgs());
                 }
                 if (command instanceof AbstractExport) {
-                    ((AbstractExport) command).setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
+                    ((AbstractExport) command).getFlushingStepArgs().setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
                     ((AbstractExport) command).getReaderArgs().setEventQueueCapacity(DEFAULT_EVENT_QUEUE_CAPACITY);
                 }
                 if (command instanceof AbstractRedisTargetExport) {
