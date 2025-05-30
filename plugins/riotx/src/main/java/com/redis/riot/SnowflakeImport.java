@@ -39,9 +39,9 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     private static final String STEP_NAME = "snowflake-import";
 
-    public static final String DEFAULT_OFFSET_PREFIX = "riotx:offset:";
+    public static final String DEFAULT_RIOT_OFFSET_PREFIX = "riotx:offset:";
 
-    public static final String DEFAULT_OFFSET_KEY = RdiOffsetStore.DEFAULT_KEY;
+    public static final String DEFAULT_RDI_OFFSET_KEY = RdiOffsetStore.DEFAULT_KEY;
 
     private static final String SOURCE_NAME = "snowflake";
 
@@ -58,10 +58,10 @@ public class SnowflakeImport extends AbstractRedisImport {
     private DebeziumStreamArgs debeziumStreamArgs = new DebeziumStreamArgs();
 
     @CommandLine.Option(names = "--offset-prefix", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
-    private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
+    private String offsetPrefix = DEFAULT_RIOT_OFFSET_PREFIX;
 
     @CommandLine.Option(names = "--offset-key", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
-    private String offsetKey = DEFAULT_OFFSET_KEY;
+    private String offsetKey = DEFAULT_RDI_OFFSET_KEY;
 
     @Option(names = "--snapshot", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SnowflakeStreamItemReader.SnapshotMode snapshotMode = DEFAULT_SNAPSHOT_MODE;
