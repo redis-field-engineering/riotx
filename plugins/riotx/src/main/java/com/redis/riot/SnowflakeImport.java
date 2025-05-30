@@ -66,8 +66,11 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Option(names = "--snapshot", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SnowflakeStreamItemReader.SnapshotMode snapshotMode = DEFAULT_SNAPSHOT_MODE;
 
-    @Option(names = "--gen", description = "Simulate CDC activity instead of connecting to database")
+    @Option(names = "--gen", description = "Simulate CDC activity instead of connecting to database.")
     private boolean gen;
+
+    @Option(names = "--count", description = "Max rows to read (default: no limit).", paramLabel = "<num>")
+    private int count;
 
     @Option(names = "--role", description = "Snowflake role to use", paramLabel = "<str>")
     private String role;
@@ -106,15 +109,17 @@ public class SnowflakeImport extends AbstractRedisImport {
     }
 
     private RiotStep<?, ?> step() {
+        AbstractCountingItemReader<SnowflakeStreamRow> reader = reader();
+        if (count > 0) {
+            reader.setMaxItemCount(count);
+        }
         if (hasOperations()) {
-            ItemReader<SnowflakeStreamRow> reader = reader();
             ItemProcessor<SnowflakeStreamRow, Map<String, Object>> processor = RiotUtils.processor(new RowFilter(),
                     new FunctionItemProcessor<>(SnowflakeStreamRow::getColumns), operationProcessor());
             RiotStep<SnowflakeStreamRow, Map<String, Object>> step = step(STEP_NAME, reader, operationWriter());
             step.setItemProcessor(processor);
             return step;
         }
-        ItemReader<SnowflakeStreamRow> reader = reader();
         ItemProcessor<SnowflakeStreamRow, StreamMessage<String, String>> processor = RiotUtils.processor(new RowFilter(),
                 new FunctionItemProcessor<>(this::changeEvent), new ChangeEventToStreamMessage(rdiStreamKey()));
         RiotStep<SnowflakeStreamRow, StreamMessage<String, String>> step = step(STEP_NAME, reader, rdiWriter());
@@ -157,12 +162,16 @@ public class SnowflakeImport extends AbstractRedisImport {
     }
 
     private ChangeEvent changeEvent(SnowflakeStreamRow row) {
-        ChangeEvent event = ChangeEvent.builder().key(row.getColumns()).columns(row.getColumns()).operation(operation(row))
-                .source(SOURCE_NAME).connector(SOURCE_NAME).build();
-        event.getValue().getSource().setDb(table.getDatabase());
-        event.getValue().getSource().setTable(table.getTable());
-        event.getValue().getSource().setSchema(table.getSchema());
-        return event;
+        ChangeEvent.Builder event = ChangeEvent.builder();
+        event.key(row.getColumns());
+        event.columns(row.getColumns());
+        event.operation(operation(row));
+        event.source(SOURCE_NAME);
+        event.connector(SOURCE_NAME);
+        event.database(table.getDatabase());
+        event.table(table.getTable());
+        event.schema(table.getSchema());
+        return event.build();
     }
 
     private ChangeEventValue.Operation operation(SnowflakeStreamRow row) {
@@ -181,7 +190,7 @@ public class SnowflakeImport extends AbstractRedisImport {
         return new RedisItemWriter<>(StringCodec.UTF8, new Xadd<>(m -> stream, Arrays::asList));
     }
 
-    protected ItemReader<SnowflakeStreamRow> reader() {
+    protected AbstractCountingItemReader<SnowflakeStreamRow> reader() {
         if (gen) {
             return new SnowflakeStreamRowGeneratorItemReader();
         }
@@ -382,6 +391,14 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     public void setGen(boolean gen) {
         this.gen = gen;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
     }
 
 }
