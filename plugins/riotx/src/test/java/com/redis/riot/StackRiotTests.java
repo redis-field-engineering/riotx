@@ -770,4 +770,12 @@ class StackRiotTests extends RiotTests {
         }
     }
 
+    @Test
+    void rdiStreamGen(TestInfo info) throws Exception {
+        execute(info, "snowflake-import-rdi-gen");
+        String streamKey = new DebeziumStreamArgs().streamKey("tb_101.raw_pos.incremental_order_header");
+        List<StreamMessage<String, String>> messages = redisCommands.xrange(streamKey, Range.create("-", "+"));
+        Assertions.assertEquals(123, messages.size());
+    }
+
 }
