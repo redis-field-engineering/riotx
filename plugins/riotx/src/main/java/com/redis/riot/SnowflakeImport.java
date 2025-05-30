@@ -213,11 +213,11 @@ public class SnowflakeImport extends AbstractRedisImport {
 
         public static final String[] DEFAULT_COLUMN_NAMES = { "order_id", "customer_id", "product_id" };
 
-        public static final int DEFAULT_COLUMN_SIZE = 10;
+        public static final int DEFAULT_COLUMN_WIDTH = 10;
 
         private Set<String> columnNames = defaultColumnNames();
 
-        private int columnSize = DEFAULT_COLUMN_SIZE;
+        private int columnWidth = DEFAULT_COLUMN_WIDTH;
 
         private final AtomicLong rowId = new AtomicLong();
 
@@ -239,7 +239,7 @@ public class SnowflakeImport extends AbstractRedisImport {
         private Map<String, Object> generateColumns() {
             Map<String, Object> columns = new HashMap<>();
             for (String columnName : columnNames) {
-                columns.put(columnName, GeneratorItemReader.string(columnSize));
+                columns.put(columnName, GeneratorItemReader.string(columnWidth));
             }
             return columns;
         }
@@ -262,12 +262,12 @@ public class SnowflakeImport extends AbstractRedisImport {
             this.columnNames = columnNames;
         }
 
-        public int getColumnSize() {
-            return columnSize;
+        public int getColumnWidth() {
+            return columnWidth;
         }
 
-        public void setColumnSize(int columnSize) {
-            this.columnSize = columnSize;
+        public void setColumnWidth(int columnWidth) {
+            this.columnWidth = columnWidth;
         }
 
     }
