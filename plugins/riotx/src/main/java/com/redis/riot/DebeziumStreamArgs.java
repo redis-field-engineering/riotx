@@ -8,7 +8,7 @@ import picocli.CommandLine;
 
 public class DebeziumStreamArgs {
 
-    private static final String DEFAULT_STREAM_PREFIX = "data:";
+    public static final String DEFAULT_STREAM_PREFIX = "data:";
 
     public static final long DEFAULT_STREAM_LIMIT = StreamLengthBackpressureStatusSupplier.DEFAULT_LIMIT;
 

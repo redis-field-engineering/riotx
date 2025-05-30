@@ -148,8 +148,8 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
         sqlRunner.executeScript("db/snowflake-roles.sql");
         sqlRunner.executeScript("db/snowflake-setup-data.sql");
         execute(info, "snowflake-import-rdi", this::executeSnowflakeImport);
-        List<StreamMessage<String, String>> messages = redisCommands.xrange("rdi:tb_101.raw_pos.incremental_order_header",
-                Range.create("-", "+"));
+        String streamKey = new DebeziumStreamArgs().streamKey("tb_101.raw_pos.incremental_order_header");
+        List<StreamMessage<String, String>> messages = redisCommands.xrange(streamKey, Range.create("-", "+"));
         Assertions.assertEquals(100, messages.size());
     }
 
