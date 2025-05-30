@@ -52,6 +52,12 @@ public class ChangeEvent {
 
         private ChangeEventValue.Operation operation = DEFAULT_OPERATION;
 
+        private String database;
+
+        private String schema;
+
+        private String table;
+
         public ChangeEvent build() {
             ChangeEvent changeEvent = new ChangeEvent();
             changeEvent.setKey(key);
@@ -84,6 +90,21 @@ public class ChangeEvent {
             return this;
         }
 
+        public Builder table(String table) {
+            this.table = table;
+            return this;
+        }
+
+        public Builder schema(String schema) {
+            this.schema = schema;
+            return this;
+        }
+
+        public Builder database(String database) {
+            this.database = database;
+            return this;
+        }
+
         public Builder operation(ChangeEventValue.Operation operation) {
             this.operation = operation;
             return this;
@@ -108,6 +129,9 @@ public class ChangeEvent {
             source.setTs_ms(instant.toEpochMilli());
             source.setTs_us(micros(instant));
             source.setTs_ns(nanos(instant));
+            source.setDb(database);
+            source.setSchema(schema);
+            source.setTable(table);
             return source;
         }
 
