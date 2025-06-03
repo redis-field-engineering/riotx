@@ -21,6 +21,7 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.batch.item.support.CompositeItemWriter;
+import org.springframework.util.CollectionUtils;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
@@ -66,8 +67,8 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Option(names = "--snapshot", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SnowflakeStreamItemReader.SnapshotMode snapshotMode = DEFAULT_SNAPSHOT_MODE;
 
-    @Option(names = "--gen", description = "Simulate CDC activity instead of connecting to database.")
-    private boolean gen;
+    @Option(names = "--gen", description = "Columns to simulate CDC activity for instead of connecting to database.", arity = "0..*")
+    private Set<String> genColumns;
 
     @Option(names = "--count", description = "Max rows to read (default: no limit).", paramLabel = "<num>")
     private int count;
@@ -86,6 +87,9 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     @Option(names = "--poll", description = "Snowflake stream polling interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration pollInterval = SnowflakeStreamItemReader.DEFAULT_POLL_INTERVAL;
+
+    @Option(names = "--key-column", description = "Table column name(s) to use as the key for the CDC event", paramLabel = "<name>")
+    private Set<String> keyColumns;
 
     @ArgGroup(exclusive = false)
     private FlushingStepArgs flushingStepArgs = new FlushingStepArgs();
@@ -163,7 +167,7 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     private ChangeEvent changeEvent(SnowflakeStreamRow row) {
         ChangeEvent.Builder event = ChangeEvent.builder();
-        event.key(row.getColumns());
+        event.key(changeEventKey(row));
         event.columns(row.getColumns());
         event.operation(operation(row));
         event.source(SOURCE_NAME);
@@ -172,6 +176,17 @@ public class SnowflakeImport extends AbstractRedisImport {
         event.table(table.getTable());
         event.schema(table.getSchema());
         return event.build();
+    }
+
+    private Object changeEventKey(SnowflakeStreamRow row) {
+        if (CollectionUtils.isEmpty(keyColumns)) {
+            return row.getColumns();
+        }
+        Map<String, Object> keyMap = new HashMap<>();
+        for (String column : keyColumns) {
+            keyMap.put(column, row.getColumns().get(column));
+        }
+        return keyMap;
     }
 
     private ChangeEventValue.Operation operation(SnowflakeStreamRow row) {
@@ -191,8 +206,8 @@ public class SnowflakeImport extends AbstractRedisImport {
     }
 
     protected AbstractCountingItemReader<SnowflakeStreamRow> reader() {
-        if (gen) {
-            return new SnowflakeStreamRowGeneratorItemReader();
+        if (!CollectionUtils.isEmpty(genColumns)) {
+            return new SnowflakeStreamRowGeneratorItemReader(genColumns);
         }
         SnowflakeStreamItemReader reader = new SnowflakeStreamItemReader();
         reader.setReaderOptions(readerArgs.readerOptions());
@@ -220,18 +235,16 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     private static class SnowflakeStreamRowGeneratorItemReader extends AbstractCountingItemReader<SnowflakeStreamRow> {
 
-        public static final String[] DEFAULT_COLUMN_NAMES = { "order_id", "customer_id", "product_id" };
-
         public static final int DEFAULT_COLUMN_WIDTH = 10;
 
-        private Set<String> columnNames = defaultColumnNames();
+        private final Set<String> columnNames;
 
         private int columnWidth = DEFAULT_COLUMN_WIDTH;
 
         private final AtomicLong rowId = new AtomicLong();
 
-        public static Set<String> defaultColumnNames() {
-            return new HashSet<>(Arrays.asList(DEFAULT_COLUMN_NAMES));
+        private SnowflakeStreamRowGeneratorItemReader(Set<String> columnNames) {
+            this.columnNames = columnNames;
         }
 
         @Override
@@ -261,14 +274,6 @@ public class SnowflakeImport extends AbstractRedisImport {
         @Override
         protected void doClose() {
             // do nothing
-        }
-
-        public Set<String> getColumnNames() {
-            return columnNames;
-        }
-
-        public void setColumnNames(Set<String> columnNames) {
-            this.columnNames = columnNames;
         }
 
         public int getColumnWidth() {
@@ -385,12 +390,12 @@ public class SnowflakeImport extends AbstractRedisImport {
         this.offsetKey = offsetKey;
     }
 
-    public boolean isGen() {
-        return gen;
+    public Set<String> getGenColumns() {
+        return genColumns;
     }
 
-    public void setGen(boolean gen) {
-        this.gen = gen;
+    public void setGenColumns(Set<String> columns) {
+        this.genColumns = columns;
     }
 
     public int getCount() {
