@@ -30,7 +30,7 @@ public class BackOffArgs {
     @CommandLine.Option(names = "--backoff-max", description = "Exponential backoff max duration (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration maxDelay = DEFAULT_MAX_DELAY;
 
-    @CommandLine.Option(names = "--backoff-x", description = "Exponential backoff duration increment for each retry attempt (default: ${DEFAULT-VALUE} i.e. 100% increase per backoff).", paramLabel = "<num>")
+    @CommandLine.Option(names = "--backoff-x", description = "Exponential backoff duration increment for each retry attempt (default: ${DEFAULT-VALUE} i.e. 100%% increase per backoff).", paramLabel = "<num>")
     private double multiplier = DEFAULT_MULTIPLIER;
 
     public Policy getPolicy() {
