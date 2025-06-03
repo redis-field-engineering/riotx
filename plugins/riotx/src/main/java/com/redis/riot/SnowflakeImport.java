@@ -20,7 +20,6 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
-import org.springframework.batch.item.support.CompositeItemWriter;
 import org.springframework.util.CollectionUtils;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
@@ -28,7 +27,10 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 @CommandLine.Command(name = "snowflake-import", description = "Import from a snowflake table (uses Snowflake Streams to track changes).")
@@ -44,7 +46,11 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     public static final String DEFAULT_RDI_OFFSET_KEY = RdiOffsetStore.DEFAULT_KEY;
 
-    private static final String SOURCE_NAME = "snowflake";
+    private static final String SOURCE_NAME = "riotx";
+
+    private static final String CONNECTOR_NAME = "snowflake";
+
+    private static final String STREAM_FORMAT = "%s%s.%s.%s";
 
     @ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
@@ -67,7 +73,10 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Option(names = "--snapshot", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SnowflakeStreamItemReader.SnapshotMode snapshotMode = DEFAULT_SNAPSHOT_MODE;
 
-    @Option(names = "--gen", description = "Columns to simulate CDC activity for instead of connecting to database.", arity = "0..*")
+    @Option(arity = "0..*", names = "--key-column", description = "Table column name(s) to use as the key for the CDC event", paramLabel = "<name>")
+    private Set<String> keyColumns;
+
+    @Option(arity = "0..*", names = "--gen", description = "Columns to simulate CDC activity for instead of connecting to database.", paramLabel = "<name>")
     private Set<String> genColumns;
 
     @Option(names = "--count", description = "Max rows to read (default: no limit).", paramLabel = "<num>")
@@ -87,9 +96,6 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     @Option(names = "--poll", description = "Snowflake stream polling interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration pollInterval = SnowflakeStreamItemReader.DEFAULT_POLL_INTERVAL;
-
-    @Option(names = "--key-column", description = "Table column name(s) to use as the key for the CDC event", paramLabel = "<name>")
-    private Set<String> keyColumns;
 
     @ArgGroup(exclusive = false)
     private FlushingStepArgs flushingStepArgs = new FlushingStepArgs();
@@ -132,23 +138,28 @@ public class SnowflakeImport extends AbstractRedisImport {
     }
 
     private ItemWriter<StreamMessage<String, String>> rdiWriter() {
-        RedisItemWriter<String, String, StreamMessage<String, String>> writer = rdiWriter(rdiStreamKey());
+        String streamKey = rdiStreamKey();
+        Xadd<String, String, StreamMessage<String, String>> xadd = new Xadd<>(m -> streamKey, Arrays::asList);
+        RedisItemWriter<String, String, StreamMessage<String, String>> writer = new RedisItemWriter<>(StringCodec.UTF8, xadd);
         configureTarget(writer);
         if (debeziumStreamArgs.getStreamLimit() > 0) {
-            BackpressureItemWriter<StreamMessage<String, String>> backpressureWriter = new BackpressureItemWriter<>();
-            StreamLengthBackpressureStatusSupplier statusSupplier = new StreamLengthBackpressureStatusSupplier(
-                    targetRedisContext.getConnection(), rdiStreamKey());
-            statusSupplier.setLimit(debeziumStreamArgs.getStreamLimit());
-            backpressureWriter.setStatusSupplier(statusSupplier);
-            CompositeItemWriter<StreamMessage<String, String>> composite = new CompositeItemWriter<>();
-            composite.setDelegates(Arrays.asList(backpressureWriter, writer));
-            return composite;
+            return RiotUtils.writer(backpressureWriter(), writer);
         }
         return writer;
     }
 
+    private BackpressureItemWriter<StreamMessage<String, String>> backpressureWriter() {
+        BackpressureItemWriter<StreamMessage<String, String>> writer = new BackpressureItemWriter<>();
+        StreamLengthBackpressureStatusSupplier statusSupplier = new StreamLengthBackpressureStatusSupplier(
+                targetRedisContext.getConnection(), rdiStreamKey());
+        statusSupplier.setLimit(debeziumStreamArgs.getStreamLimit());
+        writer.setStatusSupplier(statusSupplier);
+        return writer;
+    }
+
     private String rdiStreamKey() {
-        return debeziumStreamArgs.streamKey(table.fullName());
+        return String.format(STREAM_FORMAT, debeziumStreamArgs.getStreamPrefix(), SOURCE_NAME, table.getSchema(),
+                table.getTable());
     }
 
     private static class RowFilter implements ItemProcessor<SnowflakeStreamRow, SnowflakeStreamRow> {
@@ -171,7 +182,7 @@ public class SnowflakeImport extends AbstractRedisImport {
         event.columns(row.getColumns());
         event.operation(operation(row));
         event.source(SOURCE_NAME);
-        event.connector(SOURCE_NAME);
+        event.connector(CONNECTOR_NAME);
         event.database(table.getDatabase());
         event.table(table.getTable());
         event.schema(table.getSchema());
@@ -199,10 +210,6 @@ public class SnowflakeImport extends AbstractRedisImport {
             }
             case DELETE -> ChangeEventValue.Operation.DELETE;
         };
-    }
-
-    private RedisItemWriter<String, String, StreamMessage<String, String>> rdiWriter(String stream) {
-        return new RedisItemWriter<>(StringCodec.UTF8, new Xadd<>(m -> stream, Arrays::asList));
     }
 
     protected AbstractCountingItemReader<SnowflakeStreamRow> reader() {

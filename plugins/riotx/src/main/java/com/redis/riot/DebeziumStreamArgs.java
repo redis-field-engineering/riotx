@@ -58,8 +58,4 @@ public class DebeziumStreamArgs {
         step.setBackOffPolicy(backOffPolicy());
     }
 
-    public String streamKey(String key) {
-        return streamPrefix + key;
-    }
-
 }
