@@ -775,7 +775,7 @@ class StackRiotTests extends RiotTests {
     @Test
     void rdiStreamGen(TestInfo info) throws Exception {
         execute(info, "snowflake-import-rdi-gen");
-        String streamKey = new DebeziumStreamArgs().streamKey("tb_101.raw_pos.incremental_order_header");
+        String streamKey = DebeziumStreamArgs.DEFAULT_STREAM_PREFIX + "riotx.raw_pos.incremental_order_header";
         List<StreamMessage<String, String>> messages = redisCommands.xrange(streamKey, Range.create("-", "+"));
         Assertions.assertEquals(123, messages.size());
         ObjectMapper mapper = new ObjectMapper();
@@ -783,7 +783,7 @@ class StackRiotTests extends RiotTests {
             Map<String, String> body = message.getBody();
             Map<String, Object> key = mapper.readValue(body.get(ChangeEventToStreamMessage.KEY), Map.class);
             Map<String, Object> value = mapper.readValue(body.get(ChangeEventToStreamMessage.VALUE), Map.class);
-            Map<String,Object> after = (Map<String, Object>) value.get("after");
+            Map<String, Object> after = (Map<String, Object>) value.get("after");
             Assertions.assertEquals(key, after);
             Assertions.assertTrue(after.containsKey("order_id"));
             Assertions.assertTrue(after.containsKey("customer_id"));
@@ -794,7 +794,7 @@ class StackRiotTests extends RiotTests {
     @Test
     void rdiStreamGenKeyColumns(TestInfo info) throws Exception {
         execute(info, "snowflake-import-rdi-gen-key");
-        String streamKey = new DebeziumStreamArgs().streamKey("tb_101.raw_pos.incremental_order_header");
+        String streamKey = DebeziumStreamArgs.DEFAULT_STREAM_PREFIX + "riotx.raw_pos.incremental_order_header";
         List<StreamMessage<String, String>> messages = redisCommands.xrange(streamKey, Range.create("-", "+"));
         Assertions.assertEquals(123, messages.size());
         ObjectMapper mapper = new ObjectMapper();
@@ -804,7 +804,7 @@ class StackRiotTests extends RiotTests {
             Assertions.assertEquals(1, key.size());
             Assertions.assertTrue(key.containsKey("order_id"));
             Map<String, Object> value = mapper.readValue(body.get(ChangeEventToStreamMessage.VALUE), Map.class);
-            Map<String,Object> after = (Map<String, Object>) value.get("after");
+            Map<String, Object> after = (Map<String, Object>) value.get("after");
             Assertions.assertTrue(after.containsKey("order_id"));
             Assertions.assertTrue(after.containsKey("customer_id"));
             Assertions.assertTrue(after.containsKey("product_id"));
