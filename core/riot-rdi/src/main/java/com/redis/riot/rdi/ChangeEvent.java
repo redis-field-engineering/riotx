@@ -8,6 +8,8 @@ import java.util.concurrent.TimeUnit;
 
 public class ChangeEvent {
 
+    public static final String DEFAULT_SNAPSHOT = "false";
+
     public static final String DEFAULT_SOURCE_NAME = "RIOT-X";
 
     public static final String DEFAULT_CONNECTOR_NAME = DEFAULT_SOURCE_NAME;
@@ -58,6 +60,8 @@ public class ChangeEvent {
 
         private String table;
 
+        private String snapshot = DEFAULT_SNAPSHOT;
+
         public ChangeEvent build() {
             ChangeEvent changeEvent = new ChangeEvent();
             changeEvent.setKey(key);
@@ -77,6 +81,11 @@ public class ChangeEvent {
 
         public Builder instant(Instant instant) {
             this.instant = instant;
+            return this;
+        }
+
+        public Builder snapshot(String snapshot) {
+            this.snapshot = snapshot;
             return this;
         }
 
@@ -125,6 +134,7 @@ public class ChangeEvent {
             ChangeEventValue.Source source = new ChangeEventValue.Source();
             source.setConnector(connector);
             source.setVersion(RiotVersion.getVersion());
+            source.setSnapshot(snapshot);
             source.setName(sourceName);
             source.setTs_ms(instant.toEpochMilli());
             source.setTs_us(micros(instant));
