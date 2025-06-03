@@ -7,6 +7,7 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.batch.item.support.CompositeItemProcessor;
+import org.springframework.batch.item.support.CompositeItemWriter;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.util.ClassUtils;
@@ -14,6 +15,7 @@ import org.springframework.util.ObjectUtils;
 
 import java.io.*;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -56,6 +58,13 @@ public abstract class RiotUtils {
             return null;
         }
         return mask(password.length());
+    }
+
+    @SafeVarargs
+    public static <T> ItemWriter<T> writer(ItemWriter<T>... writers) {
+        CompositeItemWriter<T> composite = new CompositeItemWriter<>();
+        composite.setDelegates(Arrays.asList(writers));
+        return composite;
     }
 
     public static <S, T> ItemProcessor<S, T> processor(Collection<? extends Function<?, ?>> functions) {
