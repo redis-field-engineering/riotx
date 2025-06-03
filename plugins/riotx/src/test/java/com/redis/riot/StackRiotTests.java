@@ -14,6 +14,7 @@ import com.redis.riot.core.QuietMapAccessor;
 import com.redis.riot.file.xml.XmlItemReader;
 import com.redis.riot.file.xml.XmlItemReaderBuilder;
 import com.redis.riot.file.xml.XmlObjectReader;
+import com.redis.riot.rdi.ChangeEventToStreamMessage;
 import com.redis.riot.replicate.Replicate;
 import com.redis.spring.batch.item.redis.common.KeyValue;
 import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
@@ -359,7 +360,8 @@ class StackRiotTests extends RiotTests {
             Map<String, String> hash = redisCommands.hgetall(beer);
             Assertions.assertTrue(hash.containsKey("name"));
             Assertions.assertTrue(hash.containsKey("brewery_id"));
-            Assertions.assertEquals(10, redisCommands.ttl(beer), 5);
+            Long actual = redisCommands.ttl(beer);
+            Assertions.assertEquals(10, actual, 5);
         }
     }
 
@@ -776,6 +778,37 @@ class StackRiotTests extends RiotTests {
         String streamKey = new DebeziumStreamArgs().streamKey("tb_101.raw_pos.incremental_order_header");
         List<StreamMessage<String, String>> messages = redisCommands.xrange(streamKey, Range.create("-", "+"));
         Assertions.assertEquals(123, messages.size());
+        ObjectMapper mapper = new ObjectMapper();
+        for (StreamMessage<String, String> message : messages) {
+            Map<String, String> body = message.getBody();
+            Map<String, Object> key = mapper.readValue(body.get(ChangeEventToStreamMessage.KEY), Map.class);
+            Map<String, Object> value = mapper.readValue(body.get(ChangeEventToStreamMessage.VALUE), Map.class);
+            Map<String,Object> after = (Map<String, Object>) value.get("after");
+            Assertions.assertEquals(key, after);
+            Assertions.assertTrue(after.containsKey("order_id"));
+            Assertions.assertTrue(after.containsKey("customer_id"));
+            Assertions.assertTrue(after.containsKey("product_id"));
+        }
+    }
+
+    @Test
+    void rdiStreamGenKeyColumns(TestInfo info) throws Exception {
+        execute(info, "snowflake-import-rdi-gen-key");
+        String streamKey = new DebeziumStreamArgs().streamKey("tb_101.raw_pos.incremental_order_header");
+        List<StreamMessage<String, String>> messages = redisCommands.xrange(streamKey, Range.create("-", "+"));
+        Assertions.assertEquals(123, messages.size());
+        ObjectMapper mapper = new ObjectMapper();
+        for (StreamMessage<String, String> message : messages) {
+            Map<String, String> body = message.getBody();
+            Map<String, Object> key = mapper.readValue(body.get(ChangeEventToStreamMessage.KEY), Map.class);
+            Assertions.assertEquals(1, key.size());
+            Assertions.assertTrue(key.containsKey("order_id"));
+            Map<String, Object> value = mapper.readValue(body.get(ChangeEventToStreamMessage.VALUE), Map.class);
+            Map<String,Object> after = (Map<String, Object>) value.get("after");
+            Assertions.assertTrue(after.containsKey("order_id"));
+            Assertions.assertTrue(after.containsKey("customer_id"));
+            Assertions.assertTrue(after.containsKey("product_id"));
+        }
     }
 
 }
