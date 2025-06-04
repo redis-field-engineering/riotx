@@ -1,5 +1,6 @@
 package com.redis.spring.batch.memcached;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -7,7 +8,7 @@ public class MemcachedEntry {
 
 	private String key;
 	private byte[] value;
-	private int expiration;
+	private Instant expiration;
 
 	public String getKey() {
 		return key;
@@ -26,13 +27,13 @@ public class MemcachedEntry {
 	}
 
 	/**
-	 * Expiration POSIX time in seconds for this key.
+	 * @return Expiration time for this key or null if no expiration set
 	 */
-	public int getExpiration() {
+	public Instant getExpiration() {
 		return expiration;
 	}
 
-	public void setExpiration(int expiration) {
+	public void setExpiration(Instant expiration) {
 		this.expiration = expiration;
 	}
 

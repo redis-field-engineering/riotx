@@ -17,53 +17,62 @@ import net.spy.memcached.transcoders.Transcoder;
 
 public class MemcachedItemWriter implements ItemStreamWriter<MemcachedEntry> {
 
-	public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
+    public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
 
-	private static final Transcoder<byte[]> transcoder = new ByteArrayTranscoder();
+    private static final Transcoder<byte[]> transcoder = new ByteArrayTranscoder();
 
-	private final Supplier<MemcachedClient> clientSupplier;
-	private Duration timeout = DEFAULT_TIMEOUT;
+    private final Supplier<MemcachedClient> clientSupplier;
 
-	private MemcachedClient client;
+    private Duration timeout = DEFAULT_TIMEOUT;
 
-	public MemcachedItemWriter(Supplier<MemcachedClient> clientSupplier) {
-		this.clientSupplier = clientSupplier;
-	}
+    private MemcachedClient client;
 
-	@Override
-	public synchronized void open(ExecutionContext executionContext) {
-		if (client == null) {
-			client = clientSupplier.get();
-		}
-	}
+    public MemcachedItemWriter(Supplier<MemcachedClient> clientSupplier) {
+        this.clientSupplier = clientSupplier;
+    }
 
-	@Override
-	public synchronized void close() {
-		if (client != null) {
-			client.shutdown();
-			client = null;
-		}
-	}
+    @Override
+    public synchronized void open(ExecutionContext executionContext) {
+        if (client == null) {
+            client = clientSupplier.get();
+        }
+    }
 
-	@Override
-	public void write(Chunk<? extends MemcachedEntry> chunk) throws Exception {
-		Stream<OperationFuture<Boolean>> stream = chunk.getItems().stream().map(this::write);
-		List<Boolean> results = MemcachedUtils.getAll(timeout, stream.collect(Collectors.toList()));
-		for (int index = 0; index < results.size(); index++) {
-			Boolean result = results.get(index);
-			Assert.isTrue(Boolean.TRUE.equals(result), "Could not write key " + chunk.getItems().get(index).getKey());
-		}
-	}
+    @Override
+    public synchronized void close() {
+        if (client != null) {
+            client.shutdown();
+            client = null;
+        }
+    }
 
-	private OperationFuture<Boolean> write(MemcachedEntry entry) {
-		return client.set(entry.getKey(), entry.getExpiration(), entry.getValue(), transcoder);
-	}
+    @Override
+    public void write(Chunk<? extends MemcachedEntry> chunk) throws Exception {
+        Stream<OperationFuture<Boolean>> stream = chunk.getItems().stream().map(this::write);
+        List<Boolean> results = MemcachedUtils.getAll(timeout, stream.collect(Collectors.toList()));
+        for (int index = 0; index < results.size(); index++) {
+            Boolean result = results.get(index);
+            Assert.isTrue(Boolean.TRUE.equals(result), "Could not write key " + chunk.getItems().get(index).getKey());
+        }
+    }
 
-	public Duration getTimeout() {
-		return timeout;
-	}
+    private OperationFuture<Boolean> write(MemcachedEntry entry) {
+        return client.set(entry.getKey(), expiration(entry), entry.getValue(), transcoder);
+    }
 
-	public void setTimeout(Duration timeout) {
-		this.timeout = timeout;
-	}
+    private int expiration(MemcachedEntry entry) {
+        if (entry.getExpiration() == null) {
+            return 0;
+        }
+        return Math.toIntExact(entry.getExpiration().getEpochSecond());
+    }
+
+    public Duration getTimeout() {
+        return timeout;
+    }
+
+    public void setTimeout(Duration timeout) {
+        this.timeout = timeout;
+    }
+
 }

@@ -2,10 +2,10 @@ package com.redis.riot;
 
 import com.redis.riot.core.InetSocketAddressList;
 import com.redis.riot.core.MemcachedContext;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.memcached.MemcachedEntry;
 import com.redis.spring.batch.memcached.MemcachedItemReader;
 import com.redis.spring.batch.memcached.MemcachedItemWriter;
-import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -82,17 +82,9 @@ public class MemcachedReplicate extends AbstractJobCommand {
         MemcachedItemReader reader = new MemcachedItemReader(sourceMemcachedContext::safeMemcachedClient);
         MemcachedItemWriter writer = new MemcachedItemWriter(targetMemcachedContext::safeMemcachedClient);
         RiotStep<MemcachedEntry, MemcachedEntry> step = step(STEP_NAME, reader, writer);
-        step.setItemProcessor(this::process);
         step.noSkip(TimeoutException.class);
         step.retry(TimeoutException.class);
         return job(step);
-    }
-
-    private MemcachedEntry process(MemcachedEntry entry) {
-        if (entry.getExpiration() < 0) {
-            entry.setExpiration(0);
-        }
-        return entry;
     }
 
     public InetSocketAddressList getSourceAddressList() {
