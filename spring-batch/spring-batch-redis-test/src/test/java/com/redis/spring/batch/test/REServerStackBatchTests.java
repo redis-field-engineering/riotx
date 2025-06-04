@@ -14,7 +14,7 @@ class REServerStackBatchTests extends BatchTests {
 	private static final RedisServer source = new RedisEnterpriseServer().withDatabase(Database.builder().shardCount(2)
 			.port(12001).ossCluster(true).modules(RedisModule.JSON, RedisModule.SEARCH).build());
 
-	private static final RedisServer target = RedisContainerFactory.stack();
+	private static final RedisServer target = RedisContainerFactory.redis();
 
 	@Override
 	public RedisServer getRedisServer() {

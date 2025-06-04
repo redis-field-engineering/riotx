@@ -46,8 +46,8 @@ public class MemcachedTests {
         System.setProperty(SimpleLogger.SHOW_DATE_TIME_KEY, "true");
     }
 
-    private static final DockerImageName imageName = MemcachedContainer.DEFAULT_IMAGE_NAME
-            .withTag(MemcachedContainer.DEFAULT_TAG);
+    private static final DockerImageName imageName = MemcachedContainer.DEFAULT_IMAGE_NAME.withTag(
+            MemcachedContainer.DEFAULT_TAG);
 
     private static final MemcachedContainer source = new MemcachedContainer(imageName);
 
@@ -102,15 +102,11 @@ public class MemcachedTests {
         if (client != null) {
             client.shutdown();
         }
-        if (source != null) {
-            source.stop();
-        }
+        source.stop();
         if (targetClient != null) {
             targetClient.shutdown();
         }
-        if (target != null) {
-            target.stop();
-        }
+        target.stop();
     }
 
     @BeforeEach
@@ -119,20 +115,16 @@ public class MemcachedTests {
         targetClient.flush();
     }
 
-    private void compare(long startTime, Collection<MemcachedEntry> expected, Collection<MemcachedEntry> actual)
-            throws Exception {
+    private void compare(Collection<MemcachedEntry> expected, Collection<MemcachedEntry> actual) throws Exception {
         Assertions.assertFalse(expected.isEmpty());
         Assertions.assertFalse(actual.isEmpty());
-        Map<String, MemcachedEntry> entryMap = expected.stream()
+        Map<String, MemcachedEntry> expectedEntryMap = expected.stream()
                 .collect(Collectors.toMap(MemcachedEntry::getKey, Function.identity()));
         Assertions.assertEquals(expected.size(), actual.size());
-        actual.forEach(e -> {
-            MemcachedEntry entry = entryMap.get(e.getKey());
-            Assertions.assertArrayEquals(entry.getValue(), e.getValue());
-            long expectedTime = startTime + entry.getExpiration();
-            long actualTime = e.getExpiration();
-            long delta = Math.abs(expectedTime - actualTime);
-            Assertions.assertTrue(delta < 30, () -> String.format("Delta: %,d (%s <> %s)", delta, expectedTime, actualTime));
+        actual.forEach(actualEntry -> {
+            MemcachedEntry expectedEntry = expectedEntryMap.get(actualEntry.getKey());
+            Assertions.assertArrayEquals(expectedEntry.getValue(), actualEntry.getValue());
+            Assertions.assertEquals(expectedEntry.getExpiration(), actualEntry.getExpiration());
         });
     }
 
@@ -181,7 +173,7 @@ public class MemcachedTests {
         replication.call();
         List<MemcachedEntry> sourceEntries = readAll(clientSupplier);
         List<MemcachedEntry> targetEntries = readAll(targetClientSupplier);
-        compare(0, sourceEntries, targetEntries);
+        compare(sourceEntries, targetEntries);
     }
 
     private InetSocketAddress inetSocketAddress(MemcachedServer server) {

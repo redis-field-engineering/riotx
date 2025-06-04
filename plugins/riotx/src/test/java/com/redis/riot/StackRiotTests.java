@@ -22,7 +22,7 @@ import com.redis.spring.batch.item.redis.gen.MapOptions;
 import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
-import com.redis.testcontainers.RedisStackContainer;
+import com.redis.testcontainers.RedisServer;
 import io.lettuce.core.GeoArgs;
 import io.lettuce.core.Range;
 import io.lettuce.core.StreamMessage;
@@ -57,9 +57,9 @@ class StackRiotTests extends RiotTests {
 
     public static final int BEER_JSON_COUNT = 216;
 
-    private static final RedisStackContainer source = RedisContainerFactory.stack();
+    private static final RedisServer source = RedisContainerFactory.redis();
 
-    private static final RedisStackContainer target = RedisContainerFactory.stack();
+    private static final RedisServer target = RedisContainerFactory.redis();
 
     private static Path tempDir;
 
@@ -77,12 +77,12 @@ class StackRiotTests extends RiotTests {
     }
 
     @Override
-    protected RedisStackContainer getRedisServer() {
+    protected RedisServer getRedisServer() {
         return source;
     }
 
     @Override
-    protected RedisStackContainer getTargetRedisServer() {
+    protected RedisServer getTargetRedisServer() {
         return target;
     }
 
