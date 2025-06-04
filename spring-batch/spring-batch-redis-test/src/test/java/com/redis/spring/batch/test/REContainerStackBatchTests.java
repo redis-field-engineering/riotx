@@ -13,7 +13,7 @@ class REContainerStackBatchTests extends BatchTests {
 
 	private static final RedisEnterpriseContainer source = RedisContainerFactory.enterprise();
 
-	private static final RedisServer target = RedisContainerFactory.stack();
+	private static final RedisServer target = RedisContainerFactory.redis();
 
 	@Override
 	protected RedisServer getRedisServer() {

@@ -8,7 +8,7 @@ import com.redis.testcontainers.RedisServer;
 @EnabledOnOs(OS.LINUX)
 class StackREContainerBatchTests extends BatchTests {
 
-	private static final RedisServer source = RedisContainerFactory.stack();
+	private static final RedisServer source = RedisContainerFactory.redis();
 
 	private static final RedisServer target = RedisContainerFactory.enterprise();
 

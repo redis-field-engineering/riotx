@@ -48,9 +48,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class StackBatchTests extends BatchTests {
 
-    private static final RedisServer source = RedisContainerFactory.stack();
+    private static final RedisServer source = RedisContainerFactory.redis();
 
-    private static final RedisServer target = RedisContainerFactory.stack();
+    private static final RedisServer target = RedisContainerFactory.redis();
 
     @Override
     protected RedisServer getRedisServer() {
