@@ -25,7 +25,7 @@ import com.redis.spring.batch.item.PollableItemReader;
 public class FlushingFaultTolerantStepBuilder<I, O> extends FaultTolerantStepBuilder<I, O> {
 
 	private Duration flushInterval = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
-	private Duration idleTimeout = FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT;
+	private Duration idleTimeout;
 
 	public FlushingFaultTolerantStepBuilder(StepBuilderHelper<?> parent) {
 		super(parent);

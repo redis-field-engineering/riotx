@@ -23,7 +23,7 @@ public class RedisWriterArgs {
     @Option(names = "--wait-timeout", description = "Timeout for WAIT command (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration waitTimeout = DEFAULT_WAIT_TIMEOUT;
 
-    @Option(names = "--merge", description = "Merge collection data structures (hash, list, ...) instead of overwriting them. Only used in `--struct` mode.")
+    @Option(names = "--merge", defaultValue = "${RIOT_MERGE}", description = "Merge collection data structures (hash, list, ...) instead of overwriting them. Only used for Redis data-structure replication and import.")
     private boolean merge;
 
     public <K, V, T> void configure(RedisItemWriter<K, V, T> writer) {

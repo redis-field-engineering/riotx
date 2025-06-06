@@ -18,7 +18,7 @@ public class BaseCommand {
 	}
 
 	@Spec
-	protected CommandSpec commandSpec;
+	CommandSpec commandSpec;
 
 	@Mixin
 	LoggingMixin loggingMixin;

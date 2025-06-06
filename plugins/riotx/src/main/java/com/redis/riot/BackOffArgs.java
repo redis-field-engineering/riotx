@@ -1,11 +1,14 @@
 package com.redis.riot;
 
+import com.redis.riot.core.job.RiotStep;
+import org.springframework.retry.backoff.BackOffPolicy;
+import org.springframework.retry.backoff.BackOffPolicyBuilder;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import picocli.CommandLine;
 
 import java.time.Duration;
 
-public class BackOffArgs {
+public class BackOffArgs implements StepConfigurer {
 
     public enum Policy {
         EXPONENTIAL, FIXED, NONE;
@@ -30,6 +33,21 @@ public class BackOffArgs {
 
     @CommandLine.Option(names = "--backoff-x", description = "Exponential backoff duration increment for each retry attempt (default: ${DEFAULT-VALUE} i.e. 100% increase per backoff).", paramLabel = "<num>")
     private double multiplier = DEFAULT_MULTIPLIER;
+
+    @Override
+    public void configure(RiotStep<?, ?> step) {
+        step.setBackOffPolicy(backOffPolicy());
+    }
+
+    private BackOffPolicy backOffPolicy() {
+        return switch (policy) {
+            case EXPONENTIAL -> BackOffPolicyBuilder.newBuilder().delay(delay.toMillis()).maxDelay(maxDelay.toMillis())
+                    .multiplier(multiplier).build();
+            case FIXED -> BackOffPolicyBuilder.newBuilder().delay(delay.toMillis()).build();
+            default -> null;
+        };
+
+    }
 
     public Policy getPolicy() {
         return policy;

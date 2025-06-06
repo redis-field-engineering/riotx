@@ -12,10 +12,11 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.util.ClassUtils;
-import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Supplier;
 
 @Command
@@ -27,22 +28,38 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
     @ArgGroup(exclusive = false, heading = "Job options%n")
     private StepArgs stepArgs = new StepArgs();
 
-    @CommandLine.Option(names = "--skip", description = "Number of failed items before failing the job (default: ${DEFAULT-VALUE}). Use -1 to always skip failed items.", paramLabel = "<int>")
-    private int skipLimit;
-
-    @CommandLine.Option(names = "--retry", description = "Number of times to retry failed items (default: ${DEFAULT-VALUE}). 0 and 1 both mean no retry. Use -1 to always retry.", paramLabel = "<int>")
-    private int retryLimit = defaultRetryLimit();
-
-    protected int defaultRetryLimit() {
-        return 0;
-    }
-
     private final JobExecutor jobExecutor = new JobExecutor();
+
+    private final Set<StepConfigurer> stepConfigurers = new HashSet<>();
+
+    protected void register(StepConfigurer configurer) {
+        this.stepConfigurers.add(configurer);
+    }
 
     @Override
     protected void initialize() throws Exception {
+        register(stepArgs);
+        register(this::configureJobInfra);
+        if (shouldShowProgress()) {
+            register(this::configureProgress);
+        }
         jobExecutor.afterPropertiesSet();
         super.initialize();
+    }
+
+    private void configureJobInfra(RiotStep<?, ?> step) {
+        step.setJobRepository(jobExecutor.getJobRepository());
+        step.setTransactionManager(jobExecutor.getTransactionManager());
+    }
+
+    private void configureProgress(RiotStep<?, ?> step) {
+        ProgressStepExecutionListener<?> listener = new ProgressStepExecutionListener<>();
+        listener.setTaskName(taskName(step));
+        listener.setInitialMax(() -> itemReaderSize(step.getItemReader()));
+        listener.setExtraMessage(extraMessage(step));
+        listener.setProgressStyle(progressArgs.getStyle());
+        listener.setUpdateInterval(progressArgs.getUpdateInterval());
+        step.addListener(listener);
     }
 
     protected Job job(RiotStep<?, ?> step) throws Exception {
@@ -64,30 +81,12 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         return commandSpec.name();
     }
 
-    protected <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
+    protected final <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
         RiotStep<I, O> step = new RiotStep<>();
         step.setName(name);
         step.setItemReader(reader);
         step.setItemWriter(writer);
-        step.setDryRun(stepArgs.isDryRun());
-        if (stepArgs.getWritesPerSecond() != null) {
-            step.setWritesPerSecond(stepArgs.getWritesPerSecond().intValue());
-        }
-        step.setThreads(stepArgs.getThreads());
-        step.setJobRepository(jobExecutor.getJobRepository());
-        step.setTransactionManager(jobExecutor.getTransactionManager());
-        step.setCommitInterval(stepArgs.getChunkSize());
-        step.setRetryLimit(retryLimit);
-        step.setSkipLimit(skipLimit);
-        if (shouldShowProgress()) {
-            ProgressStepExecutionListener<?> listener = new ProgressStepExecutionListener<>();
-            listener.setTaskName(taskName(step));
-            listener.setInitialMax(() -> itemReaderSize(step.getItemReader()));
-            listener.setExtraMessage(extraMessage(step));
-            listener.setProgressStyle(progressArgs.getStyle());
-            listener.setUpdateInterval(progressArgs.getUpdateInterval());
-            step.addListener(listener);
-        }
+        stepConfigurers.forEach(c -> c.configure(step));
         return step;
     }
 
@@ -154,22 +153,6 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
 
     public JobExecutor getJobExecutor() {
         return jobExecutor;
-    }
-
-    public int getRetryLimit() {
-        return retryLimit;
-    }
-
-    public void setRetryLimit(int retryLimit) {
-        this.retryLimit = retryLimit;
-    }
-
-    public int getSkipLimit() {
-        return skipLimit;
-    }
-
-    public void setSkipLimit(int skipLimit) {
-        this.skipLimit = skipLimit;
     }
 
 }
