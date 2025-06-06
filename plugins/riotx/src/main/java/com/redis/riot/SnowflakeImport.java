@@ -11,17 +11,13 @@ import com.redis.riot.rdi.ChangeEventValue;
 import com.redis.riot.rdi.RdiOffsetStore;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.writer.impl.Xadd;
-import com.redis.spring.batch.step.FlushingChunkProvider;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.batch.item.support.CompositeItemWriter;
-import org.springframework.retry.backoff.BackOffPolicy;
-import org.springframework.retry.backoff.BackOffPolicyBuilder;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
@@ -38,10 +34,6 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     public static final String SNOWFLAKE_DRIVER = "net.snowflake.client.jdbc.SnowflakeDriver";
 
-    public static final Duration DEFAULT_IDLE_TIMEOUT = FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT;
-
-    public static final Duration DEFAULT_FLUSH_INTERVAL = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
-
     public static final SnowflakeStreamItemReader.SnapshotMode DEFAULT_SNAPSHOT_MODE = SnowflakeStreamItemReader.SnapshotMode.INITIAL;
 
     private static final String STEP_NAME = "snowflake-import";
@@ -51,8 +43,6 @@ public class SnowflakeImport extends AbstractRedisImport {
     public static final String DEFAULT_OFFSET_PREFIX = "riotx:offset";
 
     public static final String DEFAULT_OFFSET_KEY = RdiOffsetStore.DEFAULT_KEY;
-
-    public static final int DEFAULT_RETRY_LIMIT = 10; // with default back-off policy we reach max delay after 10 attempts
 
     @ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
@@ -81,12 +71,6 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Option(names = "--poll", description = "Snowflake stream polling interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration pollInterval = SnowflakeStreamItemReader.DEFAULT_POLL_INTERVAL;
 
-    @Option(names = "--flush-interval", description = "Max duration between batch flushes (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
-    private Duration flushInterval = DEFAULT_FLUSH_INTERVAL;
-
-    @Option(names = "--idle-timeout", description = "Min duration to consider reader complete, for example 3s 5m (default: no timeout).", paramLabel = "<dur>")
-    private Duration idleTimeout = DEFAULT_IDLE_TIMEOUT;
-
     @Option(names = "--offset-prefix", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}", paramLabel = "<str>")
     private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
 
@@ -96,30 +80,17 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Option(names = "--stream-limit", description = "Max length of RDI stream (default: ${DEFAULT-VALUE}). Use 0 for no limit.", paramLabel = "<int>")
     private long rdiStreamLimit = StreamLengthBackpressureStatusSupplier.DEFAULT_LIMIT;
 
-    @Override
-    protected int defaultRetryLimit() {
-        return DEFAULT_RETRY_LIMIT;
-    }
+    @ArgGroup(exclusive = false)
+    private FlushingStepArgs flushingStepArgs = new FlushingStepArgs();
 
     @CommandLine.ArgGroup(exclusive = false)
     private BackOffArgs backOffArgs = new BackOffArgs();
 
     @Override
-    protected <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
-        RiotStep<I, O> step = super.step(name, reader, writer);
-        step.setFlushInterval(flushInterval);
-        step.setIdleTimeout(idleTimeout);
-        step.setBackOffPolicy(backOffPolicy());
-        return step;
-    }
-
-    private BackOffPolicy backOffPolicy() {
-        return switch (backOffArgs.getPolicy()) {
-            case EXPONENTIAL -> BackOffPolicyBuilder.newBuilder().delay(backOffArgs.getDelay().toMillis())
-                    .maxDelay(backOffArgs.getMaxDelay().toMillis()).multiplier(backOffArgs.getMultiplier()).build();
-            case FIXED -> BackOffPolicyBuilder.newBuilder().delay(backOffArgs.getDelay().toMillis()).build();
-            default -> null;
-        };
+    protected void initialize() throws Exception {
+        register(backOffArgs);
+        register(flushingStepArgs);
+        super.initialize();
     }
 
     @Override
@@ -337,22 +308,6 @@ public class SnowflakeImport extends AbstractRedisImport {
         this.dataSourceArgs = dataSourceArgs;
     }
 
-    public Duration getFlushInterval() {
-        return flushInterval;
-    }
-
-    public void setFlushInterval(Duration flushInterval) {
-        this.flushInterval = flushInterval;
-    }
-
-    public Duration getIdleTimeout() {
-        return idleTimeout;
-    }
-
-    public void setIdleTimeout(Duration idleTimeout) {
-        this.idleTimeout = idleTimeout;
-    }
-
     public String getOffsetKey() {
         return offsetKey;
     }
@@ -383,6 +338,14 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     public void setBackOffArgs(BackOffArgs backOffArgs) {
         this.backOffArgs = backOffArgs;
+    }
+
+    public FlushingStepArgs getFlushingStepArgs() {
+        return flushingStepArgs;
+    }
+
+    public void setFlushingStepArgs(FlushingStepArgs flushingStepArgs) {
+        this.flushingStepArgs = flushingStepArgs;
     }
 
 }

@@ -178,6 +178,16 @@ distributions:
         platforms:
           - 'linux/amd64'
           - 'linux/arm64'
+    brew:
+      active: ALWAYS
+      continueOnError: true
+      downloadUrl: '{{projectLinkDownload}}/{{tagName}}/{{artifactFile}}'
+      formulaName: riotx
+      multiPlatform: true
+      repository:
+        active: RELEASE
+        owner: redis
+        commitMessage: 'riotx {{tagName}}'
     scoop:
       active: ALWAYS
       continueOnError: true
@@ -195,18 +205,6 @@ distributions:
         transform: '{{distributionName}}/{{distributionName}}-{{projectEffectiveVersion}}.tar'
         extraProperties:
           skipFlatpak: 'true'
-
-  riotx-standalone:
-    brew:
-      active: ALWAYS
-      continueOnError: true
-      downloadUrl: '{{projectLinkDownload}}/{{tagName}}/{{artifactFile}}'
-      formulaName: riotx
-      multiPlatform: true
-      repository:
-        active: RELEASE
-        owner: redis
-        commitMessage: 'riotx {{tagName}}'
 
 files:
   artifacts:

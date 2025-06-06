@@ -25,7 +25,6 @@ import com.redis.spring.batch.item.redis.writer.impl.Del;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.support.CompositeItemWriter;
-import org.springframework.retry.policy.MaxAttemptsRetryPolicy;
 import org.springframework.util.StringUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -54,32 +53,20 @@ public class Replicate extends AbstractCompareCommand {
 
     public static final ReplicationMode DEFAULT_REPLICATION_MODE = ReplicationMode.SCAN;
 
-    public static final int DEFAULT_RETRY_LIMIT = MaxAttemptsRetryPolicy.DEFAULT_MAX_ATTEMPTS;
-
-    @Option(names = "--mode", description = "Replication mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE})", paramLabel = "<name>")
+    @Option(names = "--mode", defaultValue = "${RIOT_SYNC_MODE:-SCAN}", description = "Replication mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE})", paramLabel = "<name>")
     private ReplicationMode mode = DEFAULT_REPLICATION_MODE;
 
-    @Option(names = "--type", description = "Replication type: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<name>")
-    private Type type = DEFAULT_TYPE;
+    @Option(names = "--struct", defaultValue = "${RIOT_SYNC_STRUCT}", description = "Enable data structure-specific replication.")
+    private boolean struct;
 
     @ArgGroup(exclusive = false)
     private RedisWriterArgs targetRedisWriterArgs = new RedisWriterArgs();
 
-    @Option(names = "--log-keys", description = "Log keys being read and written.")
+    @Option(names = "--log-keys", defaultValue = "${RIOT_LOG_KEYS}", description = "Log keys being read and written.")
     private boolean logKeys;
 
-    @Option(names = "--compare", description = "Compare mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
+    @Option(names = "--compare", defaultValue = "${RIOT_COMPARE:-QUICK}", description = "Compare mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private CompareMode compareMode = DEFAULT_COMPARE_MODE;
-
-    @Option(names = "--struct", description = "Enable data structure-specific replication")
-    public void setStruct(boolean enable) {
-        this.type = enable ? Type.STRUCT : Type.DUMP;
-    }
-
-    @Override
-    protected int defaultRetryLimit() {
-        return DEFAULT_RETRY_LIMIT;
-    }
 
     @Override
     protected boolean isQuickCompare() {
@@ -89,7 +76,7 @@ public class Replicate extends AbstractCompareCommand {
     @ArgGroup(exclusive = false, heading = "Metrics options%n")
     private MetricsArgs metricsArgs = new MetricsArgs();
 
-    @Option(names = "--remove-source-keys", description = "Delete keys from source after they have been successfully replicated.")
+    @Option(names = "--remove-source-keys", defaultValue = "${RIOT_REMOVE_SOURCE_KEYS}", description = "Delete keys from source after they have been successfully replicated.")
     private boolean removeSourceKeys;
 
     @Override
@@ -201,7 +188,11 @@ public class Replicate extends AbstractCompareCommand {
 
     @Override
     protected boolean isStruct() {
-        return type == Type.STRUCT;
+        return struct;
+    }
+
+    public void setStruct(boolean struct) {
+        this.struct = struct;
     }
 
     @Override
@@ -241,14 +232,6 @@ public class Replicate extends AbstractCompareCommand {
 
     public void setTargetRedisWriterArgs(RedisWriterArgs redisWriterArgs) {
         this.targetRedisWriterArgs = redisWriterArgs;
-    }
-
-    public Type getType() {
-        return type;
-    }
-
-    public void setType(Type type) {
-        this.type = type;
     }
 
     public boolean isLogKeys() {

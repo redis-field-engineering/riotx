@@ -12,13 +12,13 @@ public abstract class AbstractRedisTargetExport extends AbstractExport {
 
     private static final String VAR_TARGET = "target";
 
-    @Parameters(arity = "1", index = "0", description = "Source server URI or endpoint in the form host:port.", paramLabel = "SOURCE")
+    @Parameters(arity = "1", index = "0", defaultValue = "${RIOT_SOURCE}", description = "Source server URI or endpoint in the form host:port.", paramLabel = "SOURCE")
     private RedisURI sourceRedisUri;
 
     @ArgGroup(exclusive = false)
     private SourceRedisArgs sourceRedisArgs = new SourceRedisArgs();
 
-    @Parameters(arity = "1", index = "1", description = "Target server URI or endpoint in the form host:port.", paramLabel = "TARGET")
+    @Parameters(arity = "1", index = "1", defaultValue = "${RIOT_TARGET}", description = "Target server URI or endpoint in the form host:port.", paramLabel = "TARGET")
     private RedisURI targetRedisUri;
 
     @ArgGroup(exclusive = false)
