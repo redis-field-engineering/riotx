@@ -32,6 +32,8 @@ source <({app} generate-completion)
 ----
 ====
 
+include::{includedir}/env.adoc[leveloffset=+1]
+
 == Man Page
 
 https://redis-field-engineering.github.io/riotx/manpage/riotx[{project-title} man page].
