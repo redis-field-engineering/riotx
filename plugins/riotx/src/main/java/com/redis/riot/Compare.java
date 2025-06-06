@@ -25,8 +25,8 @@ public class Compare extends AbstractCompareCommand {
 	}
 
 	@Override
-	protected boolean isIgnoreStreamMessageId() {
-		return !compareStreamMessageId;
+	protected boolean isStreamMessageIds() {
+		return compareStreamMessageId;
 	}
 
 	@Override

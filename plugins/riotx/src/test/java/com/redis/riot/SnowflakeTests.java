@@ -4,8 +4,8 @@ import com.redis.riot.db.DataSourceBuilder;
 import com.redis.riot.db.SnowflakeStreamItemReader;
 import com.redis.riot.db.SnowflakeStreamRow;
 import com.redis.spring.batch.step.FlushingStepBuilder;
+import com.redis.testcontainers.RedisContainer;
 import com.redis.testcontainers.RedisServer;
-import com.redis.testcontainers.RedisStackContainer;
 import io.lettuce.core.Range;
 import io.lettuce.core.StreamMessage;
 import org.junit.jupiter.api.*;
@@ -34,8 +34,8 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
         System.setProperty(SimpleLogger.LOG_KEY_PREFIX + "com.redis.riot.db", Level.DEBUG.name());
     }
 
-    private static final RedisStackContainer redis = new RedisStackContainer(
-            RedisStackContainer.DEFAULT_IMAGE_NAME.withTag(RedisStackContainer.DEFAULT_TAG));
+    private static final RedisContainer redis = new RedisContainer(
+            RedisContainer.DEFAULT_IMAGE_NAME.withTag(RedisContainer.DEFAULT_TAG));
 
     private static final String ENV_URL = "JDBC_URL";
 

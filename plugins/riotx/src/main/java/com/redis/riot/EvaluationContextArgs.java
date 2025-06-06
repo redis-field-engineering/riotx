@@ -1,28 +1,25 @@
 package com.redis.riot;
 
-import java.text.DateFormat;
+import com.redis.lettucemod.search.GeoLocation;
+import com.redis.riot.core.Expression;
+import com.redis.riot.core.RiotUtils;
+import lombok.ToString;
+import net.datafaker.Faker;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.util.CollectionUtils;
+import picocli.CommandLine.Option;
+
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.redis.riot.core.Expression;
-import com.redis.riot.core.RiotUtils;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.util.CollectionUtils;
-
-import com.redis.lettucemod.search.GeoLocation;
-
-import lombok.ToString;
-import net.datafaker.Faker;
-import picocli.CommandLine.Option;
-
 @ToString
 public class EvaluationContextArgs {
 
-    public static final DateFormat DEFAULT_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+    public static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
 
-    public static final DecimalFormat DEFAULT_NUMBER_FORMAT = new DecimalFormat("#,###.##");
+    public static final String DEFAULT_NUMBER_FORMAT = "#,###.##";
 
     public static final String VAR_DATE = "date";
 
@@ -34,18 +31,18 @@ public class EvaluationContextArgs {
     private Map<String, Expression> varExpressions = new LinkedHashMap<>();
 
     @Option(names = "--date-format", description = "Date/time format (default: ${DEFAULT-VALUE}). For details see https://www.baeldung.com/java-simple-date-format#date_time_patterns", paramLabel = "<fmt>")
-    private DateFormat dateFormat = DEFAULT_DATE_FORMAT;
+    private String dateFormat = DEFAULT_DATE_FORMAT;
 
     @Option(names = "--number-format", description = "Number format (default: ${DEFAULT-VALUE}). For details see https://www.baeldung.com/java-decimalformat", paramLabel = "<fmt>")
-    private DecimalFormat numberFormat = DEFAULT_NUMBER_FORMAT;
+    private String numberFormat = DEFAULT_NUMBER_FORMAT;
 
     private Map<String, Object> vars = new LinkedHashMap<>();
 
     public StandardEvaluationContext evaluationContext() {
         StandardEvaluationContext context = new StandardEvaluationContext();
         RiotUtils.registerFunction(context, "geo", GeoLocation.class, "toString", String.class, String.class);
-        context.setVariable(VAR_DATE, dateFormat);
-        context.setVariable(VAR_NUMBER, numberFormat);
+        context.setVariable(VAR_DATE, new SimpleDateFormat(dateFormat));
+        context.setVariable(VAR_NUMBER, new DecimalFormat(numberFormat));
         context.setVariable(VAR_FAKER, new Faker());
         if (!CollectionUtils.isEmpty(vars)) {
             vars.forEach(context::setVariable);
@@ -72,19 +69,19 @@ public class EvaluationContextArgs {
         this.vars = variables;
     }
 
-    public DateFormat getDateFormat() {
+    public String getDateFormat() {
         return dateFormat;
     }
 
-    public void setDateFormat(DateFormat dateFormat) {
+    public void setDateFormat(String dateFormat) {
         this.dateFormat = dateFormat;
     }
 
-    public DecimalFormat getNumberFormat() {
+    public String getNumberFormat() {
         return numberFormat;
     }
 
-    public void setNumberFormat(DecimalFormat numberFormat) {
+    public void setNumberFormat(String numberFormat) {
         this.numberFormat = numberFormat;
     }
 

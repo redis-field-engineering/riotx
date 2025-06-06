@@ -1,5 +1,16 @@
 package com.redis.riot;
 
+import com.redis.testcontainers.RedisContainer;
+import com.redis.testcontainers.RedisServer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.TestInfo;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import org.testcontainers.containers.JdbcDatabaseContainer;
+import picocli.CommandLine.ExitCode;
+import picocli.CommandLine.ParseResult;
+
+import javax.sql.DataSource;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -7,88 +18,75 @@ import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import javax.sql.DataSource;
-
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.TestInfo;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-import org.testcontainers.containers.JdbcDatabaseContainer;
-
-import com.redis.testcontainers.RedisServer;
-import com.redis.testcontainers.RedisStackContainer;
-
-import picocli.CommandLine.ExitCode;
-import picocli.CommandLine.ParseResult;
-
 abstract class DbTests extends AbstractRiotApplicationTestBase {
 
-	private static final RedisStackContainer redis = new RedisStackContainer(
-			RedisStackContainer.DEFAULT_IMAGE_NAME.withTag(RedisStackContainer.DEFAULT_TAG));
+    private static final RedisContainer redis = new RedisContainer(
+            RedisContainer.DEFAULT_IMAGE_NAME.withTag(RedisContainer.DEFAULT_TAG));
 
-	protected Connection dbConnection;
-	protected DataSource dataSource;
+    protected Connection dbConnection;
 
-	protected abstract JdbcDatabaseContainer<?> getJdbcDatabaseContainer();
+    protected DataSource dataSource;
 
-	@BeforeAll
-	public void setupContainers() throws SQLException {
-		JdbcDatabaseContainer<?> container = getJdbcDatabaseContainer();
-		container.start();
-		DataSourceProperties properties = new DataSourceProperties();
-		properties.setUrl(container.getJdbcUrl());
-		properties.setUsername(container.getUsername());
-		properties.setPassword(container.getPassword());
-		dataSource = properties.initializeDataSourceBuilder().build();
-		dbConnection = dataSource.getConnection();
-	}
+    protected abstract JdbcDatabaseContainer<?> getJdbcDatabaseContainer();
 
-	@AfterAll
-	public void teardownContainers() throws SQLException {
-		if (dbConnection != null) {
-			dbConnection.close();
-		}
-		getJdbcDatabaseContainer().stop();
-	}
+    @BeforeAll
+    public void setupContainers() throws SQLException {
+        JdbcDatabaseContainer<?> container = getJdbcDatabaseContainer();
+        container.start();
+        DataSourceProperties properties = new DataSourceProperties();
+        properties.setUrl(container.getJdbcUrl());
+        properties.setUsername(container.getUsername());
+        properties.setPassword(container.getPassword());
+        dataSource = properties.initializeDataSourceBuilder().build();
+        dbConnection = dataSource.getConnection();
+    }
 
-	@Override
-	protected RedisServer getRedisServer() {
-		return redis;
-	}
+    @AfterAll
+    public void teardownContainers() throws SQLException {
+        if (dbConnection != null) {
+            dbConnection.close();
+        }
+        getJdbcDatabaseContainer().stop();
+    }
 
-	@Override
-	protected RedisStackContainer getTargetRedisServer() {
-		return redis;
-	}
+    @Override
+    protected RedisServer getRedisServer() {
+        return redis;
+    }
 
-	protected void executeScript(String file) throws IOException, SQLException {
-		SqlScriptRunner scriptRunner = new SqlScriptRunner(dbConnection);
-		scriptRunner.setAutoCommit(false);
-		scriptRunner.setStopOnError(true);
-		InputStream inputStream = PostgresTests.class.getClassLoader().getResourceAsStream(file);
-		if (inputStream == null) {
-			throw new FileNotFoundException(file);
-		}
-		scriptRunner.runScript(new InputStreamReader(inputStream));
-	}
+    @Override
+    protected RedisContainer getTargetRedisServer() {
+        return redis;
+    }
 
-	protected int executeDatabaseImport(ParseResult parseResult) {
-		DatabaseImport command = command(parseResult);
-		configureDatabase(command.getDataSourceArgs());
-		return ExitCode.OK;
-	}
+    protected void executeScript(String file) throws IOException, SQLException {
+        SqlScriptRunner scriptRunner = new SqlScriptRunner(dbConnection);
+        scriptRunner.setAutoCommit(false);
+        scriptRunner.setStopOnError(true);
+        InputStream inputStream = PostgresTests.class.getClassLoader().getResourceAsStream(file);
+        if (inputStream == null) {
+            throw new FileNotFoundException(file);
+        }
+        scriptRunner.runScript(new InputStreamReader(inputStream));
+    }
 
-	protected int executeDatabaseExport(ParseResult parseResult, TestInfo info) {
-		DatabaseExport command = command(parseResult);
-		configureDatabase(command.getDataSourceArgs());
-		return ExitCode.OK;
-	}
+    protected int executeDatabaseImport(ParseResult parseResult) {
+        DatabaseImport command = command(parseResult);
+        configureDatabase(command.getDataSourceArgs());
+        return ExitCode.OK;
+    }
 
-	private void configureDatabase(DataSourceArgs args) {
-		JdbcDatabaseContainer<?> container = getJdbcDatabaseContainer();
-		args.setUrl(container.getJdbcUrl());
-		args.setUsername(container.getUsername());
-		args.setPassword(container.getPassword());
-	}
+    protected int executeDatabaseExport(ParseResult parseResult, TestInfo info) {
+        DatabaseExport command = command(parseResult);
+        configureDatabase(command.getDataSourceArgs());
+        return ExitCode.OK;
+    }
+
+    private void configureDatabase(DataSourceArgs args) {
+        JdbcDatabaseContainer<?> container = getJdbcDatabaseContainer();
+        args.setUrl(container.getJdbcUrl());
+        args.setUsername(container.getUsername());
+        args.setPassword(container.getPassword());
+    }
 
 }

@@ -6,17 +6,21 @@ import picocli.CommandLine;
 
 import java.time.Duration;
 
-public class FlushingStepArgs {
-
-    public static final Duration DEFAULT_IDLE_TIMEOUT = FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT;
+public class FlushingStepArgs implements StepConfigurer {
 
     public static final Duration DEFAULT_FLUSH_INTERVAL = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
 
-    @CommandLine.Option(names = "--flush-interval", description = "Max duration between batch flushes (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
+    @CommandLine.Option(names = "--flush", defaultValue = "${RIOT_FLUSH:-50ms}", description = "Max duration between batch flushes (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration flushInterval = DEFAULT_FLUSH_INTERVAL;
 
-    @CommandLine.Option(names = "--idle-timeout", description = "Min duration to consider reader complete, for example 3s 5m (default: no timeout).", paramLabel = "<dur>")
-    private Duration idleTimeout = DEFAULT_IDLE_TIMEOUT;
+    @CommandLine.Option(names = "--idle", defaultValue = "${RIOT_IDLE}", description = "Min duration to consider reader complete, for example 3s 5m (default: no timeout).", paramLabel = "<dur>")
+    private Duration idleTimeout;
+
+    @Override
+    public void configure(RiotStep<?, ?> step) {
+        step.setFlushInterval(flushInterval);
+        step.setIdleTimeout(idleTimeout);
+    }
 
     public Duration getFlushInterval() {
         return flushInterval;
@@ -32,11 +36,6 @@ public class FlushingStepArgs {
 
     public void setIdleTimeout(Duration idleTimeout) {
         this.idleTimeout = idleTimeout;
-    }
-
-    public <I, O> void configure(RiotStep<I, O> step) {
-        step.setFlushInterval(flushInterval);
-        step.setIdleTimeout(idleTimeout);
     }
 
 }

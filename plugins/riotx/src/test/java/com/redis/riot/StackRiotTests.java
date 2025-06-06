@@ -23,7 +23,7 @@ import com.redis.spring.batch.item.redis.gen.MapOptions;
 import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
-import com.redis.testcontainers.RedisStackContainer;
+import com.redis.testcontainers.RedisServer;
 import io.lettuce.core.GeoArgs;
 import io.lettuce.core.Range;
 import io.lettuce.core.StreamMessage;
@@ -58,9 +58,9 @@ class StackRiotTests extends RiotTests {
 
     public static final int BEER_JSON_COUNT = 216;
 
-    private static final RedisStackContainer source = RedisContainerFactory.stack();
+    private static final RedisServer source = RedisContainerFactory.redis();
 
-    private static final RedisStackContainer target = RedisContainerFactory.stack();
+    private static final RedisServer target = RedisContainerFactory.redis();
 
     private static Path tempDir;
 
@@ -78,12 +78,12 @@ class StackRiotTests extends RiotTests {
     }
 
     @Override
-    protected RedisStackContainer getRedisServer() {
+    protected RedisServer getRedisServer() {
         return source;
     }
 
     @Override
-    protected RedisStackContainer getTargetRedisServer() {
+    protected RedisServer getTargetRedisServer() {
         return target;
     }
 
@@ -585,7 +585,7 @@ class StackRiotTests extends RiotTests {
         execute(info, filename);
         assertDbNotEmpty(redisCommands);
         DefaultKeyComparator<String, String> comparator = comparator(StringCodec.UTF8);
-        comparator.setIgnoreStreamMessageId(true);
+        comparator.setStreamMessageIds(false);
         List<KeyComparison<String>> comparisons = compare(info, StringCodec.UTF8, comparator);
         Assertions.assertFalse(comparisons.isEmpty());
         Assertions.assertFalse(comparisons.stream().anyMatch(c -> c.getStatus() != Status.OK));
@@ -602,11 +602,10 @@ class StackRiotTests extends RiotTests {
         execute(info, filename);
         assertDbNotEmpty(redisCommands);
         DefaultKeyComparator<String, String> comparator = comparator(StringCodec.UTF8);
-        comparator.setIgnoreStreamMessageId(true);
+        comparator.setStreamMessageIds(false);
         List<KeyComparison<String>> comparisons = compare(info, StringCodec.UTF8, comparator);
         Assertions.assertFalse(comparisons.isEmpty());
-        KeyComparison<String> missing = comparisons.stream().filter(c -> c.getStatus() != Status.OK)
-                .collect(Collectors.toList()).get(0);
+        KeyComparison<String> missing = comparisons.stream().filter(c -> c.getStatus() != Status.OK).toList().get(0);
         Assertions.assertEquals(Status.MISSING, missing.getStatus());
         Assertions.assertEquals(emptyStream, missing.getSource().getKey());
     }

@@ -5,7 +5,6 @@ import com.redis.spring.batch.item.redis.writer.impl.Xadd;
 import com.redis.spring.batch.test.AbstractTestBase;
 import com.redis.spring.batch.test.RedisContainerFactory;
 import com.redis.testcontainers.RedisServer;
-import com.redis.testcontainers.RedisStackContainer;
 import io.lettuce.core.StreamMessage;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -24,7 +23,7 @@ import java.util.stream.IntStream;
 
 public class CoreTests extends AbstractTestBase {
 
-    private static final RedisStackContainer redis = RedisContainerFactory.stack();
+    private static final RedisServer redis = RedisContainerFactory.redis();
 
     @Override
     protected RedisServer getRedisServer() {

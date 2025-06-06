@@ -17,19 +17,19 @@ public class RedisReaderArgs {
 
     public static final int DEFAULT_BATCH_SIZE = RedisScanItemReader.DEFAULT_BATCH_SIZE;
 
-    @Option(names = "--key-pattern", description = "Pattern of keys to read (default: *).", paramLabel = "<glob>")
+    @Option(names = "--key-pattern", defaultValue = "${RIOT_KEY_PATTERN}", description = "Pattern of keys to read (default: all keys).", paramLabel = "<glob>")
     private String keyPattern;
 
-    @Option(names = "--key-type", description = "Type of keys to read (default: all types).", paramLabel = "<type>")
+    @Option(names = "--key-type", defaultValue = "${RIOT_KEY_TYPE}", description = "Type of keys to read (default: all types).", paramLabel = "<type>")
     private String keyType;
 
-    @Option(names = "--scan-count", description = "How many keys to read at once on each scan iteration (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    @Option(names = "--scan-count", defaultValue = "${RIOT_SCAN_COUNT:-100}", description = "How many keys to read at once on each scan iteration (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
     private long scanCount = DEFAULT_SCAN_COUNT;
 
-    @Option(names = "--read-batch", description = "Number of values each reader thread should read in a pipelined call (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    @Option(names = "--read-batch", defaultValue = "${RIOT_READ_BATCH:-50}", description = "Number of values each reader thread should read in a pipelined call (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
     private int batchSize = DEFAULT_BATCH_SIZE;
 
-    @Option(names = "--event-queue", description = "Capacity of the keyspace notification queue (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    @Option(names = "--event-queue", defaultValue = "${RIOT_EVENT_QUEUE:-10000}", description = "Capacity of the keyspace notification queue (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
     private int eventQueueCapacity = DEFAULT_EVENT_QUEUE_CAPACITY;
 
     @ArgGroup(exclusive = false)

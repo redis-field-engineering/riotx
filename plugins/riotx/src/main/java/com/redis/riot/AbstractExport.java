@@ -2,30 +2,24 @@ package com.redis.riot;
 
 import com.redis.riot.core.KeyValueFilter;
 import com.redis.riot.core.RedisContext;
-import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.step.FlushingChunkProvider;
 import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.ItemWriter;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.unit.DataSize;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
-
-import java.time.Duration;
 
 public abstract class AbstractExport extends AbstractJobCommand {
 
     private static final String VAR_SOURCE = "source";
 
     @ArgGroup(exclusive = false)
-    private FlushingStepArgs flushingStepArgs = new FlushingStepArgs();
+    private RedisReaderArgs readerArgs = new RedisReaderArgs();
 
     @ArgGroup(exclusive = false)
-    private RedisReaderArgs readerArgs = new RedisReaderArgs();
+    private FlushingStepArgs flushingStepArgs = new FlushingStepArgs();
 
     @Option(names = "--mem-limit", description = "Max mem usage for a key to be read, for example 12KB 5MB.", paramLabel = "<size>")
     private DataSize memoryLimit;
@@ -43,15 +37,9 @@ public abstract class AbstractExport extends AbstractJobCommand {
     }
 
     @Override
-    protected <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
-        RiotStep<I, O> step = super.step(name, reader, writer);
-        flushingStepArgs.configure(step);
-        return step;
-    }
-
-    @Override
     protected void initialize() throws Exception {
         super.initialize();
+        register(flushingStepArgs);
         sourceRedisContext = sourceRedisContext();
         sourceRedisContext.afterPropertiesSet();
     }
@@ -87,14 +75,6 @@ public abstract class AbstractExport extends AbstractJobCommand {
 
     public void setReaderArgs(RedisReaderArgs args) {
         this.readerArgs = args;
-    }
-
-    public FlushingStepArgs getFlushingStepArgs() {
-        return flushingStepArgs;
-    }
-
-    public void setFlushingStepArgs(FlushingStepArgs flushingStepArgs) {
-        this.flushingStepArgs = flushingStepArgs;
     }
 
     public DataSize getMemoryLimit() {

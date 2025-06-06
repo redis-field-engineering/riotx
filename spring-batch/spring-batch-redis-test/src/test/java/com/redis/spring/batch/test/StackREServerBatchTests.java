@@ -10,7 +10,7 @@ import com.redis.testcontainers.RedisServer;
 @EnabledIfEnvironmentVariable(named = RedisEnterpriseServer.ENV_HOST, matches = ".*")
 class StackREServerBatchTests extends BatchTests {
 
-	private static final RedisServer source = RedisContainerFactory.stack();
+	private static final RedisServer source = RedisContainerFactory.redis();
 
 	@SuppressWarnings("resource")
 	private static final RedisServer target = new RedisEnterpriseServer().withDatabase(Database.builder().shardCount(2)

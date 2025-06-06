@@ -1,24 +1,22 @@
 package com.redis.riot;
 
+import com.redis.testcontainers.RedisServer;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
-
-import com.redis.enterprise.testcontainers.RedisEnterpriseContainer;
-import com.redis.testcontainers.RedisStackContainer;
 
 @EnabledOnOs(OS.LINUX)
 class StackREContainer extends RiotTests {
 
-	private static final RedisStackContainer source = RedisContainerFactory.stack();
-	private static final RedisEnterpriseContainer target = RedisContainerFactory.enterprise();
+	private static final RedisServer source = RedisContainerFactory.redis();
+	private static final RedisServer target = RedisContainerFactory.enterprise();
 
 	@Override
-	protected RedisStackContainer getRedisServer() {
+	protected RedisServer getRedisServer() {
 		return source;
 	}
 
 	@Override
-	protected RedisEnterpriseContainer getTargetRedisServer() {
+	protected RedisServer getTargetRedisServer() {
 		return target;
 	}
 

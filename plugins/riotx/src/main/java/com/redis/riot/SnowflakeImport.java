@@ -17,10 +17,10 @@ import io.lettuce.core.StreamMessage;
 import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.util.CollectionUtils;
+import org.springframework.batch.item.support.CompositeItemWriter;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
@@ -97,20 +97,20 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Option(names = "--poll", description = "Snowflake stream polling interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration pollInterval = SnowflakeStreamItemReader.DEFAULT_POLL_INTERVAL;
 
-    @ArgGroup(exclusive = false)
-    private FlushingStepArgs flushingStepArgs = new FlushingStepArgs();
+    @Option(names = "--offset-prefix", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}", paramLabel = "<str>")
+    private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
+
+    @Option(names = "--offset-key", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}", paramLabel = "<name>")
+    private String offsetKey = DEFAULT_OFFSET_KEY;
+
+    @Option(names = "--stream-limit", description = "Max length of RDI stream (default: ${DEFAULT-VALUE}). Use 0 for no limit.", paramLabel = "<int>")
+    private long rdiStreamLimit = StreamLengthBackpressureStatusSupplier.DEFAULT_LIMIT;
 
     @Override
-    protected int defaultRetryLimit() {
-        return BackOffArgs.DEFAULT_RETRY_LIMIT;
-    }
-
-    @Override
-    protected <I, O> RiotStep<I, O> step(String name, ItemReader<I> reader, ItemWriter<O> writer) {
-        RiotStep<I, O> step = super.step(name, reader, writer);
-        flushingStepArgs.configure(step);
-        debeziumStreamArgs.configure(step);
-        return step;
+    protected void initialize() throws Exception {
+        register(backOffArgs);
+        register(flushingStepArgs);
+        super.initialize();
     }
 
     @Override
@@ -363,14 +363,6 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     public void setDataSourceArgs(DataSourceArgs dataSourceArgs) {
         this.dataSourceArgs = dataSourceArgs;
-    }
-
-    public FlushingStepArgs getFlushingStepArgs() {
-        return flushingStepArgs;
-    }
-
-    public void setFlushingStepArgs(FlushingStepArgs flushingStepArgs) {
-        this.flushingStepArgs = flushingStepArgs;
     }
 
     public DebeziumStreamArgs getDebeziumStreamArgs() {
