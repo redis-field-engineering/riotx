@@ -190,7 +190,7 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
 
     protected int executeSnowflakeImport(CommandLine.ParseResult parseResult) {
         SnowflakeImport command = command(parseResult);
-        command.setIdleTimeout(Duration.ofSeconds(10));
+        command.getFlushingStepArgs().setIdleTimeout(Duration.ofSeconds(10));
         configureDatabase(command.getDataSourceArgs());
         return CommandLine.ExitCode.OK;
     }

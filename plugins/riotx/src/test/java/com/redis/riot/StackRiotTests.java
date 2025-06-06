@@ -583,7 +583,7 @@ class StackRiotTests extends RiotTests {
         execute(info, filename);
         assertDbNotEmpty(redisCommands);
         DefaultKeyComparator<String, String> comparator = comparator(StringCodec.UTF8);
-        comparator.setIgnoreStreamMessageId(true);
+        comparator.setStreamMessageIds(false);
         List<KeyComparison<String>> comparisons = compare(info, StringCodec.UTF8, comparator);
         Assertions.assertFalse(comparisons.isEmpty());
         Assertions.assertFalse(comparisons.stream().anyMatch(c -> c.getStatus() != Status.OK));
@@ -600,11 +600,10 @@ class StackRiotTests extends RiotTests {
         execute(info, filename);
         assertDbNotEmpty(redisCommands);
         DefaultKeyComparator<String, String> comparator = comparator(StringCodec.UTF8);
-        comparator.setIgnoreStreamMessageId(true);
+        comparator.setStreamMessageIds(false);
         List<KeyComparison<String>> comparisons = compare(info, StringCodec.UTF8, comparator);
         Assertions.assertFalse(comparisons.isEmpty());
-        KeyComparison<String> missing = comparisons.stream().filter(c -> c.getStatus() != Status.OK)
-                .collect(Collectors.toList()).get(0);
+        KeyComparison<String> missing = comparisons.stream().filter(c -> c.getStatus() != Status.OK).toList().get(0);
         Assertions.assertEquals(Status.MISSING, missing.getStatus());
         Assertions.assertEquals(emptyStream, missing.getSource().getKey());
     }

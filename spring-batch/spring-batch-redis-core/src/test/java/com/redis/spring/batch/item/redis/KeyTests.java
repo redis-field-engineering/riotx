@@ -47,7 +47,7 @@ class KeyTests {
 		StreamMessage<String, String> message2 = new StreamMessage<>(key, messageId + "1", body);
 		kv2.setValue(Arrays.asList(message2));
 		Assertions.assertEquals(Status.VALUE, comparator.compare(kv1, kv2).getStatus());
-		comparator.setIgnoreStreamMessageId(true);
+		comparator.setStreamMessageIds(false);
 		Assertions.assertEquals(Status.OK, comparator.compare(kv1, kv2).getStatus());
 	}
 	
