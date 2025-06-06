@@ -10,6 +10,8 @@ import java.time.Duration;
 
 public class BackOffArgs implements StepConfigurer {
 
+    public static final int DEFAULT_RETRY_LIMIT = 10;
+
     public enum Policy {
         EXPONENTIAL, FIXED, NONE;
     }
@@ -31,7 +33,7 @@ public class BackOffArgs implements StepConfigurer {
     @CommandLine.Option(names = "--backoff-max", description = "Exponential backoff max duration (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration maxDelay = DEFAULT_MAX_DELAY;
 
-    @CommandLine.Option(names = "--backoff-x", description = "Exponential backoff duration increment for each retry attempt (default: ${DEFAULT-VALUE} i.e. 100% increase per backoff).", paramLabel = "<num>")
+    @CommandLine.Option(names = "--backoff-x", description = "Exponential backoff duration increment for each retry attempt (default: ${DEFAULT-VALUE} i.e. 100%% increase per backoff).", paramLabel = "<num>")
     private double multiplier = DEFAULT_MULTIPLIER;
 
     @Override

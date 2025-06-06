@@ -52,11 +52,15 @@ public class SqlScriptRunner {
 	}
 
 	public void executeScript(String file) throws IOException, SQLException {
-		InputStream inputStream = PostgresTests.class.getClassLoader().getResourceAsStream(file);
+		InputStream inputStream = getClass().getClassLoader().getResourceAsStream(file);
 		if (inputStream == null) {
 			throw new FileNotFoundException(file);
 		}
 		runScript(new InputStreamReader(inputStream));
+	}
+
+	public void setReplacements(Map<String, String> replacements) {
+		this.replacements = replacements;
 	}
 
 	/**

@@ -109,3 +109,97 @@ For more information see the link:https://redis.github.io/riot/#_db_import[db-im
 <1> Column name to use as id
 
 This command performs a one-time import from Snowflake using the `db-import` command.
+
+[[_rdi]]
+== RDI Integration
+
+This recipe contains step-by-step instructions for using RIOT-X as an external collector for https://redis.io/data-integration/[Redis Data Integration (RDI)].
+
+Here is the end-to-end data flow:
+
+Snowflake -> RIOT-X -> RDI -> Redis
+
+=== Snowflake
+
+In your https://quickstarts.snowflake.com/guide/getting_started_with_snowflake_notebooks/index.html?index=..%2F..index#1[Snowflake UI] (Snowsight) import this notebook: link:snowflake-cdc.ipynb[snowflake-cdc.ipynb]
+
+This will create the schemas and tables to be used for CDC.
+
+IMPORTANT: Do not run the last step yet. This is for later.
+
+
+=== RDI
+
+In Redis Insight use these pipeline config and job definitions:
+
+.Pipeline Config
+[source, yaml]
+-----
+sources:
+  riotx:
+    type: external
+    # Redis Insight requires a connection element but it's not actually used by RDI
+    connection:
+      type: mariadb
+
+targets:
+  target:
+    connection:
+      type: redis
+      host: # Target database hostname
+      port: # Target database port
+
+processors:
+
+-----
+
+.Job Config
+[source,yaml]
+-----
+source:
+  table: "*"
+
+output:
+  - uses: redis.write
+    with:
+      connection: target
+      key:
+        expression: concat(['order:', ORDER_ID])
+        language: jmespath
+-----
+
+=== RIOT-X
+
+Run this command to start RIOT-X:
+
+[source,console]
+-----
+riotx snowflake-import -h <target_host> -p <target_port> tb_101.raw_pos.incremental_order_header --role riotx_cdc --warehouse compute_wh --cdc-schema raw_pos_cdc --jdbc-url "jdbc:snowflake://<account>.snowflakecomputing.com" --jdbc-user $JDBC_USERNAME --jdbc-pass $JDBC_PASSWORD
+-----
+
+RIOT-X will perform initial load of the `incremental_order_header` table which should translate to 1000 hashes in the target Redis database.
+
+=== Snowflake Additional Data
+
+Go back to your Snowflake UI and run the last step in the notebook.
+This will insert 100 rows in the `incremental_order_header` table which will be picked up by RIOT and written to the target database.
+You should now have 1,100 hashes in the target Redis database.
+
+=== Service User
+
+If your Snowflake account does not let you use JDBC password authentication you will have to use key-based authentication.
+
+Key Pair:: If you don't already have a private/public key pair you need to generate one.
+Follow the steps at https://docs.snowflake.com/en/user-guide/key-pair-auth[docs.snowflake.com/en/user-guide/key-pair-auth].
++
+Use the following command to extract the actual public key for the last step: https://docs.snowflake.com/en/user-guide/key-pair-auth#assign-the-public-key-to-a-snowflake-user[Assign the public key to a Snowflake user]
++
+[source,console]
+-----
+grep -v "BEGIN\|END" rsa_key.pub | tr -d '\n'
+-----
+
+JDBC URL:: When using key authentication you need to modify the JDBC URL to:
++
+`jdbc:snowflake://<account>.snowflakecomputing.com?private_key_file=<path_to_key>/rsa_key.p8`
+

@@ -51,7 +51,7 @@ public class CoreTests extends AbstractTestBase {
                 t -> Arrays.asList(new StreamMessage<>(stream, null, map(t))));
         StreamLengthBackpressureStatusSupplier supplier = new StreamLengthBackpressureStatusSupplier(redisConnection, stream);
         supplier.setLimit(3);
-        BackpressureWriter<Integer> backpressureWriter = new BackpressureWriter<>();
+        BackpressureItemWriter<Integer> backpressureWriter = new BackpressureItemWriter<>();
         backpressureWriter.setStatusSupplier(supplier);
         RedisItemWriter<String, String, Integer> streamWriter = RedisItemWriter.operation(xadd);
         streamWriter.setClient(redisClient);

@@ -77,14 +77,6 @@ public abstract class AbstractExport extends AbstractJobCommand {
         this.readerArgs = args;
     }
 
-    public FlushingStepArgs getFlushingStepArgs() {
-        return flushingStepArgs;
-    }
-
-    public void setFlushingStepArgs(FlushingStepArgs flushingStepArgs) {
-        this.flushingStepArgs = flushingStepArgs;
-    }
-
     public DataSize getMemoryLimit() {
         return memoryLimit;
     }

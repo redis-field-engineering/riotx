@@ -5,7 +5,7 @@ import org.springframework.batch.item.ItemWriter;
 
 import java.util.function.Supplier;
 
-public class BackpressureWriter<T> implements ItemWriter<T> {
+public class BackpressureItemWriter<T> implements ItemWriter<T> {
 
     private Supplier<BackpressureStatus> statusSupplier = BackpressureStatus::proceed;
 

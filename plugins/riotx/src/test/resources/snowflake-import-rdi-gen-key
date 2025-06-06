@@ -1,0 +1,1 @@
+riotx snowflake-import tb_101.raw_pos.incremental_order_header --gen order_id product_id customer_id --count 123 --key-column order_id
