@@ -119,4 +119,36 @@ public class MemcachedReplicate extends AbstractJobCommand {
         this.targetTls = targetTls;
     }
 
+    public String getSourceTlsHostname() {
+        return sourceTlsHostname;
+    }
+
+    public void setSourceTlsHostname(String sourceTlsHostname) {
+        this.sourceTlsHostname = sourceTlsHostname;
+    }
+
+    public boolean isSourceInsecure() {
+        return sourceInsecure;
+    }
+
+    public void setSourceInsecure(boolean sourceInsecure) {
+        this.sourceInsecure = sourceInsecure;
+    }
+
+    public String getTargetTlsHostname() {
+        return targetTlsHostname;
+    }
+
+    public void setTargetTlsHostname(String targetTlsHostname) {
+        this.targetTlsHostname = targetTlsHostname;
+    }
+
+    public boolean isTargetInsecure() {
+        return targetInsecure;
+    }
+
+    public void setTargetInsecure(boolean targetInsecure) {
+        this.targetInsecure = targetInsecure;
+    }
+
 }
