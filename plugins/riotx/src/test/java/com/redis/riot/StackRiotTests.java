@@ -771,6 +771,7 @@ class StackRiotTests extends RiotTests {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void rdiStreamGen(TestInfo info) throws Exception {
         execute(info, "snowflake-import-rdi-gen");
@@ -790,6 +791,7 @@ class StackRiotTests extends RiotTests {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void rdiStreamGenKeyColumns(TestInfo info) throws Exception {
         execute(info, "snowflake-import-rdi-gen-key");

@@ -93,4 +93,12 @@ public abstract class AbstractExport extends AbstractJobCommand {
         this.memoryUsageSamples = samples;
     }
 
+    public FlushingStepArgs getFlushingStepArgs() {
+        return flushingStepArgs;
+    }
+
+    public void setFlushingStepArgs(FlushingStepArgs flushingStepArgs) {
+        this.flushingStepArgs = flushingStepArgs;
+    }
+
 }

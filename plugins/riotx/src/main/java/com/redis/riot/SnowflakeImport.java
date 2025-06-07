@@ -20,7 +20,6 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.util.CollectionUtils;
-import org.springframework.batch.item.support.CompositeItemWriter;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
@@ -42,9 +41,9 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     private static final String STEP_NAME = "snowflake-import";
 
-    public static final String DEFAULT_RIOT_OFFSET_PREFIX = "riotx:offset:";
+    public static final String DEFAULT_OFFSET_PREFIX = "riotx:offset:";
 
-    public static final String DEFAULT_RDI_OFFSET_KEY = RdiOffsetStore.DEFAULT_KEY;
+    public static final String DEFAULT_OFFSET_KEY = RdiOffsetStore.DEFAULT_KEY;
 
     private static final String SOURCE_NAME = "riotx";
 
@@ -65,10 +64,10 @@ public class SnowflakeImport extends AbstractRedisImport {
     private DebeziumStreamArgs debeziumStreamArgs = new DebeziumStreamArgs();
 
     @CommandLine.Option(names = "--offset-prefix", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
-    private String offsetPrefix = DEFAULT_RIOT_OFFSET_PREFIX;
+    private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
 
     @CommandLine.Option(names = "--offset-key", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
-    private String offsetKey = DEFAULT_RDI_OFFSET_KEY;
+    private String offsetKey = DEFAULT_OFFSET_KEY;
 
     @Option(names = "--snapshot", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SnowflakeStreamItemReader.SnapshotMode snapshotMode = DEFAULT_SNAPSHOT_MODE;
@@ -97,20 +96,13 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Option(names = "--poll", description = "Snowflake stream polling interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration pollInterval = SnowflakeStreamItemReader.DEFAULT_POLL_INTERVAL;
 
-    @Option(names = "--offset-prefix", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}", paramLabel = "<str>")
-    private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
-
-    @Option(names = "--offset-key", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}", paramLabel = "<name>")
-    private String offsetKey = DEFAULT_OFFSET_KEY;
-
-    @Option(names = "--stream-limit", description = "Max length of RDI stream (default: ${DEFAULT-VALUE}). Use 0 for no limit.", paramLabel = "<int>")
-    private long rdiStreamLimit = StreamLengthBackpressureStatusSupplier.DEFAULT_LIMIT;
+    @ArgGroup(exclusive = false)
+    private FlushingStepArgs flushingStepArgs = new FlushingStepArgs();
 
     @Override
     protected void initialize() throws Exception {
-        register(backOffArgs);
-        register(flushingStepArgs);
         super.initialize();
+        register(flushingStepArgs);
     }
 
     @Override
@@ -403,6 +395,14 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     public void setCount(int count) {
         this.count = count;
+    }
+
+    public FlushingStepArgs getFlushingStepArgs() {
+        return flushingStepArgs;
+    }
+
+    public void setFlushingStepArgs(FlushingStepArgs flushingStepArgs) {
+        this.flushingStepArgs = flushingStepArgs;
     }
 
 }

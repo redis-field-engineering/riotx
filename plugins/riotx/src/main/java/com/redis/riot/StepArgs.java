@@ -9,7 +9,7 @@ import picocli.CommandLine.Option;
 @ToString
 public class StepArgs implements StepConfigurer {
 
-    public static final int DEFAULT_RETRY_LIMIT = 3;
+    public static final int DEFAULT_RETRY_LIMIT = 10;
 
     @Option(names = "--threads", defaultValue = "${RIOT_THREADS:-1}", description = "Number of concurrent threads to use for batch processing (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
     private int threads = RiotStep.DEFAULT_THREADS;
@@ -26,8 +26,11 @@ public class StepArgs implements StepConfigurer {
     @CommandLine.Option(names = "--skip", defaultValue = "${RIOT_SKIP}", description = "Number of failed items before failing the job (default: no skipping).", paramLabel = "<int>")
     private int skipLimit;
 
-    @CommandLine.Option(names = "--retry", defaultValue = "${RIOT_RETRY:-3}", description = "Number of times to retry failed items: 0 -> never, -1 -> always (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    @CommandLine.Option(names = "--retry", defaultValue = "${RIOT_RETRY:-10}", description = "Number of times to retry failed items: 0 -> never, -1 -> always (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
     private int retryLimit = DEFAULT_RETRY_LIMIT;
+
+    @CommandLine.ArgGroup(exclusive = false)
+    private BackOffArgs backOffArgs = new BackOffArgs();
 
     @Override
     public void configure(RiotStep<?, ?> step) {
@@ -37,6 +40,7 @@ public class StepArgs implements StepConfigurer {
         step.setCommitInterval(chunkSize);
         step.setRetryLimit(retryLimit);
         step.setSkipLimit(skipLimit);
+        step.setBackOffPolicy(backOffArgs.backOffPolicy());
     }
 
     public boolean isDryRun() {
@@ -85,6 +89,14 @@ public class StepArgs implements StepConfigurer {
 
     public void setRetryLimit(int retryLimit) {
         this.retryLimit = retryLimit;
+    }
+
+    public BackOffArgs getBackOffArgs() {
+        return backOffArgs;
+    }
+
+    public void setBackOffArgs(BackOffArgs backOffArgs) {
+        this.backOffArgs = backOffArgs;
     }
 
 }
