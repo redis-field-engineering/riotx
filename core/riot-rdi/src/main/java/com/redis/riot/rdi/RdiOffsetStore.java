@@ -6,6 +6,7 @@ import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.riot.core.OffsetStore;
 import io.lettuce.core.AbstractRedisClient;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -45,10 +46,15 @@ public class RdiOffsetStore implements OffsetStore {
         return mapper.writeValueAsString(field);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Map<String, Object> getOffset() throws JsonProcessingException {
         try (StatefulRedisModulesConnection<String, String> connection = connection()) {
-            return mapper.readValue(connection.sync().hget(key, field()), Map.class);
+            String value = connection.sync().hget(key, field());
+            if (StringUtils.hasLength(value)) {
+                return mapper.readValue(value, Map.class);
+            }
+            return null;
         }
     }
 

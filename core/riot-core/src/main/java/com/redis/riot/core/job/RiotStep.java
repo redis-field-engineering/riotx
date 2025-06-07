@@ -1,5 +1,6 @@
 package com.redis.riot.core.job;
 
+import com.redis.riot.core.BackpressureException;
 import com.redis.riot.core.NoopItemWriter;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.ThrottledItemWriter;
@@ -44,6 +45,14 @@ public class RiotStep<T, S> implements FactoryBean<Step> {
 
     public static final int DEFAULT_COMMIT_INTERVAL = 50;
 
+    private static final RetryPolicy RETRY_NEVER = new NeverRetryPolicy();
+
+    private static final RetryPolicy RETRY_ALWAYS = new AlwaysRetryPolicy();
+
+    private static final SkipPolicy SKIP_NEVER = new NeverSkipItemSkipPolicy();
+
+    private static final SkipPolicy SKIP_ALWAYS = new AlwaysSkipItemSkipPolicy();
+
     private final Set<Class<? extends Throwable>> skip = defaultSkippableExceptions();
 
     private final Set<Class<? extends Throwable>> noSkip = new HashSet<>();
@@ -76,7 +85,7 @@ public class RiotStep<T, S> implements FactoryBean<Step> {
 
     private Duration flushInterval = FlushingStepFactoryBean.DEFAULT_FLUSH_INTERVAL;
 
-    private Duration idleTimeout = FlushingStepFactoryBean.DEFAULT_IDLE_TIMEOUT;
+    private Duration idleTimeout;
 
     private int retryLimit;
 
@@ -84,6 +93,7 @@ public class RiotStep<T, S> implements FactoryBean<Step> {
 
     private BackOffPolicy backOffPolicy;
 
+    @SuppressWarnings("removal")
     @Override
     public Step getObject() throws Exception {
         SimpleStepFactoryBean<T, S> factory = factoryBean();
@@ -138,30 +148,16 @@ public class RiotStep<T, S> implements FactoryBean<Step> {
         if (retryLimit > 0) {
             factoryBean.setRetryLimit(retryLimit);
         } else {
-            factoryBean.setRetryPolicy(retryPolicy());
+            factoryBean.setRetryPolicy(retryLimit == 0 ? RETRY_NEVER : RETRY_ALWAYS);
         }
         if (skipLimit > 0) {
             factoryBean.setSkipLimit(skipLimit);
         } else {
-            factoryBean.setSkipPolicy(skipPolicy());
+            factoryBean.setSkipPolicy(skipLimit == 0 ? SKIP_NEVER : SKIP_ALWAYS);
         }
         factoryBean.setRetryableExceptionClasses(retryableExceptions());
         factoryBean.setSkippableExceptionClasses(skippableExceptions());
         factoryBean.setBackOffPolicy(backOffPolicy);
-    }
-
-    private SkipPolicy skipPolicy() {
-        if (skipLimit < 0) {
-            return new AlwaysSkipItemSkipPolicy();
-        }
-        return new NeverSkipItemSkipPolicy();
-    }
-
-    private RetryPolicy retryPolicy() {
-        if (retryLimit < 0) {
-            return new AlwaysRetryPolicy();
-        }
-        return new NeverRetryPolicy();
     }
 
     public static Set<Class<? extends Throwable>> defaultSkippableExceptions() {
@@ -170,7 +166,7 @@ public class RiotStep<T, S> implements FactoryBean<Step> {
 
     public static Set<Class<? extends Throwable>> defaultRetriableExceptions() {
         return BatchUtils.asSet(RedisCommandTimeoutException.class, RedisLoadingException.class, RedisBusyException.class,
-                RedisOOMException.class);
+                RedisOOMException.class, BackpressureException.class);
     }
 
     public static Set<Class<? extends Throwable>> defaultNonRetriableExceptions() {
@@ -193,6 +189,7 @@ public class RiotStep<T, S> implements FactoryBean<Step> {
         return writer;
     }
 
+    @SuppressWarnings("unchecked")
     protected ItemReader<? extends T> synchronizedItemReader() {
         if (itemReader instanceof PollableItemReader) {
             return itemReader;

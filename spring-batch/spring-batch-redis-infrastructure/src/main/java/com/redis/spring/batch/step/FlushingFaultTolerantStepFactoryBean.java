@@ -8,11 +8,9 @@ public class FlushingFaultTolerantStepFactoryBean<T, S> extends FaultTolerantSte
 
     private static final Duration DEFAULT_FLUSH_INTERVAL = FlushingChunkProvider.DEFAULT_FLUSH_INTERVAL;
 
-    private static final Duration DEFAULT_IDLE_TIMEOUT = FlushingChunkProvider.DEFAULT_IDLE_TIMEOUT;
-
     private Duration flushInterval = DEFAULT_FLUSH_INTERVAL;
 
-    private Duration idleTimeout = DEFAULT_IDLE_TIMEOUT;
+    private Duration idleTimeout;
 
     @Override
     protected FlushingFaultTolerantStepBuilder<T, S> createBuilder(String name) {

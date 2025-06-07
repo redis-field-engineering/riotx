@@ -6,10 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redis.lettucemod.Beers;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.utils.ConnectionBuilder;
-import com.redis.riot.core.BackpressureStatus;
 import com.redis.riot.core.CompareMode;
 import com.redis.riot.core.ReplicationMode;
-import com.redis.riot.core.StreamLengthBackpressureStatusSupplier;
 import com.redis.riot.replicate.Replicate;
 import com.redis.riot.replicate.ReplicateWriteLogger;
 import com.redis.spring.batch.item.redis.common.KeyValue;
@@ -32,7 +30,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.function.Predicate;
-import java.util.stream.IntStream;
 
 abstract class RiotTests extends AbstractRiotApplicationTestBase {
 
@@ -72,7 +69,7 @@ abstract class RiotTests extends AbstractRiotApplicationTestBase {
         replicate.getSourceRedisArgs().setCluster(getRedisServer().isRedisCluster());
         replicate.setTargetRedisUri(targetRedisURI);
         replicate.getTargetRedisArgs().setCluster(getTargetRedisServer().isRedisCluster());
-        replicate.setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
+        replicate.getFlushingStepArgs().setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
         replicate.call();
     }
 
@@ -82,48 +79,51 @@ abstract class RiotTests extends AbstractRiotApplicationTestBase {
         byte[] value = Hex.decode("aced0004");
         Map<byte[], byte[]> hash = new HashMap<>();
         hash.put(key, value);
-        StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
+        try (StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
                 .connection(ByteArrayCodec.INSTANCE);
-        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = ConnectionBuilder.client(targetRedisClient)
-                .connection(ByteArrayCodec.INSTANCE);
-        connection.sync().hset(key, hash);
-        Replicate replication = new Replicate();
-        replication.setCompareMode(CompareMode.NONE);
-        replication.setStruct(true);
-        execute(replication, info);
-        Assertions.assertArrayEquals(connection.sync().hget(key, key), targetConnection.sync().hget(key, key));
+                StatefulRedisModulesConnection<byte[], byte[]> targetConnection = ConnectionBuilder.client(targetRedisClient)
+                        .connection(ByteArrayCodec.INSTANCE)) {
+            connection.sync().hset(key, hash);
+            Replicate replication = new Replicate();
+            replication.setCompareMode(CompareMode.NONE);
+            replication.setStruct(true);
+            execute(replication, info);
+            Assertions.assertArrayEquals(connection.sync().hget(key, key), targetConnection.sync().hget(key, key));
+        }
     }
 
     @Test
     void replicateBinaryKeyValueScan(TestInfo info) throws Exception {
         byte[] key = Hex.decode("aced0005");
         byte[] value = Hex.decode("aced0004");
-        StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
+        try (StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
                 .connection(ByteArrayCodec.INSTANCE);
-        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = ConnectionBuilder.client(targetRedisClient)
-                .connection(ByteArrayCodec.INSTANCE);
-        connection.sync().set(key, value);
-        Replicate replication = new Replicate();
-        replication.setCompareMode(CompareMode.NONE);
-        execute(replication, info);
-        Assertions.assertArrayEquals(connection.sync().get(key), targetConnection.sync().get(key));
+                StatefulRedisModulesConnection<byte[], byte[]> targetConnection = ConnectionBuilder.client(targetRedisClient)
+                        .connection(ByteArrayCodec.INSTANCE)) {
+            connection.sync().set(key, value);
+            Replicate replication = new Replicate();
+            replication.setCompareMode(CompareMode.NONE);
+            execute(replication, info);
+            Assertions.assertArrayEquals(connection.sync().get(key), targetConnection.sync().get(key));
+        }
     }
 
     @Test
     void replicateBinaryKeyLive(TestInfo info) throws Exception {
         byte[] key = Hex.decode("aced0005");
         byte[] value = Hex.decode("aced0004");
-        StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
+        try (StatefulRedisModulesConnection<byte[], byte[]> connection = ConnectionBuilder.client(redisClient)
                 .connection(ByteArrayCodec.INSTANCE);
-        StatefulRedisModulesConnection<byte[], byte[]> targetConnection = ConnectionBuilder.client(targetRedisClient)
-                .connection(ByteArrayCodec.INSTANCE);
-        enableKeyspaceNotifications();
-        executeWhenSubscribers(() -> connection.sync().set(key, value));
-        Replicate replicate = new Replicate();
-        replicate.setMode(ReplicationMode.LIVE);
-        replicate.setCompareMode(CompareMode.NONE);
-        execute(replicate, info);
-        Assertions.assertArrayEquals(connection.sync().get(key), targetConnection.sync().get(key));
+                StatefulRedisModulesConnection<byte[], byte[]> targetConnection = ConnectionBuilder.client(targetRedisClient)
+                        .connection(ByteArrayCodec.INSTANCE)) {
+            enableKeyspaceNotifications();
+            executeWhenSubscribers(() -> connection.sync().set(key, value));
+            Replicate replicate = new Replicate();
+            replicate.setMode(ReplicationMode.LIVE);
+            replicate.setCompareMode(CompareMode.NONE);
+            execute(replicate, info);
+            Assertions.assertArrayEquals(connection.sync().get(key), targetConnection.sync().get(key));
+        }
     }
 
     @Test

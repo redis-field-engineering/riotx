@@ -29,17 +29,14 @@ public abstract class AbstractRiotApplicationTestBase extends AbstractRiotTestBa
 
     @Override
     protected MainCommand mainCommand(TestInfo info, IExecutionStrategy... executionStrategies) {
-        return new TestRiot(info, executionStrategies);
+        return new TestRiot(executionStrategies);
     }
 
     private class TestRiot extends Riotx {
 
-        private final TestInfo info;
-
         private final List<IExecutionStrategy> configs;
 
-        public TestRiot(TestInfo info, IExecutionStrategy... configs) {
-            this.info = info;
+        public TestRiot(IExecutionStrategy... configs) {
             this.configs = Arrays.asList(configs);
             setDisableExceptionMessageHandling(true);
         }
@@ -70,7 +67,7 @@ public abstract class AbstractRiotApplicationTestBase extends AbstractRiotTestBa
                     configure(((AbstractRedisImport) command).getRedisArgs());
                 }
                 if (command instanceof AbstractExport) {
-                    ((AbstractExport) command).setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
+                    ((AbstractExport) command).getFlushingStepArgs().setIdleTimeout(DEFAULT_IDLE_TIMEOUT);
                     ((AbstractExport) command).getReaderArgs().setEventQueueCapacity(DEFAULT_EVENT_QUEUE_CAPACITY);
                 }
                 if (command instanceof AbstractRedisTargetExport) {

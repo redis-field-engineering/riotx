@@ -1,5 +1,7 @@
 package com.redis.riot;
 
+import org.springframework.retry.backoff.BackOffPolicy;
+import org.springframework.retry.backoff.BackOffPolicyBuilder;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import picocli.CommandLine;
 
@@ -28,8 +30,17 @@ public class BackOffArgs {
     @CommandLine.Option(names = "--backoff-max", description = "Exponential backoff max duration (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration maxDelay = DEFAULT_MAX_DELAY;
 
-    @CommandLine.Option(names = "--backoff-x", description = "Exponential backoff duration increment for each retry attempt (default: ${DEFAULT-VALUE} i.e. 100% increase per backoff).", paramLabel = "<num>")
+    @CommandLine.Option(names = "--backoff-x", description = "Exponential backoff duration increment for each retry attempt (default: ${DEFAULT-VALUE} i.e. 100%% increase per backoff).", paramLabel = "<num>")
     private double multiplier = DEFAULT_MULTIPLIER;
+
+    public BackOffPolicy backOffPolicy() {
+        return switch (policy) {
+            case EXPONENTIAL -> BackOffPolicyBuilder.newBuilder().delay(delay.toMillis()).maxDelay(maxDelay.toMillis())
+                    .multiplier(multiplier).build();
+            case FIXED -> BackOffPolicyBuilder.newBuilder().delay(delay.toMillis()).build();
+            default -> null;
+        };
+    }
 
     public Policy getPolicy() {
         return policy;

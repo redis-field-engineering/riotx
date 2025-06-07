@@ -34,7 +34,9 @@ public class MetricsArgs {
 
     public static final String DEFAULT_NAME = "RIOTX-" + RiotVersion.getVersion();
 
-    @Option(names = "--metrics", description = "Enable metrics.")
+    public static final boolean DEFAULT_JVM = true;
+
+    @Option(names = "--metrics", defaultValue = "${RIOT_METRICS}", description = "Enable metrics.")
     private boolean enabled;
 
     @Option(names = "--metrics-name", description = "Application name tag that will be applied to all metrics (default: ${DEFAULT-VALUE}).", paramLabel = "<name>")
@@ -43,16 +45,16 @@ public class MetricsArgs {
     @Option(names = "--metrics-desc", negatable = true, defaultValue = "true", description = "Enable publishing descriptions as part of the scrape payload to Prometheus. Turn off to minimize the amount of data sent on each scrape.", hidden = true)
     private boolean decriptions = DEFAULT_DESCRIPTIONS;
 
-    @Option(names = "--metrics-jvm", negatable = true, defaultValue = "true", fallbackValue = "true", description = "Enable/disable JVM metrics. Enabled by default.")
-    private boolean jvm;
+    @Option(names = "--metrics-jvm", defaultValue = "${RIOT_METRICS_JVM:-true}", negatable = true, fallbackValue = "true", description = "Enable/disable JVM metrics. Enabled by default.")
+    private boolean jvm = DEFAULT_JVM;
 
-    @Option(names = "--metrics-redis", description = "Enable command latency metrics. See https://github.com/redis/lettuce/wiki/Command-Latency-Metrics#micrometer")
+    @Option(names = "--metrics-redis", defaultValue = "${RIOT_METRICS_REDIS}", description = "Enable command latency metrics. See https://github.com/redis/lettuce/wiki/Command-Latency-Metrics#micrometer")
     private boolean redis;
 
     @Option(names = "--metrics-step", description = "Metrics reporting interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>", hidden = true)
     private Duration step = DEFAULT_STEP;
 
-    @Option(names = "--metrics-port", description = "Port that Prometheus HTTP server should listen on (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    @Option(names = "--metrics-port", defaultValue = "${RIOT_METRICS_PORT:-8080}", description = "Port that Prometheus HTTP server should listen on (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
     private int port = DEFAULT_PORT;
 
     @Option(names = "--metrics-prop", description = "Additional properties to pass to the Prometheus client. See https://prometheus.github.io/client_java/config/config/", paramLabel = "<k=v>")

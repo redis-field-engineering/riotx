@@ -65,7 +65,7 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
     protected abstract boolean isStruct();
 
     protected ItemProcessor<KeyValue<byte[]>, KeyValue<byte[]>> processor() {
-        if (isIgnoreStreamMessageId()) {
+        if (!isStreamMessageIds()) {
             Assert.isTrue(isStruct(), "Dropping stream message ID is only possible in STRUCT mode");
         }
         StandardEvaluationContext evaluationContext = evaluationContext();
@@ -131,16 +131,15 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
     protected abstract boolean isQuickCompare();
 
     private KeyComparator<byte[]> keyComparator() {
-        boolean ignoreStreamId = isIgnoreStreamMessageId();
-        log.info("Creating KeyComparator with ttlTolerance={} ignoreStreamMessageId={}", ttlTolerance, ignoreStreamId);
+        log.info("Creating KeyComparator with ttlTolerance={} streamMessageIds={}", ttlTolerance, isStreamMessageIds());
         DefaultKeyComparator<byte[], byte[]> comparator = new DefaultKeyComparator<>(CODEC);
-        comparator.setIgnoreStreamMessageId(ignoreStreamId);
+        comparator.setStreamMessageIds(processorArgs.isStreamMessageIds());
         comparator.setTtlTolerance(ttlTolerance);
         return comparator;
     }
 
-    protected boolean isIgnoreStreamMessageId() {
-        return processorArgs.isNoStreamIds();
+    protected boolean isStreamMessageIds() {
+        return processorArgs.isStreamMessageIds();
     }
 
     public boolean isShowDiffs() {

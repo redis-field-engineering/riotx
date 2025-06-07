@@ -14,37 +14,37 @@ import java.time.Duration;
 @ToString
 public class TargetRedisArgs implements RedisArgs {
 
-    @Option(names = "--target-user", description = "Target ACL style 'AUTH username pass'. Needs password.", paramLabel = "<name>")
+    @Option(names = "--target-user", defaultValue = "${RIOT_TARGET_USER}", description = "Target ACL style 'AUTH username pass'. Needs password.", paramLabel = "<name>")
     private String username;
 
-    @Option(names = "--target-pass", arity = "0..1", interactive = true, description = "Password to use when connecting to the target server.", paramLabel = "<pwd>")
+    @Option(names = "--target-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_TARGET_PASS}", description = "Password to use when connecting to the target server.", paramLabel = "<pwd>")
     private char[] password;
 
-    @Option(names = "--target-timeout", description = "Target Redis command timeout, e.g. 30s or 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
-    private Duration timeout = URIBuilder.DEFAULT_TIMEOUT_DURATION;
+    @Option(names = "--target-timeout", defaultValue = "${RIOT_TARGET_TIMEOUT:-60s}", description = "Target Redis command timeout, e.g. 30s or 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
+    private Duration timeout = DEFAULT_TIMEOUT;
 
-    @Option(names = "--target-tls", description = "Establish a secure TLS connection to target.")
+    @Option(names = "--target-tls", defaultValue = "${RIOT_TARGET_TLS}", description = "Establish a secure TLS connection to target.")
     private boolean tls;
 
-    @Option(names = "--target-insecure", description = "Allow insecure TLS connection to target by skipping cert validation.")
+    @Option(names = "--target-insecure", defaultValue = "${RIOT_TARGET_INSECURE}", description = "Allow insecure TLS connection to target by skipping cert validation.")
     private boolean insecure;
 
     @Option(names = "--target-verify", description = "Target TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SslVerifyMode sslVerifyMode = DEFAULT_SSL_VERIFY_MODE;
 
-    @Option(names = "--target-client", description = "Client name used to connect to target Redis.", paramLabel = "<name>")
+    @Option(names = "--target-client", defaultValue = "${RIOT_TARGET_CLIENT}", description = "Client name used to connect to target Redis.", paramLabel = "<name>")
     private String clientName;
 
-    @Option(names = "--target-cluster", description = "Enable target cluster mode.")
+    @Option(names = "--target-cluster", defaultValue = "${RIOT_TARGET_CLUSTER}", description = "Enable target cluster mode.")
     private boolean cluster;
 
-    @Option(names = "--target-resp", description = "Redis protocol version used to connect to target: ${COMPLETION-CANDIDATES}.", paramLabel = "<ver>")
+    @Option(names = "--target-resp", defaultValue = "${RIOT_TARGET_RESP:-RESP2}", description = "Redis protocol version used to connect to target: ${COMPLETION-CANDIDATES}.", paramLabel = "<ver>")
     private ProtocolVersion protocolVersion;
 
-    @Option(names = "--target-pool", description = "Max number of target Redis connections (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    @Option(names = "--target-pool", defaultValue = "${RIOT_TARGET_POOL:-8}", description = "Max number of target Redis connections (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
     private int poolSize = RedisContext.DEFAULT_POOL_SIZE;
 
-    @Option(names = "--target-read-from", description = "Which target Redis cluster nodes to read from: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<n>")
+    @Option(names = "--target-read-from", defaultValue = "${RIOT_TARGET_READ_FROM:-UPSTREAM}", description = "Which target Redis cluster nodes to read from: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<n>")
     private ReadFrom readFrom = ReadFrom.UPSTREAM;
 
     @Option(names = "--target-keystore", description = "Path to keystore.", paramLabel = "<file>", hidden = true)

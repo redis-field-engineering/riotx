@@ -40,7 +40,10 @@ public final class PrefixedNumber implements Comparable<PrefixedNumber> {
      */
     private static final Pattern PATTERN = Pattern.compile("^([+\\-]?\\d+)([kKmMgG]?)$");
 
-    private final long value;
+    private long value;
+
+    public PrefixedNumber() {
+    }
 
     private PrefixedNumber(long value) {
         this.value = value;
@@ -167,16 +170,12 @@ public final class PrefixedNumber implements Comparable<PrefixedNumber> {
         }
 
         char c = suffix.toLowerCase().charAt(0);
-        switch (c) {
-            case 'k':
-                return NumberPrefix.KILO;
-            case 'm':
-                return NumberPrefix.MEGA;
-            case 'g':
-                return NumberPrefix.GIGA;
-            default:
-                throw new IllegalArgumentException("Unknown prefix suffix: " + suffix);
-        }
+        return switch (c) {
+            case 'k' -> NumberPrefix.KILO;
+            case 'm' -> NumberPrefix.MEGA;
+            case 'g' -> NumberPrefix.GIGA;
+            default -> throw new IllegalArgumentException("Unknown prefix suffix: " + suffix);
+        };
     }
 
     /**
