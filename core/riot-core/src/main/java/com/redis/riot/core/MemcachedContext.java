@@ -15,76 +15,76 @@ import net.spy.memcached.MemcachedClient;
 
 public class MemcachedContext {
 
-	private final List<InetSocketAddress> addresses;
-	private boolean tls;
+    private final List<InetSocketAddress> addresses;
 
-	private String hostnameForTlsVerification;
+    private boolean tls;
 
-	private boolean skipTlsHostnameVerification;
-	private ConnectionFactory connectionFactory;
+    private String hostnameForTlsVerification;
 
-	public MemcachedContext(List<InetSocketAddress> addresses) {
-		this.addresses = addresses;
-	}
+    private boolean skipTlsHostnameVerification;
 
-	public MemcachedClient memcachedClient() throws IOException {
-		if (tls) {
-			return new MemcachedClient(connectionFactory, addresses);
-		}
-		return new MemcachedClient(addresses);
-	}
+    private ConnectionFactory connectionFactory;
 
-	public MemcachedClient safeMemcachedClient() {
-		try {
-			return memcachedClient();
-		} catch (IOException e) {
-			throw new RuntimeException("Could not create memcached client", e);
-		}
-	}
+    public MemcachedContext(List<InetSocketAddress> addresses) {
+        this.addresses = addresses;
+    }
 
-	private ConnectionFactory sslConnectionFactory() throws GeneralSecurityException {
-		ConnectionFactoryBuilder builder = new ConnectionFactoryBuilder();
-		// Build SSLContext
-		TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-		tmf.init((KeyStore) null);
-		SSLContext sslContext = SSLContext.getInstance("TLS");
-		sslContext.init(null, tmf.getTrustManagers(), null);
-		builder.setSSLContext(sslContext);
-		// TLS mode enables hostname verification by default. It is always recommended
-		// to do that.
-		builder.setHostnameForTlsVerification(hostnameForTlsVerification);
-		if (skipTlsHostnameVerification) {
-			builder.setSkipTlsHostnameVerification(true);
-		}
-		// To disable hostname verification, do the following:
-		return builder.setSSLContext(sslContext).build();
-	}
+    public MemcachedClient memcachedClient() throws IOException {
+        if (tls) {
+            return new MemcachedClient(connectionFactory, addresses);
+        }
+        return new MemcachedClient(addresses);
+    }
 
-	public boolean isTls() {
-		return tls;
-	}
+    public MemcachedClient safeMemcachedClient() {
+        try {
+            return memcachedClient();
+        } catch (IOException e) {
+            throw new RuntimeException("Could not create memcached client", e);
+        }
+    }
 
-	public void setTls(boolean tls) throws GeneralSecurityException {
-		if (tls) {
-			connectionFactory = sslConnectionFactory();
-		}
-		this.tls = tls;
-	}
+    private ConnectionFactory sslConnectionFactory() throws GeneralSecurityException {
+        ConnectionFactoryBuilder builder = new ConnectionFactoryBuilder();
+        // Build SSLContext
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        tmf.init((KeyStore) null);
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, tmf.getTrustManagers(), null);
+        builder.setSSLContext(sslContext);
+        // TLS mode enables hostname verification by default. It is always recommended
+        // to do that.
+        builder.setHostnameForTlsVerification(hostnameForTlsVerification);
+        builder.setSkipTlsHostnameVerification(skipTlsHostnameVerification);
+        // To disable hostname verification, do the following:
+        return builder.setSSLContext(sslContext).build();
+    }
 
-	public String getHostnameForTlsVerification() {
-		return hostnameForTlsVerification;
-	}
+    public boolean isTls() {
+        return tls;
+    }
 
-	public void setHostnameForTlsVerification(String hostname) {
-		this.hostnameForTlsVerification = hostname;
-	}
+    public void setTls(boolean tls) throws GeneralSecurityException {
+        if (tls) {
+            connectionFactory = sslConnectionFactory();
+        }
+        this.tls = tls;
+    }
 
-	public boolean isSkipTlsHostnameVerification() {
-		return skipTlsHostnameVerification;
-	}
+    public String getHostnameForTlsVerification() {
+        return hostnameForTlsVerification;
+    }
 
-	public void setSkipTlsHostnameVerification(boolean skipTlsHostnameVerification) {
-		this.skipTlsHostnameVerification = skipTlsHostnameVerification;
-	}
+    public void setHostnameForTlsVerification(String hostname) {
+        this.hostnameForTlsVerification = hostname;
+    }
+
+    public boolean isSkipTlsHostnameVerification() {
+        return skipTlsHostnameVerification;
+    }
+
+    public void setSkipTlsHostnameVerification(boolean skipTlsHostnameVerification) {
+        this.skipTlsHostnameVerification = skipTlsHostnameVerification;
+    }
 
 }
