@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
 
 import com.redis.lettucemod.RedisModulesClient;
-import com.redis.spring.batch.item.redis.common.RedisInfo;
+import com.redis.batch.RedisInfo;
 import com.redis.spring.batch.item.redis.common.RedisSupportCheck;
 
 import io.lettuce.core.RedisURI;

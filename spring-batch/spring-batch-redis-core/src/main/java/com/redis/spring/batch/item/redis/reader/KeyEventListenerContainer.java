@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.redis.batch.KeyEvent;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -13,8 +14,8 @@ import org.springframework.context.SmartLifecycle;
 import org.springframework.util.Assert;
 
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.BatchUtils;
+import com.redis.batch.KeyValue;
 import com.redis.spring.batch.item.redis.reader.pubsub.PubSubListenerContainer;
 import com.redis.spring.batch.item.redis.reader.pubsub.PubSubMessage;
 import com.redis.spring.batch.item.redis.reader.pubsub.PubSubMessageListener;
@@ -135,7 +136,6 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
         KeyEvent<K> keyEvent = new KeyEvent<>();
         keyEvent.setKey(key);
         keyEvent.setEvent(event);
-        keyEvent.setTimestamp(System.currentTimeMillis());
         keyEvent.setType(type);
         return keyEvent;
     }

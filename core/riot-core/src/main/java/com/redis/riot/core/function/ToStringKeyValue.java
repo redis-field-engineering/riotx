@@ -2,8 +2,8 @@ package com.redis.riot.core.function;
 
 import java.util.function.Function;
 
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.BatchUtils;
+import com.redis.batch.KeyValue;
 
 import io.lettuce.core.codec.RedisCodec;
 

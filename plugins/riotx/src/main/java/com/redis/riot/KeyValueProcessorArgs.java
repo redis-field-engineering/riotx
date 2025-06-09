@@ -5,13 +5,14 @@ import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.TemplateExpression;
 import com.redis.riot.core.function.ConsumerUnaryOperator;
 import com.redis.riot.core.function.StreamItemProcessor;
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.KeyValue;
 import lombok.ToString;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.expression.EvaluationContext;
 import picocli.CommandLine.Option;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -45,10 +46,10 @@ public class KeyValueProcessorArgs {
             processors.add(processor(t -> t.setKey(keyExpression.getValue(context, t))));
         }
         if (noTtl) {
-            processors.add(processor(t -> t.setTtl(0)));
+            processors.add(processor(t -> t.setTtl(null)));
         }
         if (ttlExpression != null) {
-            processors.add(processor(t -> t.setTtl(ttlExpression.getLong(context, t))));
+            processors.add(processor(t -> t.setTtl(Instant.ofEpochMilli(ttlExpression.getLong(context, t)))));
         }
         if (typeExpression != null) {
             processors.add(processor(t -> t.setType(typeExpression.getString(context, t))));

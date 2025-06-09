@@ -9,9 +9,9 @@ import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.transcoders.Transcoder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.util.ClassUtils;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -74,7 +74,7 @@ public class MemcachedItemReader extends AbstractCountingItemReader<MemcachedEnt
             readerClient.shutdown();
             readerClient = null;
         }
-        if (crawlerClient == null) {
+        if (crawlerClient != null) {
             crawlerClient.shutdown();
             crawlerClient = null;
         }
@@ -107,10 +107,17 @@ public class MemcachedItemReader extends AbstractCountingItemReader<MemcachedEnt
             MemcachedEntry entry = new MemcachedEntry();
             entry.setKey(metaEntry.getKey());
             entry.setValue(values.get(metaEntry.getKey()));
-            entry.setExpiration(metaEntry.getExp());
+            entry.setExpiration(expiration(metaEntry.getExp()));
             entries.add(entry);
         }
         return entries;
+    }
+
+    private Instant expiration(int expiration) {
+        if (expiration > 0) {
+            return Instant.ofEpochSecond(expiration);
+        }
+        return null;
     }
 
     private class MetadumpCallback implements Callback {
@@ -160,6 +167,14 @@ public class MemcachedItemReader extends AbstractCountingItemReader<MemcachedEnt
 
     public void setBatchSize(int size) {
         this.batchSize = size;
+    }
+
+    public Duration getPollTimeout() {
+        return pollTimeout;
+    }
+
+    public void setPollTimeout(Duration pollTimeout) {
+        this.pollTimeout = pollTimeout;
     }
 
 }

@@ -2,9 +2,8 @@ package com.redis.riot.core;
 
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.util.Assert;
-import org.springframework.util.unit.DataSize;
 
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.KeyValue;
 
 public class KeyValueFilter<K> implements ItemProcessor<KeyValue<K>, KeyValue<K>> {
 
@@ -17,7 +16,8 @@ public class KeyValueFilter<K> implements ItemProcessor<KeyValue<K>, KeyValue<K>
 
     @Override
     public KeyValue<K> process(KeyValue<K> item) throws Exception {
-        if (KeyValue.exists(item) && item.getMemoryUsage() > memoryLimit) {
+        if (!KeyValue.TYPE_NONE.equalsIgnoreCase(item.getType()) && item.getValue() != null
+                && item.getMemoryUsage() > memoryLimit) {
             return null;
         }
         return item;

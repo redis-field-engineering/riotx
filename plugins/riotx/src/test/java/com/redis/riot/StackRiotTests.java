@@ -2,6 +2,9 @@ package com.redis.riot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.redis.batch.gen.Generator;
+import com.redis.batch.gen.ItemType;
+import com.redis.batch.gen.MapOptions;
 import com.redis.lettucemod.search.Field;
 import com.redis.lettucemod.search.IndexInfo;
 import com.redis.lettucemod.search.Suggestion;
@@ -9,6 +12,7 @@ import com.redis.lettucemod.search.SuggetOptions;
 import com.redis.lettucemod.timeseries.MRangeOptions;
 import com.redis.lettucemod.timeseries.RangeResult;
 import com.redis.lettucemod.timeseries.TimeRange;
+import com.redis.riot.core.CompareMode;
 import com.redis.riot.core.Expression;
 import com.redis.riot.core.QuietMapAccessor;
 import com.redis.riot.file.xml.XmlItemReader;
@@ -16,10 +20,8 @@ import com.redis.riot.file.xml.XmlItemReaderBuilder;
 import com.redis.riot.file.xml.XmlObjectReader;
 import com.redis.riot.rdi.ChangeEventToStreamMessage;
 import com.redis.riot.replicate.Replicate;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
-import com.redis.spring.batch.item.redis.gen.ItemType;
-import com.redis.spring.batch.item.redis.gen.MapOptions;
+import com.redis.batch.KeyValue;
+import com.redis.spring.batch.item.redis.GeneratorItemReader;
 import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
@@ -480,14 +482,14 @@ class StackRiotTests extends RiotTests {
     @Test
     void generateTypes(TestInfo info) throws Exception {
         execute(info, "generate");
-        Assertions.assertEquals(Math.min(Generate.DEFAULT_COUNT, GeneratorItemReader.DEFAULT_KEY_RANGE.getMax()),
+        Assertions.assertEquals(Math.min(Generate.DEFAULT_COUNT, Generator.DEFAULT_KEY_RANGE.getMax()),
                 redisCommands.dbsize());
     }
 
     @Test
     void generateJsonIndex(TestInfo info) throws Exception {
         execute(info, "generate-json-index");
-        int keyCount = Math.min(Generate.DEFAULT_COUNT, GeneratorItemReader.DEFAULT_KEY_RANGE.getMax());
+        int keyCount = Math.min(Generate.DEFAULT_COUNT, Generator.DEFAULT_KEY_RANGE.getMax());
         Assertions.assertEquals(keyCount, redisCommands.dbsize());
         IndexInfo indexInfo = IndexInfo.parse(redisCommands.ftInfo("jsonIdx"));
         List<Field<String>> expectedFields = new ArrayList<>();
@@ -501,7 +503,7 @@ class StackRiotTests extends RiotTests {
     @Test
     void generateHashIndex(TestInfo info) throws Exception {
         execute(info, "generate-hash-index");
-        int keyCount = Math.min(Generate.DEFAULT_COUNT, GeneratorItemReader.DEFAULT_KEY_RANGE.getMax());
+        int keyCount = Math.min(Generate.DEFAULT_COUNT, Generator.DEFAULT_KEY_RANGE.getMax());
         Assertions.assertEquals(keyCount, redisCommands.dbsize());
         IndexInfo indexInfo = IndexInfo.parse(redisCommands.ftInfo("hashIdx"));
         List<Field<String>> expectedFields = new ArrayList<>();
@@ -520,7 +522,7 @@ class StackRiotTests extends RiotTests {
         generate(info, gen);
         int badCount = 100;
         GeneratorItemReader generator2 = generator(badCount, ItemType.HASH);
-        generator2.setKeyspace("bad");
+        generator2.getGenerator().setKeyspace("bad");
         generate(testInfo(info, "2"), generator2);
         Assertions.assertEquals(badCount, keyCount("bad:*"));
         execute(info, filename);
@@ -535,7 +537,7 @@ class StackRiotTests extends RiotTests {
         enableKeyspaceNotifications();
         generateAsync(testInfo(info, "gen-1"), generator(goodCount, ItemType.HASH));
         GeneratorItemReader generator2 = generator(badCount, ItemType.HASH);
-        generator2.setKeyspace("bad");
+        generator2.getGenerator().setKeyspace("bad");
         generateAsync(testInfo(info, "gen-2"), generator2);
         execute(info, filename);
         awaitUntil(() -> redisCommands.pubsubNumpat() == 0);
@@ -559,9 +561,11 @@ class StackRiotTests extends RiotTests {
 
     @Test
     void replicateAPI(TestInfo info) throws Throwable {
-        generate(info, generator(73));
+        generate(info, generator(7));
         Assertions.assertTrue(redisCommands.dbsize() > 0);
         Replicate replication = new Replicate();
+        replication.getStepArgs().setRetryLimit(0);
+        replication.getStepArgs().setSkipLimit(0);
         execute(replication, info);
         List<KeyComparison<String>> comparisons = compare(info);
         Assertions.assertFalse(comparisons.isEmpty());

@@ -2,8 +2,8 @@ package com.redis.spring.batch.memcached;
 
 import com.redis.spring.batch.item.AbstractCountingItemReader;
 import org.springframework.batch.item.file.transform.Range;
-import org.springframework.util.ClassUtils;
 
+import java.time.Instant;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -70,7 +70,7 @@ public class MemcachedGeneratorItemReader extends AbstractCountingItemReader<Mem
         struct.setKey(key());
         struct.setValue(value());
         if (expiration != null) {
-            struct.setExpiration(startTime + randomInt(expiration));
+            struct.setExpiration(Instant.ofEpochSecond(startTime + randomInt(expiration)));
         }
         return struct;
     }

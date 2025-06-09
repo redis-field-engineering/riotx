@@ -1,6 +1,6 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.KeyValue;
 
 public interface KeyComparator<K> {
 

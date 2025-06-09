@@ -19,7 +19,7 @@ import com.redis.lettucemod.timeseries.AddOptions.Builder;
 import com.redis.lettucemod.timeseries.DuplicatePolicy;
 import com.redis.lettucemod.timeseries.Sample;
 import com.redis.riot.core.function.ToSample;
-import com.redis.spring.batch.item.redis.writer.impl.TsAdd;
+import com.redis.batch.operation.TsAdd;
 
 import io.lettuce.core.KeyValue;
 import picocli.CommandLine.Command;

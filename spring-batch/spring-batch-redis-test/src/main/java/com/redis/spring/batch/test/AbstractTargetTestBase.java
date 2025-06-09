@@ -1,11 +1,14 @@
 package com.redis.spring.batch.test;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.redis.batch.gen.ItemType;
+import com.redis.batch.gen.StreamOptions;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
@@ -20,11 +23,9 @@ import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.sync.RedisModulesCommands;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.Range;
-import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
-import com.redis.spring.batch.item.redis.gen.ItemType;
-import com.redis.spring.batch.item.redis.gen.StreamOptions;
+import com.redis.batch.KeyValue;
+import com.redis.batch.Range;
+import com.redis.spring.batch.item.redis.GeneratorItemReader;
 import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
@@ -94,8 +95,8 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
         return ConnectionBuilder.client(targetRedisClient).connection(codec);
     }
 
-    protected void assertTtlEquals(long expected, long actual) {
-        Assertions.assertEquals(expected, actual, ttlTolerance.toMillis());
+    protected void assertTtlEquals(Instant expected, Instant actual) {
+        Assertions.assertEquals(expected.toEpochMilli(), actual.toEpochMilli(), ttlTolerance.toMillis());
     }
 
     public void setTtlTolerance(Duration tolerance) {
@@ -174,7 +175,7 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
             generate(info, generator(130));
         } else {
             GeneratorItemReader generator = generator(1, ItemType.STREAM);
-            StreamOptions streamOptions = generator.getStreamOptions();
+            StreamOptions streamOptions = generator.getGenerator().getStreamOptions();
             streamOptions.setMessageCount(Range.of(3));
             streamOptions.getBodyOptions().setFieldCount(Range.of(1));
             generateAsync(info, generator);

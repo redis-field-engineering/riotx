@@ -6,7 +6,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.redis.spring.batch.item.redis.common.BatchUtils;
+import com.redis.batch.BatchUtils;
 
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.RedisClient;

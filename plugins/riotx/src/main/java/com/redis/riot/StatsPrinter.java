@@ -4,7 +4,7 @@ import com.github.freva.asciitable.AsciiTable;
 import com.github.freva.asciitable.Column;
 import com.github.freva.asciitable.ColumnData;
 import com.github.freva.asciitable.HorizontalAlign;
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.KeyValue;
 import org.springframework.util.unit.DataSize;
 
 import java.io.PrintStream;

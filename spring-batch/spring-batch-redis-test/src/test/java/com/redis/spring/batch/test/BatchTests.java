@@ -2,6 +2,9 @@ package com.redis.spring.batch.test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.redis.batch.gen.Generator;
+import com.redis.batch.gen.ItemType;
+import com.redis.batch.operation.*;
 import com.redis.lettucemod.Beers;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.sync.RedisModulesCommands;
@@ -9,16 +12,14 @@ import com.redis.lettucemod.search.IndexInfo;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.spring.batch.JobUtils;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.Wait;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.Range;
-import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
-import com.redis.spring.batch.item.redis.gen.ItemType;
+import com.redis.batch.Wait;
+import com.redis.batch.KeyValue;
+import com.redis.batch.Range;
+import com.redis.spring.batch.item.redis.GeneratorItemReader;
 import com.redis.spring.batch.item.redis.reader.*;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader.AckPolicy;
-import com.redis.spring.batch.item.redis.writer.KeyValueWrite;
-import com.redis.spring.batch.item.redis.writer.impl.*;
+import com.redis.batch.operation.KeyValueWrite;
 import io.lettuce.core.*;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.StringCodec;
@@ -37,6 +38,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.*;
 import java.util.Map.Entry;
@@ -77,7 +79,7 @@ abstract class BatchTests extends AbstractTargetTestBase {
         long expectedCount = redisCommands.dbsize();
         RedisScanSizeEstimator estimator = new RedisScanSizeEstimator();
         estimator.setClient(redisClient);
-        estimator.setKeyPattern(GeneratorItemReader.DEFAULT_KEYSPACE + ":*");
+        estimator.setKeyPattern(Generator.DEFAULT_KEYSPACE + ":*");
         estimator.setSamples(300);
         assertEquals(expectedCount, estimator.getAsLong(), (float) expectedCount / 10);
         estimator.setKeyType(ItemType.HASH.getString());
@@ -141,7 +143,7 @@ abstract class BatchTests extends AbstractTargetTestBase {
     @SuppressWarnings("unchecked")
     protected void readStreamsAutoAck(TestInfo info, int streamCount) throws Exception {
         GeneratorItemReader generator = generator(streamCount, ItemType.STREAM);
-        generator.getStreamOptions().setMessageCount(new Range(73, 73));
+        generator.getGenerator().getStreamOptions().setMessageCount(new Range(73, 73));
         Map<String, List<StreamMessage<String, String>>> expected = readAll(info, generator).stream()
                 .flatMap(t -> ((List<StreamMessage<String, String>>) t.getValue()).stream())
                 .collect(Collectors.groupingBy(StreamMessage::getStream));
@@ -439,7 +441,7 @@ abstract class BatchTests extends AbstractTargetTestBase {
         hash.put("field1", "value1");
         hash.put("field2", "value2");
         redisCommands.hset(key, hash);
-        long ttl = System.currentTimeMillis() + 123456;
+        Instant ttl = Instant.now().plusMillis(123456);
         redisCommands.pexpireat(key, ttl);
         RedisScanItemReader<String, String> reader = scanStructReader();
         reader.open(new ExecutionContext());
@@ -511,7 +513,7 @@ abstract class BatchTests extends AbstractTargetTestBase {
         body.put("field2", "value2");
         redisCommands.xadd(key, body);
         redisCommands.xadd(key, body);
-        long ttl = System.currentTimeMillis() + 123456;
+        Instant ttl = Instant.now().plusMillis(123456);
         redisCommands.pexpireat(key, ttl);
         RedisScanItemReader<byte[], byte[]> reader = scanDumpReader();
         reader.open(new ExecutionContext());
@@ -519,7 +521,7 @@ abstract class BatchTests extends AbstractTargetTestBase {
         Assertions.assertArrayEquals(toByteArray(key), dump.getKey());
         assertTtlEquals(ttl, dump.getTtl());
         redisCommands.del(key);
-        redisCommands.restore(key, (byte[]) dump.getValue(), RestoreArgs.Builder.ttl(ttl).absttl());
+        redisCommands.restore(key, (byte[]) dump.getValue(), RestoreArgs.Builder.ttl(ttl.toEpochMilli()).absttl());
         Assertions.assertEquals(ItemType.STREAM.getString(), redisCommands.type(key));
         reader.close();
     }

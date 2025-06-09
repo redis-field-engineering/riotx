@@ -86,8 +86,7 @@ public abstract class AbstractRiotApplicationTestBase extends AbstractRiotTestBa
                     }
                 }
                 if (command instanceof Replicate) {
-                    Replicate replicateCommand = (Replicate) command;
-                    replicateCommand.setCompareMode(CompareMode.NONE);
+                    ((Replicate) command).setCompareMode(CompareMode.NONE);
                 }
             }
             configs.forEach(c -> c.execute(parseResult));

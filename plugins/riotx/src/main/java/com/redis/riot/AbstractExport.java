@@ -4,7 +4,7 @@ import com.redis.riot.core.KeyValueFilter;
 import com.redis.riot.core.RedisContext;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.KeyValue;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.unit.DataSize;
@@ -22,7 +22,7 @@ public abstract class AbstractExport extends AbstractJobCommand {
     private FlushingStepArgs flushingStepArgs = new FlushingStepArgs();
 
     @Option(names = "--mem-limit", description = "Max mem usage for a key to be read, for example 12KB 5MB.", paramLabel = "<size>")
-    private DataSize memoryLimit;
+    private DataSize memoryLimit = DataSize.ofBytes(0);
 
     @Option(names = "--mem-samples", description = "Number of nested values to sample in key memory usage.", paramLabel = "<int>")
     private int memoryUsageSamples;

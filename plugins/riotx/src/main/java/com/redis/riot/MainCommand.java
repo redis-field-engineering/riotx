@@ -12,7 +12,7 @@ import com.redis.riot.core.InetSocketAddressList;
 import com.redis.riot.core.PrefixedNumber;
 import com.redis.riot.core.TemplateExpression;
 import com.redis.riot.db.DatabaseObject;
-import com.redis.spring.batch.item.redis.common.Range;
+import com.redis.batch.Range;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.json.JsonPath;
 import org.springframework.boot.convert.DurationStyle;

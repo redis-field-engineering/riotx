@@ -1,12 +1,13 @@
 package com.redis.riot;
 
+import com.redis.batch.gen.Generator;
+import com.redis.batch.gen.ItemType;
 import com.redis.lettucemod.search.CreateOptions;
 import com.redis.lettucemod.search.Field;
 import com.redis.riot.core.PrefixedNumber;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
-import com.redis.spring.batch.item.redis.gen.ItemType;
+import com.redis.batch.KeyValue;
+import com.redis.spring.batch.item.redis.GeneratorItemReader;
 import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
 import org.springframework.util.StringUtils;
@@ -101,9 +102,10 @@ public class Generate extends AbstractRedisCommand {
     }
 
     private GeneratorItemReader reader() {
-        GeneratorItemReader reader = new GeneratorItemReader();
+        Generator generator = new Generator();
+        generateArgs.configure(generator);
+        GeneratorItemReader reader = new GeneratorItemReader(generator);
         reader.setMaxItemCount(count.intValue());
-        generateArgs.configure(reader);
         return reader;
     }
 

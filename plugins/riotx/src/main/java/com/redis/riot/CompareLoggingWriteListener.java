@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.ItemWriteListener;
 import org.springframework.batch.item.Chunk;
 
-import com.redis.spring.batch.item.redis.common.BatchUtils;
+import com.redis.batch.BatchUtils;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
 
 import io.lettuce.core.codec.RedisCodec;

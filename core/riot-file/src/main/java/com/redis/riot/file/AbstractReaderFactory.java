@@ -1,7 +1,7 @@
 package com.redis.riot.file;
 
-import java.util.Map;
-
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.separator.DefaultRecordSeparatorPolicy;
@@ -11,9 +11,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
+import java.util.Map;
 
 public abstract class AbstractReaderFactory implements ReaderFactory {
 
@@ -74,9 +72,7 @@ public abstract class AbstractReaderFactory implements ReaderFactory {
 
 	protected <T extends ObjectMapper> T objectMapper(T objectMapper, ReadOptions options) {
 		objectMapper.configure(DeserializationFeature.USE_LONG_FOR_INTS, true);
-		SimpleModule module = new SimpleModule();
-		options.getDeserializers().forEach(module::addDeserializer);
-		objectMapper.registerModule(module);
+		options.getObjectMapperConfigurers().forEach(c -> c.accept(objectMapper));
 		return objectMapper;
 	}
 

@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.redis.spring.batch.UniqueBlockingQueue;
-import com.redis.spring.batch.item.redis.common.Key;
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.Key;
+import com.redis.batch.KeyValue;
 import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
 

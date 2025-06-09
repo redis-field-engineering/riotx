@@ -1,11 +1,12 @@
 package com.redis.riot;
 
+import com.redis.batch.operation.KeyValueRead;
 import com.redis.riot.core.CompareStepListener;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.StringKeyValue;
 import com.redis.riot.core.function.ToStringKeyValue;
 import com.redis.riot.core.job.RiotStep;
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.KeyValue;
 import com.redis.spring.batch.item.redis.reader.*;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.RedisCodec;

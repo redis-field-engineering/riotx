@@ -1,10 +1,9 @@
 package com.redis.spring.batch.item.redis.reader;
 
+import com.redis.batch.*;
+import com.redis.batch.operation.KeyValueRead;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.RedisOperation;
 import io.lettuce.core.KeyScanArgs;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.RedisCodec;
@@ -29,7 +28,7 @@ public class RedisScanItemReader<K, V> extends RedisItemReader<K, V> {
 
     private Iterator<KeyValue<K>> valueIterator = Collections.emptyIterator();
 
-    public RedisScanItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> operation) {
+    public RedisScanItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, K, KeyValue<K>> operation) {
         super(codec, operation);
     }
 

@@ -2,7 +2,6 @@ dependencies {
     api project(':spring-batch-redis-core')
     api project(':spring-batch-memcached')
     api 'org.springframework.boot:spring-boot-autoconfigure'
-    api 'com.fasterxml.jackson.core:jackson-databind'
     api group: 'com.tdunning', name: 't-digest', version: tdigestVersion
     api group: 'org.latencyutils', name: 'LatencyUtils', version: latencyUtilsVersion
     api 'org.springframework.batch:spring-batch-infrastructure'

@@ -1,7 +1,7 @@
 package com.redis.riot;
 
-import com.redis.spring.batch.item.redis.common.Range;
-import com.redis.spring.batch.item.redis.gen.*;
+import com.redis.batch.Range;
+import com.redis.batch.gen.*;
 import lombok.ToString;
 import picocli.CommandLine.Option;
 
@@ -12,16 +12,16 @@ import java.util.List;
 public class GenerateArgs {
 
     @Option(names = "--key-separator", description = "Key separator (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
-    private String keySeparator = GeneratorItemReader.DEFAULT_KEY_SEPARATOR;
+    private String keySeparator = Generator.DEFAULT_KEY_SEPARATOR;
 
     @Option(names = "--keyspace", description = "Keyspace prefix for generated data structures (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
-    private String keyspace = GeneratorItemReader.DEFAULT_KEYSPACE;
+    private String keyspace = Generator.DEFAULT_KEYSPACE;
 
     @Option(names = "--key-range", description = "Range of keys to generate in the form 'start-end' (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
-    private Range keyRange = GeneratorItemReader.DEFAULT_KEY_RANGE;
+    private Range keyRange = Generator.DEFAULT_KEY_RANGE;
 
     @Option(arity = "1..*", names = "--type", description = "Types of data structures to generate: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<type>")
-    private List<ItemType> types = GeneratorItemReader.defaultTypes();
+    private List<ItemType> types = Generator.defaultTypes();
 
     @Option(names = "--index", description = "Name of index to create that matches JSON or hash type.", paramLabel = "<name>")
     private String index;
@@ -140,20 +140,20 @@ public class GenerateArgs {
         return options;
     }
 
-    public void configure(GeneratorItemReader reader) {
-        reader.setKeySeparator(keySeparator);
-        reader.setExpiration(expiration);
-        reader.setHashOptions(hashOptions());
-        reader.setJsonOptions(jsonOptions());
-        reader.setKeyRange(keyRange);
-        reader.setKeyspace(keyspace);
-        reader.setListOptions(listOptions());
-        reader.setSetOptions(setOptions());
-        reader.setStreamOptions(streamOptions());
-        reader.setStringOptions(stringOptions());
-        reader.setTimeSeriesOptions(timeseriesOptions());
-        reader.setTypes(types);
-        reader.setZsetOptions(zsetOptions());
+    public void configure(Generator generator) {
+        generator.setKeySeparator(keySeparator);
+        generator.setExpiration(expiration);
+        generator.setHashOptions(hashOptions());
+        generator.setJsonOptions(jsonOptions());
+        generator.setKeyRange(keyRange);
+        generator.setKeyspace(keyspace);
+        generator.setListOptions(listOptions());
+        generator.setSetOptions(setOptions());
+        generator.setStreamOptions(streamOptions());
+        generator.setStringOptions(stringOptions());
+        generator.setTimeSeriesOptions(timeseriesOptions());
+        generator.setTypes(types);
+        generator.setZsetOptions(zsetOptions());
     }
 
     public String getKeyspace() {

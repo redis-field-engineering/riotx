@@ -3,7 +3,7 @@ package com.redis.spring.batch.item.redis.reader;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.async.RedisModulesAsyncCommands;
 import com.redis.lettucemod.utils.ConnectionBuilder;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
+import com.redis.batch.BatchUtils;
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.internal.Exceptions;

@@ -2,6 +2,8 @@ package com.redis.spring.batch.memcached.reader;
 
 public class LruMetadumpEntry {
 
+	public static final int EXP_NEVER = -1;
+
 	private String key;
 	private int exp;
 	private int la;

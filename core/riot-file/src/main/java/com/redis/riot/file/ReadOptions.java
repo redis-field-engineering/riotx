@@ -1,101 +1,94 @@
 package com.redis.riot.file;
 
-import java.util.LinkedHashMap;
+import lombok.ToString;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.fasterxml.jackson.databind.JsonDeserializer;
-
-import lombok.ToString;
-
 @ToString
 public class ReadOptions extends FileOptions {
 
-	public static final String DEFAULT_CONTINUATION_STRING = "\\";
+    public static final String DEFAULT_CONTINUATION_STRING = "\\";
 
-	private int maxItemCount;
-	private Set<Integer> includedFields;
-	private String continuationString = DEFAULT_CONTINUATION_STRING;
-	private List<String> fields;
-	private Integer headerLine;
-	private Integer linesToSkip;
-	private List<String> columnRanges;
-	@SuppressWarnings("rawtypes")
-	private final Map<Class, JsonDeserializer> deserializers = new LinkedHashMap<>();
-	private Class<?> itemType = Map.class;
+    private int maxItemCount;
 
-	public <T> void addDeserializer(Class<T> type, JsonDeserializer<? extends T> deserializer) {
-		deserializers.put(type, deserializer);
-	}
+    private Set<Integer> includedFields;
 
-	@SuppressWarnings("rawtypes")
-	public Map<Class, JsonDeserializer> getDeserializers() {
-		return deserializers;
-	}
+    private String continuationString = DEFAULT_CONTINUATION_STRING;
 
-	public Class<?> getItemType() {
-		return itemType;
-	}
+    private List<String> fields;
 
-	public void setItemType(Class<?> type) {
-		this.itemType = type;
-	}
+    private Integer headerLine;
 
-	public int getMaxItemCount() {
-		return maxItemCount;
-	}
+    private Integer linesToSkip;
 
-	public void setMaxItemCount(int count) {
-		this.maxItemCount = count;
-	}
+    private List<String> columnRanges;
 
-	public Set<Integer> getIncludedFields() {
-		return includedFields;
-	}
+    private Class<?> itemType = Map.class;
 
-	public void setIncludedFields(Set<Integer> fields) {
-		this.includedFields = fields;
-	}
+    public Class<?> getItemType() {
+        return itemType;
+    }
 
-	public String getContinuationString() {
-		return continuationString;
-	}
+    public void setItemType(Class<?> type) {
+        this.itemType = type;
+    }
 
-	public void setContinuationString(String string) {
-		this.continuationString = string;
-	}
+    public int getMaxItemCount() {
+        return maxItemCount;
+    }
 
-	public List<String> getFields() {
-		return fields;
-	}
+    public void setMaxItemCount(int count) {
+        this.maxItemCount = count;
+    }
 
-	public void setFields(List<String> fields) {
-		this.fields = fields;
-	}
+    public Set<Integer> getIncludedFields() {
+        return includedFields;
+    }
 
-	public Integer getHeaderLine() {
-		return headerLine;
-	}
+    public void setIncludedFields(Set<Integer> fields) {
+        this.includedFields = fields;
+    }
 
-	public void setHeaderLine(Integer headerLine) {
-		this.headerLine = headerLine;
-	}
+    public String getContinuationString() {
+        return continuationString;
+    }
 
-	public Integer getLinesToSkip() {
-		return linesToSkip;
-	}
+    public void setContinuationString(String string) {
+        this.continuationString = string;
+    }
 
-	public void setLinesToSkip(Integer linesToSkip) {
-		this.linesToSkip = linesToSkip;
-	}
+    public List<String> getFields() {
+        return fields;
+    }
 
-	public List<String> getColumnRanges() {
-		return columnRanges;
-	}
+    public void setFields(List<String> fields) {
+        this.fields = fields;
+    }
 
-	public void setColumnRanges(List<String> columnRanges) {
-		this.columnRanges = columnRanges;
-	}
+    public Integer getHeaderLine() {
+        return headerLine;
+    }
+
+    public void setHeaderLine(Integer headerLine) {
+        this.headerLine = headerLine;
+    }
+
+    public Integer getLinesToSkip() {
+        return linesToSkip;
+    }
+
+    public void setLinesToSkip(Integer linesToSkip) {
+        this.linesToSkip = linesToSkip;
+    }
+
+    public List<String> getColumnRanges() {
+        return columnRanges;
+    }
+
+    public void setColumnRanges(List<String> columnRanges) {
+        this.columnRanges = columnRanges;
+    }
 
 }

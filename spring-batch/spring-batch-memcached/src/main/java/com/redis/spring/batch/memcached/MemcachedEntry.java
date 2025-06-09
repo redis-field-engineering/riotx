@@ -1,60 +1,56 @@
 package com.redis.spring.batch.memcached;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Objects;
 
 public class MemcachedEntry {
 
-	private String key;
-	private byte[] value;
-	private int expiration;
+    private String key;
 
-	public String getKey() {
-		return key;
-	}
+    private byte[] value;
 
-	public void setKey(String key) {
-		this.key = key;
-	}
+    private Instant expiration;
 
-	public byte[] getValue() {
-		return value;
-	}
+    public String getKey() {
+        return key;
+    }
 
-	public void setValue(byte[] value) {
-		this.value = value;
-	}
+    public void setKey(String key) {
+        this.key = key;
+    }
 
-	/**
-	 * Expiration POSIX time in seconds for this key.
-	 */
-	public int getExpiration() {
-		return expiration;
-	}
+    public byte[] getValue() {
+        return value;
+    }
 
-	public void setExpiration(int expiration) {
-		this.expiration = expiration;
-	}
+    public void setValue(byte[] value) {
+        this.value = value;
+    }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + Arrays.hashCode(value);
-		result = prime * result + Objects.hash(expiration, key);
-		return result;
-	}
+    /**
+     * @return Expiration time for this key or null if no expiration set
+     */
+    public Instant getExpiration() {
+        return expiration;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		MemcachedEntry other = (MemcachedEntry) obj;
-		return expiration == other.expiration && Objects.equals(key, other.key) && Arrays.equals(value, other.value);
-	}
+    public void setExpiration(Instant expiration) {
+        this.expiration = expiration;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass())
+            return false;
+        MemcachedEntry that = (MemcachedEntry) o;
+        return Objects.equals(key, that.key) && Objects.deepEquals(value, that.value) && Objects.equals(expiration,
+                that.expiration);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(key, Arrays.hashCode(value), expiration);
+    }
 
 }

@@ -12,9 +12,10 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.redis.batch.KeyEvent;
 import org.springframework.util.CollectionUtils;
 
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.KeyValue;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
 
 import io.lettuce.core.ScoredValue;
@@ -48,13 +49,13 @@ public class DefaultKeyComparator<K, V> implements KeyComparator<K> {
     }
 
     private Status status(KeyValue<K> source, KeyValue<K> target) {
-        if (!KeyValue.exists(target)) {
-            if (!KeyValue.exists(source)) {
+        if (KeyEvent.TYPE_NONE.equalsIgnoreCase(target.getType())) {
+            if (KeyEvent.TYPE_NONE.equalsIgnoreCase(source.getType())) {
                 return Status.OK;
             }
             return Status.MISSING;
         }
-        if (KeyValue.hasType(source) && !source.getType().equals(target.getType())) {
+        if (!source.getType().equals(target.getType())) {
             return Status.TYPE;
         }
         if (!ttlEquals(source, target)) {
@@ -67,7 +68,13 @@ public class DefaultKeyComparator<K, V> implements KeyComparator<K> {
     }
 
     private boolean ttlEquals(KeyValue<K> source, KeyValue<K> target) {
-        return source.getTtl() == target.getTtl() || Math.abs(source.getTtl() - target.getTtl()) <= ttlTolerance.toMillis();
+        if (source.getTtl() == null) {
+            return target.getTtl() == null;
+        }
+        if (target.getTtl() == null) {
+            return false;
+        }
+        return Math.abs(source.getTtl().toEpochMilli() - target.getTtl().toEpochMilli()) <= ttlTolerance.toMillis();
     }
 
     @SuppressWarnings("unchecked")
@@ -81,8 +88,8 @@ public class DefaultKeyComparator<K, V> implements KeyComparator<K> {
                 return false;
             }
         }
-        if (!KeyValue.hasType(source)) {
-            return !KeyValue.hasType(target);
+        if (KeyValue.TYPE_NONE.equalsIgnoreCase(source.getType())) {
+            return KeyValue.TYPE_NONE.equalsIgnoreCase(target.getType());
         }
         String type = source.getType();
         if (type == null) {

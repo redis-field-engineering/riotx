@@ -19,7 +19,7 @@ public class XmlWriterFactory extends AbstractWriterFactory {
         writer.rootName(options.getRootName());
         writer.resource(resource);
         writer.saveState(false);
-        XmlMapper mapper = objectMapper(new XmlMapper());
+        XmlMapper mapper = objectMapper(new XmlMapper(), options);
         mapper.setConfig(mapper.getSerializationConfig().withRootName(options.getElementName()));
         writer.xmlObjectMarshaller(new JacksonJsonObjectMarshaller<>(mapper));
         return writer.build();

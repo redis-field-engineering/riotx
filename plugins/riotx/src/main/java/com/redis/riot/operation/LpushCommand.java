@@ -1,9 +1,8 @@
 package com.redis.riot.operation;
 
-import java.util.Arrays;
 import java.util.Map;
 
-import com.redis.spring.batch.item.redis.writer.impl.Lpush;
+import com.redis.batch.operation.Lpush;
 
 import picocli.CommandLine.Command;
 

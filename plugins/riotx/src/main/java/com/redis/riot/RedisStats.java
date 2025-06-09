@@ -15,9 +15,9 @@ import java.util.stream.Collectors;
 import com.redis.riot.core.Throughput;
 import org.springframework.util.unit.DataSize;
 
-import com.redis.spring.batch.item.redis.common.Key;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.reader.KeyEvent;
+import com.redis.batch.Key;
+import com.redis.batch.KeyValue;
+import com.redis.batch.KeyEvent;
 import com.tdunning.math.stats.TDigest;
 
 public class RedisStats {

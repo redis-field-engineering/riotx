@@ -1,13 +1,12 @@
 package com.redis.riot.operation;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
 
-import com.redis.spring.batch.item.redis.writer.impl.Zadd;
+import com.redis.batch.operation.Zadd;
 
 import io.lettuce.core.ScoredValue;
 import picocli.CommandLine.ArgGroup;

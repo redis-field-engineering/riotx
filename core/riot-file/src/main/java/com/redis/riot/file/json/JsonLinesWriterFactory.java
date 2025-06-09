@@ -10,11 +10,12 @@ import com.redis.spring.batch.resource.FlatFileItemWriterBuilder;
 
 public class JsonLinesWriterFactory extends AbstractWriterFactory {
 
-	@Override
-	public ItemWriter<?> create(WritableResource resource, WriteOptions options) {
-		FlatFileItemWriterBuilder<?> builder = flatFileWriter(resource, options);
-		builder.lineAggregator(new JsonLineAggregator<>(new ObjectMapper()));
-		return builder.build();
-	}
+    @Override
+    public ItemWriter<?> create(WritableResource resource, WriteOptions options) {
+        FlatFileItemWriterBuilder<?> builder = flatFileWriter(resource, options);
+        ObjectMapper objectMapper = objectMapper(new ObjectMapper(), options);
+        builder.lineAggregator(new JsonLineAggregator<>(objectMapper));
+        return builder.build();
+    }
 
 }

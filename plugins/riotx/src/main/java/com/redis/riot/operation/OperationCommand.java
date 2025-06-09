@@ -2,7 +2,7 @@ package com.redis.riot.operation;
 
 import java.util.Map;
 
-import com.redis.spring.batch.item.redis.common.RedisOperation;
+import com.redis.batch.RedisOperation;
 import org.springframework.expression.EvaluationContext;
 
 public interface OperationCommand {

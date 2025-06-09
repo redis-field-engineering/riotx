@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test;
 
 import com.redis.riot.core.function.StringToMapFunction;
 import com.redis.riot.core.function.KeyValueMap;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.Range;
+import com.redis.batch.KeyValue;
+import com.redis.batch.Range;
 
 import io.lettuce.core.cluster.SlotHash;
 import io.lettuce.core.codec.StringCodec;

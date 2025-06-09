@@ -1,6 +1,10 @@
 package com.redis.riot;
 
-import com.redis.riot.core.KeyValueDeserializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.redis.batch.KeyValue;
+import com.redis.batch.KeyValueDeserializer;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.MapToFieldFunction;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
@@ -11,7 +15,6 @@ import com.redis.riot.file.*;
 import com.redis.riot.parquet.ParquetFileItemReader;
 import com.redis.riot.parquet.ParquetFileNameMap;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.KeyValue;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
@@ -155,8 +158,15 @@ public class FileImport extends AbstractRedisImport {
         ReadOptions options = fileReaderArgs.readOptions();
         options.setContentType(getFileType());
         options.setItemType(itemType());
-        options.addDeserializer(KeyValue.class, new KeyValueDeserializer());
+        options.addObjectMapperConfigurer(this::configure);
         return options;
+    }
+
+    private void configure(ObjectMapper mapper) {
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(KeyValue.class, new KeyValueDeserializer());
+        mapper.registerModule(module);
+        mapper.registerModule(new JavaTimeModule());
     }
 
     private Class<?> itemType() {
