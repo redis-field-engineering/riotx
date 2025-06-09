@@ -1,27 +1,26 @@
 package com.redis.spring.batch.item.redis;
 
+import com.redis.batch.KeyValue;
+import com.redis.batch.OperationExecutor;
+import com.redis.batch.RedisOperation;
+import com.redis.batch.Wait;
+import com.redis.spring.batch.item.redis.common.RedisSupportCheck;
+import com.redis.batch.operation.KeyValueRestore;
+import com.redis.batch.operation.KeyValueWrite;
+import com.redis.batch.operation.KeyValueWrite.WriteMode;
+import com.redis.batch.operation.MultiExec;
+import com.redis.batch.operation.ReplicaWait;
+import io.lettuce.core.AbstractRedisClient;
+import io.lettuce.core.codec.ByteArrayCodec;
+import io.lettuce.core.codec.RedisCodec;
+import io.lettuce.core.codec.StringCodec;
+import lombok.ToString;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.support.AbstractItemStreamItemWriter;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
-
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.OperationExecutor;
-import com.redis.spring.batch.item.redis.common.RedisOperation;
-import com.redis.spring.batch.item.redis.common.RedisSupportCheck;
-import com.redis.spring.batch.item.redis.writer.KeyValueRestore;
-import com.redis.spring.batch.item.redis.writer.KeyValueWrite;
-import com.redis.spring.batch.item.redis.writer.KeyValueWrite.WriteMode;
-import com.redis.spring.batch.item.redis.writer.impl.MultiExec;
-import com.redis.spring.batch.item.redis.writer.impl.ReplicaWait;
-
-import io.lettuce.core.AbstractRedisClient;
-import io.lettuce.core.codec.ByteArrayCodec;
-import io.lettuce.core.codec.RedisCodec;
-import io.lettuce.core.codec.StringCodec;
-import lombok.ToString;
 
 @ToString
 public class RedisItemWriter<K, V, T> extends AbstractItemStreamItemWriter<T> {
@@ -89,7 +88,7 @@ public class RedisItemWriter<K, V, T> extends AbstractItemStreamItemWriter<T> {
 
     @Override
     public void write(Chunk<? extends T> items) throws Exception {
-        operationExecutor.execute(items);
+        operationExecutor.execute(items.getItems());
     }
 
     private RedisOperation<K, V, T, Object> operation() {

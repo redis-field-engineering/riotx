@@ -1,6 +1,6 @@
 package com.redis.riot.operation;
 
-import com.redis.spring.batch.item.redis.writer.impl.Geoadd;
+import com.redis.batch.operation.Geoadd;
 import io.lettuce.core.GeoValue;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;

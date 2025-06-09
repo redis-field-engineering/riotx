@@ -9,8 +9,8 @@ import java.util.function.Predicate;
 import org.springframework.data.util.Predicates;
 import org.springframework.util.CollectionUtils;
 
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.Range;
+import com.redis.batch.BatchUtils;
+import com.redis.batch.Range;
 
 import io.lettuce.core.cluster.SlotHash;
 import io.lettuce.core.codec.RedisCodec;

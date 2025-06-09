@@ -2,7 +2,7 @@ package com.redis.riot.operation;
 
 import com.redis.lettucemod.search.Suggestion;
 import com.redis.riot.core.TemplateExpression;
-import com.redis.spring.batch.item.redis.writer.impl.Sugadd;
+import com.redis.batch.operation.Sugadd;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;

@@ -3,7 +3,7 @@ package com.redis.riot.operation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.redis.spring.batch.item.redis.writer.impl.JsonSet;
+import com.redis.batch.operation.JsonSet;
 import io.lettuce.core.json.JsonPath;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.core.serializer.support.SerializationFailedException;

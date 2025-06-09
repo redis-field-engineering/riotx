@@ -4,12 +4,11 @@ import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.spring.batch.item.PollableItemReader;
-import com.redis.spring.batch.item.redis.common.Key;
+import com.redis.batch.Key;
 import io.lettuce.core.*;
 import io.lettuce.core.XReadArgs.StreamOffset;
 import io.lettuce.core.api.sync.RedisStreamCommands;
 import io.lettuce.core.codec.RedisCodec;
-import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;

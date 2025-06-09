@@ -10,9 +10,6 @@ public class InetSocketAddressList {
 
 	private List<InetSocketAddress> addresses;
 
-	public InetSocketAddressList() {
-	}
-
 	public InetSocketAddressList(InetSocketAddress... addresses) {
 		this(Arrays.asList(addresses));
 	}

@@ -1,12 +1,10 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import com.redis.batch.KeyEvent;
+import com.redis.batch.operation.KeyValueRead;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.item.ExecutionContext;
@@ -14,16 +12,14 @@ import org.springframework.batch.item.ItemStreamException;
 
 import com.redis.spring.batch.item.PollableItemReader;
 import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.RedisOperation;
+import com.redis.batch.KeyValue;
+import com.redis.batch.RedisOperation;
 
 import io.lettuce.core.codec.RedisCodec;
 import lombok.ToString;
 
 @ToString
 public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements PollableItemReader<KeyValue<K>> {
-
-    public static final String COUNTER_DESCRIPTION = "Number of key events received. Status SUCCESS means key was successfully processed, 'FAILURE' means queue was full.";
 
     public static final int DEFAULT_QUEUE_CAPACITY = KeyEventItemReader.DEFAULT_QUEUE_CAPACITY;
 
@@ -37,7 +33,7 @@ public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements 
 
     ;
 
-    public RedisLiveItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> operation) {
+    public RedisLiveItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, K, KeyValue<K>> operation) {
         super(codec, operation);
     }
 
@@ -85,7 +81,7 @@ public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements 
         while (keyEvents.size() < batchSize && (keyEvent = keyEventReader.poll(timeout, unit)) != null) {
             keyEvents.add(keyEvent);
         }
-        List<KeyValue<K>> keyValues = read(keyEvents);
+        List<KeyValue<K>> keyValues = read(new ArrayList<>(keyEvents));
         iterator = keyValues.iterator();
         if (iterator.hasNext()) {
             return iterator.next();

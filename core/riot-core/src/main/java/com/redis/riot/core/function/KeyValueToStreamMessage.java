@@ -3,7 +3,7 @@ package com.redis.riot.core.function;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.KeyValue;
 import io.lettuce.core.StreamMessage;
 import org.springframework.batch.item.ItemProcessor;
 

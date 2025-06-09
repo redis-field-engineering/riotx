@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import com.redis.riot.core.InetSocketAddressList;
+import io.lettuce.core.RedisURI;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -169,7 +170,8 @@ public class MemcachedTests {
         replication.getProgressArgs().setStyle(ProgressStyle.NONE);
         replication.getJobExecutor().setJobRepository(jobRepository);
         replication.setSourceAddressList(new InetSocketAddressList(inetSocketAddress(source)));
-        replication.setTargetAddressList(new InetSocketAddressList(inetSocketAddress(target)));
+        replication.setTargetUri(RedisURI.create(target.getMemcachedHost(), target.getMemcachedPort()));
+        replication.setTargetType(MemcachedReplicate.ServerType.MEMCACHED);
         replication.call();
         List<MemcachedEntry> sourceEntries = readAll(clientSupplier);
         List<MemcachedEntry> targetEntries = readAll(targetClientSupplier);

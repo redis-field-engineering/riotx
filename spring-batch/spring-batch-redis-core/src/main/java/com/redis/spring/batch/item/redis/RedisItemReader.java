@@ -1,11 +1,11 @@
 package com.redis.spring.batch.item.redis;
 
 import com.redis.spring.batch.item.AbstractCountingItemReader;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.OperationExecutor;
-import com.redis.spring.batch.item.redis.common.RedisOperation;
-import com.redis.spring.batch.item.redis.reader.KeyEvent;
-import com.redis.spring.batch.item.redis.reader.KeyValueRead;
+import com.redis.batch.KeyValue;
+import com.redis.batch.OperationExecutor;
+import com.redis.batch.RedisOperation;
+import com.redis.batch.KeyEvent;
+import com.redis.batch.operation.KeyValueRead;
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.ReadFrom;
 import io.lettuce.core.codec.RedisCodec;
@@ -13,11 +13,11 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import org.springframework.data.util.Predicates;
 import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
 import org.springframework.util.unit.DataSize;
 
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<KeyValue<K>> {
 
@@ -27,7 +27,7 @@ public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<K
 
     protected final RedisCodec<K, V> codec;
 
-    private final RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> operation;
+    private final RedisOperation<K, V, K, KeyValue<K>> operation;
 
     private int poolSize = DEFAULT_POOL_SIZE;
 
@@ -43,17 +43,25 @@ public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<K
 
     protected AbstractRedisClient client;
 
-    private OperationExecutor<K, V, KeyEvent<K>, KeyValue<K>> operationExecutor;
+    private OperationExecutor<K, V, K, KeyValue<K>> operationExecutor;
 
     private Predicate<K> keyFilter = Predicates.isTrue();
 
-    protected RedisItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> operation) {
+    protected RedisItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, K, KeyValue<K>> operation) {
         this.codec = codec;
         this.operation = operation;
     }
 
-    public List<KeyValue<K>> read(Iterable<? extends KeyEvent<K>> keys) throws Exception {
-        return operationExecutor.execute(keys);
+    public List<KeyValue<K>> read(List<? extends KeyEvent<K>> keyEvents) throws Exception {
+        List<? extends K> keys = keyEvents.stream().map(KeyEvent::getKey).collect(Collectors.toList());
+        List<KeyValue<K>> keyValues = operationExecutor.execute(keys);
+        for (int index = 0; index < keyEvents.size(); index++) {
+            KeyEvent<K> keyEvent = keyEvents.get(index);
+            KeyValue<K> keyValue = keyValues.get(index);
+            keyValue.setEvent(keyEvent.getEvent());
+            keyValue.setTimestamp(keyEvent.getTimestamp());
+        }
+        return keyValues;
     }
 
     @Override
@@ -69,7 +77,7 @@ public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<K
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose() {
         if (operationExecutor != null) {
             operationExecutor.close();
             operationExecutor = null;
@@ -84,7 +92,7 @@ public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<K
         return keyFilter.test(key);
     }
 
-    public RedisOperation<K, V, KeyEvent<K>, KeyValue<K>> getOperation() {
+    public RedisOperation<K, V, K, KeyValue<K>> getOperation() {
         return operation;
     }
 
@@ -137,8 +145,9 @@ public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<K
     }
 
     public void setMemoryLimit(DataSize limit) {
+        Assert.notNull(limit, "Limit must not be null");
         if (operation instanceof KeyValueRead) {
-            ((KeyValueRead<K, V>) operation).limit(limit);
+            ((KeyValueRead<K, V>) operation).limit(limit.toBytes());
         }
     }
 

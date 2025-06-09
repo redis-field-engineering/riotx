@@ -3,7 +3,7 @@ package com.redis.riot;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.KeyValueMap;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.KeyValue;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;

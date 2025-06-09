@@ -1,6 +1,6 @@
 package com.redis.riot;
 
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.KeyValue;
 import com.redis.spring.batch.item.redis.reader.KeyEventListenerContainer;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.riot.core.job.RiotStep;

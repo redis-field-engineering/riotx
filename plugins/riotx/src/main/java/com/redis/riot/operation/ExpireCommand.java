@@ -1,17 +1,14 @@
 package com.redis.riot.operation;
 
-import java.time.Duration;
+import com.redis.batch.operation.AbstractWriteOperation;
+import com.redis.batch.operation.Expire;
+import com.redis.batch.operation.ExpireAt;
+import picocli.CommandLine.ArgGroup;
+import picocli.CommandLine.Command;
+
 import java.time.Instant;
 import java.util.Map;
 import java.util.function.ToLongFunction;
-
-import com.redis.spring.batch.item.redis.writer.impl.AbstractWriteOperation;
-import com.redis.spring.batch.item.redis.writer.impl.Expire;
-import com.redis.spring.batch.item.redis.writer.impl.ExpireAt;
-
-import org.springframework.expression.EvaluationContext;
-import picocli.CommandLine.ArgGroup;
-import picocli.CommandLine.Command;
 
 @Command(name = "expire", description = "Set timeouts on keys")
 public class ExpireCommand extends AbstractOperationCommand {
@@ -24,9 +21,10 @@ public class ExpireCommand extends AbstractOperationCommand {
         if (ttlArgs.getTimeField() != null || ttlArgs.getTime() != null) {
             ExpireAt<String, String, Map<String, Object>> operation = new ExpireAt<>(keyFunction());
             if (ttlArgs.getTime() == null) {
-                operation.setTimestampFunction(toLong(ttlArgs.getTimeField()));
+                ToLongFunction<Map<String, Object>> longFunction = toLong(ttlArgs.getTimeField());
+                operation.setTimestampFunction(t -> Instant.ofEpochMilli(longFunction.applyAsLong(t)));
             } else {
-                operation.setTimestamp(ttlArgs.getTime().toEpochMilli());
+                operation.setTimestamp(ttlArgs.getTime());
             }
             return operation;
         }

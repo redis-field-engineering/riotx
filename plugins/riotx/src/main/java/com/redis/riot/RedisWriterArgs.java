@@ -3,8 +3,8 @@ package com.redis.riot;
 import java.time.Duration;
 
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.Wait;
-import com.redis.spring.batch.item.redis.writer.KeyValueWrite.WriteMode;
+import com.redis.batch.Wait;
+import com.redis.batch.operation.KeyValueWrite.WriteMode;
 
 import lombok.ToString;
 import picocli.CommandLine.Option;

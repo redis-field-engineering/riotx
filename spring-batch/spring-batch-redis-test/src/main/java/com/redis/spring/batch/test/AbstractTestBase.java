@@ -1,5 +1,8 @@
 package com.redis.spring.batch.test;
 
+import com.redis.batch.gen.Generator;
+import com.redis.batch.gen.ItemType;
+import com.redis.batch.gen.StreamOptions;
 import com.redis.lettucemod.RedisModulesClient;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.async.RedisModulesAsyncCommands;
@@ -10,13 +13,11 @@ import com.redis.spring.batch.JobUtils;
 import com.redis.spring.batch.item.PollableItemReader;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.Range;
-import com.redis.spring.batch.item.redis.common.RedisOperation;
-import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
-import com.redis.spring.batch.item.redis.gen.ItemType;
-import com.redis.spring.batch.item.redis.gen.StreamOptions;
+import com.redis.batch.BatchUtils;
+import com.redis.batch.KeyValue;
+import com.redis.batch.Range;
+import com.redis.batch.RedisOperation;
+import com.redis.spring.batch.item.redis.GeneratorItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader;
 import com.redis.spring.batch.step.FlushingStepBuilder;
@@ -194,12 +195,13 @@ public abstract class AbstractTestBase {
     }
 
     protected GeneratorItemReader generator(int count, ItemType... types) {
-        GeneratorItemReader gen = new GeneratorItemReader();
-        gen.setMaxItemCount(count);
+        Generator gen = new Generator();
         if (!ObjectUtils.isEmpty(types)) {
             gen.setTypes(types);
         }
-        return gen;
+        GeneratorItemReader reader = new GeneratorItemReader(gen);
+        reader.setMaxItemCount(count);
+        return reader;
     }
 
     protected int keyCount(String pattern) {
@@ -369,7 +371,7 @@ public abstract class AbstractTestBase {
         GeneratorItemReader gen = generator(streamCount, ItemType.STREAM);
         StreamOptions streamOptions = new StreamOptions();
         streamOptions.setMessageCount(new Range(messageCount, messageCount));
-        gen.setStreamOptions(streamOptions);
+        gen.getGenerator().setStreamOptions(streamOptions);
         generate(info, gen);
     }
 

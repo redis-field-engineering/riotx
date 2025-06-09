@@ -2,7 +2,7 @@ package com.redis.riot.operation;
 
 import java.util.Map;
 
-import com.redis.spring.batch.item.redis.writer.impl.Del;
+import com.redis.batch.operation.Del;
 
 import picocli.CommandLine.Command;
 

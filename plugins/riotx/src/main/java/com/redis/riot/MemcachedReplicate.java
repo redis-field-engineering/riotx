@@ -2,20 +2,34 @@ package com.redis.riot;
 
 import com.redis.riot.core.InetSocketAddressList;
 import com.redis.riot.core.MemcachedContext;
+import com.redis.riot.core.RedisMemcachedContext;
 import com.redis.riot.core.job.RiotStep;
+import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.batch.KeyValue;
+import com.redis.batch.operation.KeyValueWrite;
 import com.redis.spring.batch.memcached.MemcachedEntry;
 import com.redis.spring.batch.memcached.MemcachedItemReader;
 import com.redis.spring.batch.memcached.MemcachedItemWriter;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.codec.ByteArrayCodec;
+import io.lettuce.core.codec.RedisCodec;
+import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
+import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+import java.net.InetSocketAddress;
 import java.security.GeneralSecurityException;
-import java.util.concurrent.TimeoutException;
+import java.util.Collections;
 
 @Command(name = "memcached-replicate", description = "Replicate a Memcached database into another Memcached database.")
 public class MemcachedReplicate extends AbstractJobCommand {
+
+    public enum ServerType {
+        REDIS, MEMCACHED
+    }
 
     private static final String TASK_NAME = "Replicating";
 
@@ -27,27 +41,27 @@ public class MemcachedReplicate extends AbstractJobCommand {
     @Option(names = "--source-tls", description = "Establish a secure TLS connection to source server(s).")
     private boolean sourceTls;
 
-    @Option(names = "--source-tls-host", description = "Hostname for source TLS verification.")
+    @Option(names = "--source-tls-host", description = "Hostname for source TLS verification.", paramLabel = "<host>")
     private String sourceTlsHostname;
 
     @Option(names = "--source-insecure", description = "Skip hostname verification for source server.")
     private boolean sourceInsecure;
 
-    @Parameters(arity = "1", index = "1", description = "Target server address(es) in the form host:port.", paramLabel = "TARGET")
-    private InetSocketAddressList targetAddressList;
+    @Option(names = "--target-type", defaultValue = "${RIOT_TARGET_TYPE:-MEMCACHED}", description = "Target type: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<type>")
+    private ServerType targetType = ServerType.MEMCACHED;
 
-    @Option(names = "--target-tls", description = "Establish a secure TLS connection to target server(s).")
-    private boolean targetTls;
+    @Parameters(arity = "1", index = "1", defaultValue = "${RIOT_TARGET}", description = "Target server URI or host:port.", paramLabel = "TARGET")
+    private RedisURI targetUri;
 
-    @Option(names = "--target-tls-host", description = "Hostname for target TLS verification.")
+    @CommandLine.ArgGroup(exclusive = false)
+    private TargetRedisArgs targetArgs = new TargetRedisArgs();
+
+    @Option(names = "--target-tls-host", description = "Hostname for target TLS verification.", paramLabel = "<host>")
     private String targetTlsHostname;
 
-    @Option(names = "--target-insecure", description = "Skip hostname verification for target server.")
-    private boolean targetInsecure;
+    private MemcachedContext sourceContext;
 
-    private MemcachedContext sourceMemcachedContext;
-
-    private MemcachedContext targetMemcachedContext;
+    private RedisMemcachedContext targetContext;
 
     @Override
     protected String taskName(RiotStep<?, ?> step) {
@@ -57,11 +71,23 @@ public class MemcachedReplicate extends AbstractJobCommand {
     @Override
     protected void initialize() throws Exception {
         super.initialize();
-        sourceMemcachedContext = sourceMemcachedContext();
-        targetMemcachedContext = targetMemcachedContext();
+        sourceContext = sourceContext();
+        targetContext = targetContext();
     }
 
-    private MemcachedContext sourceMemcachedContext() throws GeneralSecurityException {
+    private RedisMemcachedContext targetContext() throws Exception {
+        if (targetType == ServerType.MEMCACHED) {
+            InetSocketAddress address = new InetSocketAddress(targetUri.getHost(), targetUri.getPort());
+            MemcachedContext context = new MemcachedContext(Collections.singletonList(address));
+            context.setTls(targetArgs.isTls());
+            context.setSkipTlsHostnameVerification(targetArgs.isInsecure());
+            context.setHostnameForTlsVerification(targetTlsHostname);
+            return RedisMemcachedContext.of(context);
+        }
+        return RedisMemcachedContext.of(targetArgs.redisContext(targetUri));
+    }
+
+    private MemcachedContext sourceContext() throws GeneralSecurityException {
         MemcachedContext context = new MemcachedContext(sourceAddressList.getAddresses());
         context.setTls(sourceTls);
         context.setSkipTlsHostnameVerification(sourceInsecure);
@@ -69,22 +95,30 @@ public class MemcachedReplicate extends AbstractJobCommand {
         return context;
     }
 
-    private MemcachedContext targetMemcachedContext() throws GeneralSecurityException {
-        MemcachedContext context = new MemcachedContext(targetAddressList.getAddresses());
-        context.setTls(targetTls);
-        context.setSkipTlsHostnameVerification(targetInsecure);
-        context.setHostnameForTlsVerification(targetTlsHostname);
-        return context;
-    }
-
     @Override
     protected Job job() throws Exception {
-        MemcachedItemReader reader = new MemcachedItemReader(sourceMemcachedContext::safeMemcachedClient);
-        MemcachedItemWriter writer = new MemcachedItemWriter(targetMemcachedContext::safeMemcachedClient);
-        RiotStep<MemcachedEntry, MemcachedEntry> step = step(STEP_NAME, reader, writer);
-        step.noSkip(TimeoutException.class);
-        step.retry(TimeoutException.class);
-        return job(step);
+        return job(step());
+    }
+
+    private RiotStep<MemcachedEntry, ?> step() {
+        MemcachedItemReader reader = new MemcachedItemReader(sourceContext::safeMemcachedClient);
+        if (targetType == ServerType.MEMCACHED) {
+            MemcachedItemWriter writer = new MemcachedItemWriter(targetContext.getMemcachedContext()::safeMemcachedClient);
+            return step(STEP_NAME, reader, writer);
+        }
+        RedisItemWriter<String, byte[], KeyValue<String>> writer = new RedisItemWriter<>(
+                RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE), new KeyValueWrite<>());
+        RiotStep<MemcachedEntry, KeyValue<String>> step = step(STEP_NAME, reader, writer);
+        step.setItemProcessor(this::keyValue);
+        return step;
+    }
+
+    private KeyValue<String> keyValue(MemcachedEntry entry) {
+        KeyValue<String> kv = new KeyValue<>();
+        kv.setKey(entry.getKey());
+        kv.setValue(entry.getValue());
+        kv.setTtl(entry.getExpiration());
+        return kv;
     }
 
     public InetSocketAddressList getSourceAddressList() {
@@ -101,22 +135,6 @@ public class MemcachedReplicate extends AbstractJobCommand {
 
     public void setSourceTls(boolean sourceTls) {
         this.sourceTls = sourceTls;
-    }
-
-    public InetSocketAddressList getTargetAddressList() {
-        return targetAddressList;
-    }
-
-    public void setTargetAddressList(InetSocketAddressList targetAddressList) {
-        this.targetAddressList = targetAddressList;
-    }
-
-    public boolean isTargetTls() {
-        return targetTls;
-    }
-
-    public void setTargetTls(boolean targetTls) {
-        this.targetTls = targetTls;
     }
 
     public String getSourceTlsHostname() {
@@ -143,12 +161,28 @@ public class MemcachedReplicate extends AbstractJobCommand {
         this.targetTlsHostname = targetTlsHostname;
     }
 
-    public boolean isTargetInsecure() {
-        return targetInsecure;
+    public ServerType getTargetType() {
+        return targetType;
     }
 
-    public void setTargetInsecure(boolean targetInsecure) {
-        this.targetInsecure = targetInsecure;
+    public void setTargetType(ServerType targetType) {
+        this.targetType = targetType;
+    }
+
+    public RedisURI getTargetUri() {
+        return targetUri;
+    }
+
+    public void setTargetUri(RedisURI targetUri) {
+        this.targetUri = targetUri;
+    }
+
+    public TargetRedisArgs getTargetArgs() {
+        return targetArgs;
+    }
+
+    public void setTargetArgs(TargetRedisArgs targetArgs) {
+        this.targetArgs = targetArgs;
     }
 
 }

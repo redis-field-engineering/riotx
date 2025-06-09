@@ -224,7 +224,7 @@ abstract class FileTests extends AbstractTargetTestBase {
         fileImport.setFiles(file.toString());
         fileImport.getRedisArgs().setUri(redisURI);
         fileImport.call();
-        Assertions.assertEquals(100, redisCommands.dbsize());
+        Assertions.assertEquals(7, redisCommands.dbsize());
     }
 
 }

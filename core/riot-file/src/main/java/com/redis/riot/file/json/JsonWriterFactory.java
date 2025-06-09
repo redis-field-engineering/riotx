@@ -24,7 +24,8 @@ public class JsonWriterFactory extends AbstractWriterFactory {
         writer.shouldDeleteIfEmpty(options.isShouldDeleteIfEmpty());
         writer.shouldDeleteIfExists(options.isShouldDeleteIfExists());
         writer.transactional(options.isTransactional());
-        writer.jsonObjectMarshaller(new JacksonJsonObjectMarshaller<>(objectMapper(new ObjectMapper())));
+        ObjectMapper objectMapper = objectMapper(new ObjectMapper(), options);
+        writer.jsonObjectMarshaller(new JacksonJsonObjectMarshaller<>(objectMapper));
         return writer.build();
     }
 

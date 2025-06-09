@@ -1,7 +1,7 @@
 package com.redis.riot.core;
 
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.writer.impl.Xadd;
+import com.redis.batch.operation.Xadd;
 import com.redis.spring.batch.test.AbstractTestBase;
 import com.redis.spring.batch.test.RedisContainerFactory;
 import com.redis.testcontainers.RedisServer;

@@ -1,7 +1,7 @@
 package com.redis.spring.batch.item.redis.reader;
 
 import com.redis.spring.batch.item.AbstractCountingItemReader;
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.KeyValue;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemStreamException;

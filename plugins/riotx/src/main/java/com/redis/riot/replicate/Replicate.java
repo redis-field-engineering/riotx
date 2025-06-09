@@ -12,16 +12,16 @@ import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.job.StepFlowFactoryBean;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.common.KeyValue;
-import com.redis.spring.batch.item.redis.common.RedisInfo;
-import com.redis.spring.batch.item.redis.common.RedisOperation;
+import com.redis.batch.KeyValue;
+import com.redis.batch.RedisInfo;
+import com.redis.batch.RedisOperation;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
-import com.redis.spring.batch.item.redis.reader.KeyValueRead;
+import com.redis.batch.operation.KeyValueRead;
 import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-import com.redis.spring.batch.item.redis.writer.KeyValueRestore;
-import com.redis.spring.batch.item.redis.writer.KeyValueWrite;
-import com.redis.spring.batch.item.redis.writer.impl.Del;
+import com.redis.batch.operation.KeyValueRestore;
+import com.redis.batch.operation.KeyValueWrite;
+import com.redis.batch.operation.Del;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.support.CompositeItemWriter;
@@ -35,15 +35,9 @@ import java.util.Arrays;
 @Command(name = "replicate", aliases = "sync", description = "Replicate a Redis database into another Redis database.")
 public class Replicate extends AbstractCompareCommand {
 
-    public enum Type {
-        STRUCT, DUMP
-    }
-
     private static final String SCAN_STEP = "scanStep";
 
     private static final String LIVE_STEP = "liveStep";
-
-    public static final Type DEFAULT_TYPE = Type.DUMP;
 
     public static final CompareMode DEFAULT_COMPARE_MODE = CompareMode.QUICK;
 
@@ -68,16 +62,16 @@ public class Replicate extends AbstractCompareCommand {
     @Option(names = "--compare", defaultValue = "${RIOT_COMPARE:-QUICK}", description = "Compare mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private CompareMode compareMode = DEFAULT_COMPARE_MODE;
 
-    @Override
-    protected boolean isQuickCompare() {
-        return compareMode == CompareMode.QUICK;
-    }
-
     @ArgGroup(exclusive = false, heading = "Metrics options%n")
     private MetricsArgs metricsArgs = new MetricsArgs();
 
     @Option(names = "--remove-source-keys", defaultValue = "${RIOT_REMOVE_SOURCE_KEYS}", description = "Delete keys from source after they have been successfully replicated.")
     private boolean removeSourceKeys;
+
+    @Override
+    protected boolean isQuickCompare() {
+        return compareMode == CompareMode.QUICK;
+    }
 
     @Override
     protected Job job() throws Exception {

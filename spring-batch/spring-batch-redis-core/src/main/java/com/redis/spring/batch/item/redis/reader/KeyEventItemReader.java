@@ -1,10 +1,10 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import com.redis.spring.batch.BatchRedisMetrics;
+import com.redis.batch.KeyEvent;
 import com.redis.spring.batch.UniqueBlockingQueue;
 import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.spring.batch.item.PollableItemReader;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
+import com.redis.batch.BatchUtils;
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.codec.RedisCodec;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -15,7 +15,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.batch.core.observability.BatchMetrics;
 import org.springframework.data.util.Predicates;
-import org.springframework.util.ClassUtils;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -55,7 +54,7 @@ public class KeyEventItemReader<K, V> extends AbstractCountingItemReader<KeyEven
         if (queue == null) {
             log.info(String.format("Creating queue with capacity %,d", queueCapacity));
             queue = new UniqueBlockingQueue<>(queueCapacity);
-            BatchRedisMetrics.gaugeQueue(meterRegistry, METRIC_NAME + ".queue", queue, nameTag());
+            BatchUtils.gaugeQueue(meterRegistry, METRIC_NAME + ".queue", queue, nameTag());
         }
         if (!listenerContainer.isRunning()) {
             listenerContainer.receive(database, keyPattern, this::onKeyEvent);
@@ -72,7 +71,7 @@ public class KeyEventItemReader<K, V> extends AbstractCountingItemReader<KeyEven
             boolean added = queue.offer(keyEvent);
             String status = added ? BatchMetrics.STATUS_SUCCESS : BatchMetrics.STATUS_FAILURE;
             Tags tags = BatchUtils.tags(keyEvent, status).and(nameTag());
-            BatchRedisMetrics.createCounter(meterRegistry, METRIC_NAME, COUNTER_DESCRIPTION, tags).increment();
+            BatchUtils.createCounter(meterRegistry, METRIC_NAME, COUNTER_DESCRIPTION, tags).increment();
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Key event key=%s event=%s type=%s: %s", BatchUtils.toString(keyEvent.getKey()),
                         keyEvent.getEvent(), keyEvent.getType(), status));

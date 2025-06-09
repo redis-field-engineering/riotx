@@ -23,7 +23,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.WritableResource;
 import org.springframework.util.Assert;
 
-import com.redis.spring.batch.common.CountingOutputStream;
+import com.redis.batch.CountingOutputStream;
 
 public class ParquetFileItemWriter extends AbstractItemStreamItemWriter<Map<String, Object>>
 		implements ResourceAwareItemWriterItemStream<Map<String, Object>>, InitializingBean {

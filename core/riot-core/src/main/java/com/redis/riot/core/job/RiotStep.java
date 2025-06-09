@@ -5,8 +5,8 @@ import com.redis.riot.core.NoopItemWriter;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.ThrottledItemWriter;
 import com.redis.spring.batch.item.PollableItemReader;
-import com.redis.spring.batch.item.redis.common.BatchUtils;
-import com.redis.spring.batch.item.redis.common.RedisOOMException;
+import com.redis.batch.BatchUtils;
+import com.redis.batch.RedisOOMException;
 import com.redis.spring.batch.step.FlushingFaultTolerantStepFactoryBean;
 import com.redis.spring.batch.step.FlushingStepFactoryBean;
 import io.lettuce.core.RedisBusyException;
@@ -38,6 +38,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import java.text.ParseException;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 
 public class RiotStep<T, S> implements FactoryBean<Step> {
 
@@ -165,8 +166,8 @@ public class RiotStep<T, S> implements FactoryBean<Step> {
     }
 
     public static Set<Class<? extends Throwable>> defaultRetriableExceptions() {
-        return BatchUtils.asSet(RedisCommandTimeoutException.class, RedisLoadingException.class, RedisBusyException.class,
-                RedisOOMException.class, BackpressureException.class);
+        return BatchUtils.asSet(TimeoutException.class, RedisCommandTimeoutException.class, RedisLoadingException.class,
+                RedisBusyException.class, RedisOOMException.class, BackpressureException.class);
     }
 
     public static Set<Class<? extends Throwable>> defaultNonRetriableExceptions() {

@@ -1,5 +1,6 @@
 package com.redis.riot;
 
+import com.redis.batch.gen.Generator;
 import com.redis.riot.core.*;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.db.DatabaseObject;
@@ -11,8 +12,8 @@ import com.redis.riot.rdi.ChangeEventValue;
 import com.redis.riot.rdi.RdiOffsetStore;
 import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.gen.GeneratorItemReader;
-import com.redis.spring.batch.item.redis.writer.impl.Xadd;
+import com.redis.spring.batch.item.redis.GeneratorItemReader;
+import com.redis.batch.operation.Xadd;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
@@ -260,7 +261,7 @@ public class SnowflakeImport extends AbstractRedisImport {
         private Map<String, Object> generateColumns() {
             Map<String, Object> columns = new HashMap<>();
             for (String columnName : columnNames) {
-                columns.put(columnName, GeneratorItemReader.string(columnWidth));
+                columns.put(columnName, Generator.string(columnWidth));
             }
             return columns;
         }

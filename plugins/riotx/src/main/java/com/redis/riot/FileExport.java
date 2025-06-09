@@ -1,12 +1,16 @@
 package com.redis.riot;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.redis.batch.KeyValueSerializer;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.file.*;
 import com.redis.riot.parquet.ParquetFieldType;
 import com.redis.riot.parquet.ParquetFileItemWriter;
 import com.redis.riot.parquet.ParquetFileNameMap;
-import com.redis.spring.batch.item.redis.common.KeyValue;
+import com.redis.batch.KeyValue;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
@@ -77,10 +81,18 @@ public class FileExport extends AbstractRedisExport {
     }
 
     private WriteOptions writeOptions() {
-        WriteOptions writeOptions = fileWriterArgs.fileWriterOptions();
-        writeOptions.setContentType(getFileType());
-        writeOptions.setHeaderSupplier(this::headerRecord);
-        return writeOptions;
+        WriteOptions options = fileWriterArgs.fileWriterOptions();
+        options.setContentType(getFileType());
+        options.setHeaderSupplier(this::headerRecord);
+        options.addObjectMapperConfigurer(this::configure);
+        return options;
+    }
+
+    private void configure(ObjectMapper mapper) {
+        SimpleModule module = new SimpleModule();
+        module.addSerializer(KeyValue.class, new KeyValueSerializer());
+        mapper.registerModule(module);
+        mapper.registerModule(new JavaTimeModule());
     }
 
     @Override

@@ -2,7 +2,7 @@ package com.redis.riot;
 
 import org.springframework.util.StringUtils;
 
-import com.redis.spring.batch.item.redis.common.Range;
+import com.redis.batch.Range;
 
 import picocli.CommandLine.ITypeConverter;
 
