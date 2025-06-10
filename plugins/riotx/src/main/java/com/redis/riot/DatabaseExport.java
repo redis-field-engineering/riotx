@@ -1,9 +1,9 @@
 package com.redis.riot;
 
-import com.redis.riot.core.RiotUtils;
 import com.redis.batch.KeyValue;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
+import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.job.RiotStep;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
@@ -11,7 +11,7 @@ import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilde
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import picocli.CommandLine.ArgGroup;
+import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -25,7 +25,7 @@ public class DatabaseExport extends AbstractRedisExport {
 
     private static final String STEP_NAME = "db-export-step";
 
-    @ArgGroup(exclusive = false)
+    @CommandLine.ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
 
     @Parameters(arity = "1", description = "SQL INSERT statement.", paramLabel = "SQL")

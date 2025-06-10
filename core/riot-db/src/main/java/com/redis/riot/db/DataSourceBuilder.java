@@ -3,6 +3,7 @@ package com.redis.riot.db;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.boot.jdbc.DatabaseDriver;
+import org.springframework.jdbc.datasource.lookup.DataSourceLookupFailureException;
 import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
@@ -187,7 +188,11 @@ public class DataSourceBuilder {
         if (StringUtils.hasLength(driver)) {
             return driver;
         }
-        return DatabaseDriver.fromJdbcUrl(url).getDriverClassName();
+        DatabaseDriver databaseDriver = DatabaseDriver.fromJdbcUrl(url);
+        if (databaseDriver == DatabaseDriver.UNKNOWN) {
+            throw new DataSourceLookupFailureException("Could not determine database driver from JDBC URL: " + url);
+        }
+        return databaseDriver.getDriverClassName();
     }
 
     public Integer maximumPoolSize() {
