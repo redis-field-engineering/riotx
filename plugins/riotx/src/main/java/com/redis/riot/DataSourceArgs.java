@@ -2,6 +2,7 @@ package com.redis.riot;
 
 import com.redis.riot.db.DataSourceBuilder;
 import lombok.ToString;
+import org.springframework.util.Assert;
 import picocli.CommandLine.Option;
 
 import java.time.Duration;
@@ -14,10 +15,10 @@ public class DataSourceArgs {
     @Option(names = "--jdbc-driver", description = "Fully qualified name of the JDBC driver (e.g. oracle.jdbc.OracleDriver).", paramLabel = "<class>")
     private Class<?> driver;
 
-    @Option(names = "--jdbc-url", required = true, description = "JDBC URL to connect to the database.", paramLabel = "<string>")
+    @Option(names = "--jdbc-url", description = "JDBC URL to connect to the database.", paramLabel = "<url>")
     private String url;
 
-    @Option(names = "--jdbc-user", description = "Login username of the database.", paramLabel = "<string>")
+    @Option(names = "--jdbc-user", description = "Login username of the database.", paramLabel = "<user>")
     private String username;
 
     @Option(names = "--jdbc-pass", arity = "0..1", interactive = true, description = "Login password of the database.", paramLabel = "<pwd>")
@@ -26,7 +27,7 @@ public class DataSourceArgs {
     @Option(names = "--jdbc-property", description = "Additional JDBC property (key=value).", paramLabel = "<prop>")
     private Map<String, String> properties = new HashMap<>();
 
-    @Option(names = "--jdbc-pool", description = "Maximum number of connections in the pool.", paramLabel = "<int>")
+    @Option(names = "--jdbc-pool", description = "Maximum number of connections in the pool.", paramLabel = "<size >")
     private Integer maxPoolSize;
 
     @Option(names = "--jdbc-min-idle", description = "Minimum number of idle connections in the pool.", hidden = true)
@@ -57,6 +58,7 @@ public class DataSourceArgs {
     private String poolName;
 
     public DataSourceBuilder dataSourceBuilder() {
+        Assert.hasLength(url, "JDBC URL is required");
         DataSourceBuilder builder = new DataSourceBuilder();
         builder.driver(driver == null ? null : driver.getName());
         builder.url(url);
