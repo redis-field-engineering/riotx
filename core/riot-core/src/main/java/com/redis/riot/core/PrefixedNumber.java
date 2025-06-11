@@ -1,5 +1,7 @@
 package com.redis.riot.core;
 
+import org.springframework.util.StringUtils;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -136,12 +138,11 @@ public final class PrefixedNumber implements Comparable<PrefixedNumber> {
      * @return the parsed {@code PrefixedNumber}
      */
     public static PrefixedNumber parse(CharSequence text, NumberPrefix defaultPrefix) {
-        if (text == null) {
-            throw new IllegalArgumentException("Text must not be null");
+        if (!StringUtils.hasText(text)) {
+            return null;
         }
-
+        String trimmedText = text.toString().trim();
         try {
-            String trimmedText = text.toString().trim();
             Matcher matcher = PATTERN.matcher(trimmedText);
 
             if (!matcher.matches()) {

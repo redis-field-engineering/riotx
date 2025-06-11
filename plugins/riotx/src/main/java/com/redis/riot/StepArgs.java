@@ -18,7 +18,7 @@ public class StepArgs implements StepConfigurer {
     private int chunkSize = RiotStep.DEFAULT_COMMIT_INTERVAL;
 
     @CommandLine.Option(names = "--rate", defaultValue = "${RIOT_RATE}", description = "Limit number of items written per second, for example 100 or 5k (default: no limit).", paramLabel = "<int>")
-    private PrefixedNumber writesPerSecond = new PrefixedNumber();
+    private PrefixedNumber writesPerSecond;
 
     @CommandLine.Option(names = "--dry-run", defaultValue = "${RIOT_DRY_RUN}", description = "Enable dummy writes.")
     private boolean dryRun;
@@ -35,7 +35,9 @@ public class StepArgs implements StepConfigurer {
     @Override
     public void configure(RiotStep<?, ?> step) {
         step.setDryRun(dryRun);
-        step.setWritesPerSecond(writesPerSecond.intValue());
+        if (writesPerSecond != null) {
+            step.setWritesPerSecond(writesPerSecond.intValue());
+        }
         step.setThreads(threads);
         step.setCommitInterval(chunkSize);
         step.setRetryLimit(retryLimit);
