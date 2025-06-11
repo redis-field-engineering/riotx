@@ -10,7 +10,7 @@ import picocli.CommandLine.Command;
 public class DelCommand extends AbstractOperationCommand {
 
 	@Override
-	public Del<String, String, Map<String, Object>> operation() {
+	public Del<byte[], byte[], Map<String, Object>> operation() {
 		return new Del<>(keyFunction());
 	}
 

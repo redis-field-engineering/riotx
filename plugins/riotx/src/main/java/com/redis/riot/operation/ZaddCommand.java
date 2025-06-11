@@ -19,13 +19,13 @@ public class ZaddCommand extends AbstractMemberOperationCommand {
     private ScoreArgs scoreArgs = new ScoreArgs();
 
     @Override
-    public Zadd<String, String, Map<String, Object>> operation() {
+    public Zadd<byte[], byte[], Map<String, Object>> operation() {
         return new Zadd<>(keyFunction(), t -> scoredValues(memberFunction(), score(scoreArgs), t));
     }
 
-    private Collection<ScoredValue<String>> scoredValues(Function<Map<String, Object>, Collection<String>> member,
+    private Collection<ScoredValue<byte[]>> scoredValues(Function<Map<String, Object>, Collection<byte[]>> member,
             ToDoubleFunction<Map<String, Object>> score, Map<String, Object> source) {
-        Collection<String> ids = member.apply(source);
+        Collection<byte[]> ids = member.apply(source);
         return ids.stream().map(m -> ScoredValue.just(score.applyAsDouble(source), m)).collect(Collectors.toList());
     }
 

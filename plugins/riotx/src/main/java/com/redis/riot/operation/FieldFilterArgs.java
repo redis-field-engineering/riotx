@@ -1,20 +1,16 @@
 package com.redis.riot.operation;
 
+import com.redis.batch.BatchUtils;
+import com.redis.riot.core.function.MapFilteringFunction;
+import com.redis.riot.core.function.MapFlatteningFunction;
+import lombok.ToString;
+import org.springframework.util.ObjectUtils;
+import picocli.CommandLine.Option;
+
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-
-import org.springframework.util.ObjectUtils;
-
-import com.redis.riot.core.function.MapFilteringFunction;
-import com.redis.riot.core.function.MapFlatteningFunction;
-import com.redis.riot.core.function.ObjectToStringFunction;
-
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisURI;
-import io.lettuce.core.api.StatefulRedisConnection;
-import lombok.ToString;
-import picocli.CommandLine.Option;
 
 @ToString
 public class FieldFilterArgs {
@@ -25,20 +21,25 @@ public class FieldFilterArgs {
     @Option(arity = "1..*", names = "--exclude", description = "Fields to exclude.", paramLabel = "<field>")
     private List<String> excludeFields;
 
-    public Function<Map<String, Object>, Map<String, String>> mapFunction() {
-        Function<Map<String, Object>, Map<String, String>> mapFlattener = new MapFlatteningFunction<>(
-                new ObjectToStringFunction());
+    public Function<Map<String, Object>, Map<byte[], byte[]>> mapFunction() {
+        Function<Map<String, Object>, Map<String, byte[]>> mapFlattener = new MapFlatteningFunction();
         if (ObjectUtils.isEmpty(includeFields) && ObjectUtils.isEmpty(excludeFields)) {
-            return mapFlattener;
+            return mapFlattener.andThen(this::toByteArrayMap);
         }
-        MapFilteringFunction filtering = new MapFilteringFunction();
+        MapFilteringFunction<byte[]> filtering = new MapFilteringFunction<>();
         if (!ObjectUtils.isEmpty(includeFields)) {
             filtering.includes(includeFields);
         }
         if (!ObjectUtils.isEmpty(excludeFields)) {
             filtering.excludes(excludeFields);
         }
-        return mapFlattener.andThen(filtering);
+        return mapFlattener.andThen(filtering).andThen(this::toByteArrayMap);
+    }
+
+    private Map<byte[], byte[]> toByteArrayMap(Map<String, byte[]> map) {
+        Map<byte[], byte[]> result = new LinkedHashMap<>();
+        map.forEach((k, v) -> result.put(BatchUtils.STRING_KEY_TO_BYTES.apply(k), v));
+        return result;
     }
 
     public List<String> getExcludeFields() {

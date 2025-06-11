@@ -1,5 +1,6 @@
 package com.redis.riot.operation;
 
+import com.redis.batch.BatchUtils;
 import com.redis.riot.BaseCommand;
 import com.redis.riot.core.TemplateExpression;
 import com.redis.riot.core.function.FieldExtractorFactory;
@@ -56,7 +57,11 @@ public abstract class AbstractOperationCommand extends BaseCommand implements Op
         return new IdFunctionBuilder().separator(keySeparator).remove(removeFields).prefix(prefix).fields(fields).build();
     }
 
-    protected Function<Map<String, Object>, String> keyFunction() {
+    protected Function<Map<String, Object>, byte[]> keyFunction() {
+        return stringKeyFunction().andThen(BatchUtils.STRING_KEY_TO_BYTES);
+    }
+
+    private Function<Map<String, Object>, String> stringKeyFunction() {
         if (key == null) {
             return idFunction(keyspace, keyFields);
         }

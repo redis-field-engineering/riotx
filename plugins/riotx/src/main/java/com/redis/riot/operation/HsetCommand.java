@@ -10,20 +10,20 @@ import picocli.CommandLine.Command;
 @Command(name = "hset", description = "Set hashes from input")
 public class HsetCommand extends AbstractOperationCommand {
 
-	@ArgGroup(exclusive = false)
-	private FieldFilterArgs fieldFilterArgs = new FieldFilterArgs();
+    @ArgGroup(exclusive = false)
+    private FieldFilterArgs fieldFilterArgs = new FieldFilterArgs();
 
-	@Override
-	public Hset<String, String, Map<String, Object>> operation() {
-		return new Hset<>(keyFunction(), fieldFilterArgs.mapFunction());
-	}
+    @Override
+    public Hset<byte[], byte[], Map<String, Object>> operation() {
+        return new Hset<>(keyFunction(), fieldFilterArgs.mapFunction());
+    }
 
-	public FieldFilterArgs getFieldFilterArgs() {
-		return fieldFilterArgs;
-	}
+    public FieldFilterArgs getFieldFilterArgs() {
+        return fieldFilterArgs;
+    }
 
-	public void setFieldFilterArgs(FieldFilterArgs filteringArgs) {
-		this.fieldFilterArgs = filteringArgs;
-	}
+    public void setFieldFilterArgs(FieldFilterArgs filteringArgs) {
+        this.fieldFilterArgs = filteringArgs;
+    }
 
 }

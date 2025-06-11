@@ -9,6 +9,6 @@ public interface OperationCommand {
 
     void setEvaluationContext(EvaluationContext context);
 
-    RedisOperation<String, String, Map<String, Object>, Object> operation();
+    RedisOperation<byte[], byte[], Map<String, Object>, Object> operation();
 
 }

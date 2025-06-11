@@ -10,6 +10,7 @@ import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.batch.operation.MultiOperation;
 import com.redis.batch.RedisOperation;
 import com.redis.riot.core.job.RiotStep;
+import io.lettuce.core.codec.ByteArrayCodec;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.expression.EvaluationContext;
@@ -76,11 +77,11 @@ public abstract class AbstractImport extends AbstractJobCommand {
         super.teardown();
     }
 
-    protected List<RedisOperation<String, String, Map<String, Object>, Object>> operations() {
+    protected List<RedisOperation<byte[], byte[], Map<String, Object>, Object>> operations() {
         return importOperationCommands.stream().map(this::operation).collect(Collectors.toList());
     }
 
-    private RedisOperation<String, String, Map<String, Object>, Object> operation(OperationCommand command) {
+    private RedisOperation<byte[], byte[], Map<String, Object>, Object> operation(OperationCommand command) {
         command.setEvaluationContext(evaluationContext);
         return command.operation();
     }
@@ -107,8 +108,8 @@ public abstract class AbstractImport extends AbstractJobCommand {
         return RiotUtils.processor(processors);
     }
 
-    protected RedisItemWriter<String, String, Map<String, Object>> operationWriter() {
-        RedisItemWriter<String, String, Map<String, Object>> writer = RedisItemWriter.operation(
+    protected RedisItemWriter<byte[], byte[], Map<String, Object>> operationWriter() {
+        RedisItemWriter<byte[], byte[], Map<String, Object>> writer = new RedisItemWriter<>(ByteArrayCodec.INSTANCE,
                 new MultiOperation<>(operations()));
         configureTarget(writer);
         return writer;

@@ -3,6 +3,7 @@ package com.redis.riot.operation;
 import java.util.Map;
 import java.util.function.Function;
 
+import com.redis.batch.BatchUtils;
 import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -34,8 +35,8 @@ public class SetCommand extends AbstractOperationCommand {
     private String root;
 
     @Override
-    public Set<String, String, Map<String, Object>> operation() {
-        return new Set<>(keyFunction(), value());
+    public Set<byte[], byte[], Map<String, Object>> operation() {
+        return new Set<>(keyFunction(), value().andThen(BatchUtils.STRING_KEY_TO_BYTES));
     }
 
     private Function<Map<String, Object>, String> value() {

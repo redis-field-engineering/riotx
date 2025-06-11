@@ -10,7 +10,7 @@ import picocli.CommandLine.Command;
 public class RpushCommand extends AbstractMemberOperationCommand {
 
 	@Override
-	public Rpush<String, String, Map<String, Object>> operation() {
+	public Rpush<byte[], byte[], Map<String, Object>> operation() {
 		return new Rpush<>(keyFunction(), memberFunction());
 	}
 

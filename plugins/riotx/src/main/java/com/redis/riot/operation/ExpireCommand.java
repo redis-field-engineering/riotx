@@ -1,5 +1,6 @@
 package com.redis.riot.operation;
 
+import com.redis.batch.RedisOperation;
 import com.redis.batch.operation.AbstractWriteOperation;
 import com.redis.batch.operation.Expire;
 import com.redis.batch.operation.ExpireAt;
@@ -17,9 +18,9 @@ public class ExpireCommand extends AbstractOperationCommand {
     private ExpireTtlArgs ttlArgs = new ExpireTtlArgs();
 
     @Override
-    public AbstractWriteOperation<String, String, Map<String, Object>> operation() {
+    public RedisOperation<byte[], byte[], Map<String, Object>, Object> operation() {
         if (ttlArgs.getTimeField() != null || ttlArgs.getTime() != null) {
-            ExpireAt<String, String, Map<String, Object>> operation = new ExpireAt<>(keyFunction());
+            ExpireAt<byte[], byte[], Map<String, Object>> operation = new ExpireAt<>(keyFunction());
             if (ttlArgs.getTime() == null) {
                 ToLongFunction<Map<String, Object>> longFunction = toLong(ttlArgs.getTimeField());
                 operation.setTimestampFunction(t -> Instant.ofEpochMilli(longFunction.applyAsLong(t)));
@@ -28,7 +29,7 @@ public class ExpireCommand extends AbstractOperationCommand {
             }
             return operation;
         }
-        Expire<String, String, Map<String, Object>> operation = new Expire<>(keyFunction());
+        Expire<byte[], byte[], Map<String, Object>> operation = new Expire<>(keyFunction());
         if (ttlArgs.getTtl() == null) {
             operation.setTtlFunction(toLong(ttlArgs.getTtlField()));
         } else {

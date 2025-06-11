@@ -3,6 +3,7 @@ package com.redis.riot.operation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.redis.batch.BatchUtils;
 import com.redis.batch.operation.JsonSet;
 import io.lettuce.core.json.JsonPath;
 import org.springframework.batch.item.ItemStreamException;
@@ -31,8 +32,9 @@ public class JsonSetCommand extends AbstractOperationCommand {
     private String valueField;
 
     @Override
-    public JsonSet<String, String, Map<String, Object>> operation() {
-        JsonSet<String, String, Map<String, Object>> operation = new JsonSet<>(keyFunction(), valueFunction());
+    public JsonSet<byte[], byte[], Map<String, Object>> operation() {
+        JsonSet<byte[], byte[], Map<String, Object>> operation = new JsonSet<>(keyFunction(),
+                valueFunction().andThen(BatchUtils.STRING_KEY_TO_BYTES));
         if (pathField == null) {
             operation.setPath(path);
         } else {

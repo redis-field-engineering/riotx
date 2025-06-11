@@ -10,7 +10,7 @@ import picocli.CommandLine.Command;
 public class LpushCommand extends AbstractMemberOperationCommand {
 
 	@Override
-	public Lpush<String, String, Map<String, Object>> operation() {
+	public Lpush<byte[], byte[], Map<String, Object>> operation() {
 		return new Lpush<>(keyFunction(), memberFunction());
 	}
 

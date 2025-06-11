@@ -1,5 +1,6 @@
 package com.redis.riot.operation;
 
+import com.redis.batch.BatchUtils;
 import com.redis.lettucemod.search.Suggestion;
 import com.redis.riot.core.TemplateExpression;
 import com.redis.batch.operation.Sugadd;
@@ -27,22 +28,22 @@ public class SugaddCommand extends AbstractOperationCommand {
     private ScoreArgs scoreArgs = new ScoreArgs();
 
     @Override
-    public Sugadd<String, String, Map<String, Object>> operation() {
-        Sugadd<String, String, Map<String, Object>> operation = new Sugadd<>(keyFunction(), suggestion());
+    public Sugadd<byte[], byte[], Map<String, Object>> operation() {
+        Sugadd<byte[], byte[], Map<String, Object>> operation = new Sugadd<>(keyFunction(), suggestion());
         operation.setIncr(increment);
         return operation;
     }
 
-    private Function<Map<String, Object>, Suggestion<String>> suggestion() {
+    private Function<Map<String, Object>, Suggestion<byte[]>> suggestion() {
         ToDoubleFunction<Map<String, Object>> score = score(scoreArgs);
         return t -> suggestion(evaluate(string, t), score.applyAsDouble(t), evaluate(payload, t));
     }
 
-    private Suggestion<String> suggestion(String string, double score, String payload) {
-        Suggestion<String> suggestion = new Suggestion<>();
-        suggestion.setString(string);
+    private Suggestion<byte[]> suggestion(String string, double score, String payload) {
+        Suggestion<byte[]> suggestion = new Suggestion<>();
+        suggestion.setString(BatchUtils.STRING_KEY_TO_BYTES.apply(string));
         suggestion.setScore(score);
-        suggestion.setPayload(payload);
+        suggestion.setPayload(BatchUtils.STRING_VALUE_TO_BYTES.apply(payload));
         return suggestion;
     }
 

@@ -113,28 +113,26 @@ public class FileImport extends AbstractRedisImport {
         return job(FlowFactoryBean.sequential("importFlow", steps.stream().map(this::stepFlow).collect(Collectors.toList())));
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings("rawtypes")
     private RiotStep step(Resource resource) {
         MimeType type = contentType(resource);
         ReaderFactory readerFactory = readerRegistry.getReaderFactory(type);
         Assert.notNull(readerFactory, () -> String.format("No reader found for file %s", resource.getFilename()));
         ItemReader reader = readerFactory.create(resource, readOptions);
-        RiotStep step = step(resource.getFilename(), reader, writer(type));
-        if (hasOperations()) {
-            step.setItemProcessor(operationProcessor());
-        }
-        return step;
+        return step(resource.getFilename(), reader, type);
     }
 
-    private RedisItemWriter<String, String, ?> writer(MimeType type) {
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private RiotStep step(String filename, ItemReader reader, MimeType type) {
         if (hasOperations()) {
-            return operationWriter();
+            RiotStep<Map<String, Object>, Map<String, Object>> step = step(filename, reader, operationWriter());
+            step.setItemProcessor(operationProcessor());
+            return step;
         }
         Assert.isTrue(keyValueTypes.contains(type), "No Redis operation specified");
         RedisItemWriter<String, String, ?> writer = RedisItemWriter.struct();
         configureTarget(writer);
-        return writer;
-
+        return step(filename, reader, writer);
     }
 
     @Override

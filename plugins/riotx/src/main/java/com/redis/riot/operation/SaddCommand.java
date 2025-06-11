@@ -10,7 +10,7 @@ import picocli.CommandLine.Command;
 public class SaddCommand extends AbstractMemberOperationCommand {
 
 	@Override
-	public Sadd<String, String, Map<String, Object>> operation() {
+	public Sadd<byte[], byte[], Map<String, Object>> operation() {
 		return new Sadd<>(keyFunction(), memberFunction());
 	}
 

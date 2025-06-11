@@ -37,15 +37,15 @@ public class GeoaddCommand extends AbstractMemberOperationCommand {
 	}
 
 	@Override
-	public Geoadd<String, String, Map<String, Object>> operation() {
-		Function<Map<String, Object>, Collection<String>> members = memberFunction();
+	public Geoadd<byte[], byte[], Map<String, Object>> operation() {
+		Function<Map<String, Object>, Collection<byte[]>> members = memberFunction();
 		ToDoubleFunction<Map<String, Object>> lon = toDouble(longitude, 0);
 		ToDoubleFunction<Map<String, Object>> lat = toDouble(latitude, 0);
 		return new Geoadd<>(keyFunction(), t -> value(members, lon, lat, t));
 	}
 
-	private Collection<GeoValue<String>> value(Function<Map<String, Object>, Collection<String>> members, ToDoubleFunction<Map<String, Object>> lon, ToDoubleFunction<Map<String, Object>> lat, Map<String, Object> map) {
-		Collection<String> ids = members.apply(map);
+	private Collection<GeoValue<byte[]>> value(Function<Map<String, Object>, Collection<byte[]>> members, ToDoubleFunction<Map<String, Object>> lon, ToDoubleFunction<Map<String, Object>> lat, Map<String, Object> map) {
+		Collection<byte[]> ids = members.apply(map);
 		double longitude = lon.applyAsDouble(map);
 		double latitude = lat.applyAsDouble(map);
 		return ids.stream().map(id -> GeoValue.just(longitude, latitude, id)).collect(Collectors.toList());

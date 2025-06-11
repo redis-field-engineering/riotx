@@ -15,12 +15,10 @@ import reactor.core.publisher.Flux;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -45,6 +43,10 @@ public abstract class BatchUtils {
     public static final String STATUS_SUCCESS = "SUCCESS";
 
     public static final String STATUS_FAILURE = "FAILURE";
+
+    public static final Function<String, byte[]> STRING_KEY_TO_BYTES = toByteArrayKeyFunction(StringCodec.UTF8);
+
+    public static final Function<String, byte[]> STRING_VALUE_TO_BYTES = toByteArrayValueFunction(StringCodec.UTF8);
 
     private BatchUtils() {
     }
@@ -161,6 +163,11 @@ public abstract class BatchUtils {
         return encode.andThen(StringCodec.UTF8::decodeValue);
     }
 
+    public static <V> Function<V, byte[]> toByteArrayValueFunction(RedisCodec<?, V> codec) {
+        Function<V, ByteBuffer> encode = codec::encodeValue;
+        return encode.andThen(ByteArrayCodec.INSTANCE::decodeValue);
+    }
+
     public static <K> Function<K, byte[]> toByteArrayKeyFunction(RedisCodec<K, ?> codec) {
         Function<K, ByteBuffer> encode = codec::encodeKey;
         return encode.andThen(ByteArrayCodec.INSTANCE::decodeKey);
@@ -221,6 +228,19 @@ public abstract class BatchUtils {
     @SuppressWarnings("varargs")
     public static <T> Set<T> asSet(T... elements) {
         return new HashSet<>(Arrays.asList(elements));
+    }
+
+    /**
+     * x86 systems are little-endian and Java defaults to big-endian. This causes mismatching query results when RediSearch is
+     * running in a x86 system. This method helps to convert concerned arrays.
+     *
+     * @param input float array
+     * @return byte array
+     */
+    public static byte[] toByteArray(float[] input) {
+        byte[] bytes = new byte[Float.BYTES * input.length];
+        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer().put(input);
+        return bytes;
     }
 
 }

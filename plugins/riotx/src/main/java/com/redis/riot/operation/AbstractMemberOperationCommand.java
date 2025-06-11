@@ -1,5 +1,6 @@
 package com.redis.riot.operation;
 
+import com.redis.batch.BatchUtils;
 import com.redis.riot.core.TemplateExpression;
 import picocli.CommandLine;
 
@@ -14,8 +15,9 @@ abstract class AbstractMemberOperationCommand extends AbstractOperationCommand i
     @CommandLine.Option(arity = "1..*", required = true, names = "--member", description = "Member template expression.", paramLabel = "<exp>")
     private List<TemplateExpression> members;
 
-    protected Function<Map<String, Object>, Collection<String>> memberFunction() {
-        return t -> members.stream().map(e -> e.getValue(evaluationContext, t)).collect(Collectors.toList());
+    protected Function<Map<String, Object>, Collection<byte[]>> memberFunction() {
+        return t -> members.stream().map(e -> e.getValue(evaluationContext, t)).map(BatchUtils.STRING_KEY_TO_BYTES)
+                .collect(Collectors.toList());
     }
 
     public List<TemplateExpression> getMembers() {
