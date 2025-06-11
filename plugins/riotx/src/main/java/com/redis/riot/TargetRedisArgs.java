@@ -17,7 +17,7 @@ public class TargetRedisArgs implements RedisArgs {
     @Option(names = "--target-user", defaultValue = "${RIOT_TARGET_USER}", description = "Target ACL style 'AUTH username pass'. Needs password.", paramLabel = "<name>")
     private String username;
 
-    @Option(names = "--target-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_TARGET_PASS}", description = "Password to use when connecting to the target server.", paramLabel = "<pwd>")
+    @Option(names = "--target-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_TARGET_PASSWORDS}", description = "Password to use when connecting to the target server.", paramLabel = "<pwd>")
     private char[] password;
 
     @Option(names = "--target-timeout", defaultValue = "${RIOT_TARGET_TIMEOUT:-60s}", description = "Target Redis command timeout, e.g. 30s or 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
@@ -26,10 +26,10 @@ public class TargetRedisArgs implements RedisArgs {
     @Option(names = "--target-tls", defaultValue = "${RIOT_TARGET_TLS}", description = "Establish a secure TLS connection to target.")
     private boolean tls;
 
-    @Option(names = "--target-insecure", defaultValue = "${RIOT_TARGET_INSECURE}", description = "Allow insecure TLS connection to target by skipping cert validation.")
+    @Option(names = "--target-insecure", description = "Allow insecure TLS connection to target by skipping cert validation.")
     private boolean insecure;
 
-    @Option(names = "--target-verify", description = "Target TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
+    @Option(names = "--target-verify", defaultValue = "${RIOT_TARGET_TLS_VERIFY:-FULL}", description = "Target TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SslVerifyMode sslVerifyMode = DEFAULT_SSL_VERIFY_MODE;
 
     @Option(names = "--target-client", defaultValue = "${RIOT_TARGET_CLIENT}", description = "Client name used to connect to target Redis.", paramLabel = "<name>")

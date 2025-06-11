@@ -15,7 +15,7 @@ public class SourceRedisArgs implements RedisArgs {
     @Option(names = "--source-user", defaultValue = "${RIOT_SOURCE_USER}", description = "Source ACL style 'AUTH username pass'. Needs password.", paramLabel = "<name>")
     private String username;
 
-    @Option(names = "--source-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_SOURCE_PASS}", description = "Password to use when connecting to the source server.", paramLabel = "<pwd>")
+    @Option(names = "--source-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_SOURCE_PASSWORD}", description = "Password to use when connecting to the source server.", paramLabel = "<pwd>")
     private char[] password;
 
     @Option(names = "--source-timeout", defaultValue = "${RIOT_SOURCE_TIMEOUT:-60s}", description = "Source Redis command timeout, e.g. 30s or 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
@@ -24,10 +24,10 @@ public class SourceRedisArgs implements RedisArgs {
     @Option(names = "--source-tls", defaultValue = "${RIOT_SOURCE_TLS}", description = "Establish a secure TLS connection to source.")
     private boolean tls;
 
-    @Option(names = "--source-insecure", defaultValue = "${RIOT_SOURCE_INSECURE}", description = "Allow insecure TLS connection to source by skipping cert validation.")
+    @Option(names = "--source-insecure", description = "Allow insecure TLS connection to source by skipping cert validation.")
     private boolean insecure;
 
-    @Option(names = "--source-verify", description = "Source TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
+    @Option(names = "--source-verify", defaultValue = "${RIOT_SOURCE_TLS_VERIFY:-FULL}", description = "Source TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SslVerifyMode sslVerifyMode = DEFAULT_SSL_VERIFY_MODE;
 
     @Option(names = "--source-client", defaultValue = "${RIOT_SOURCE_CLIENT}", description = "Client name used to connect to source Redis.", paramLabel = "<name>")
