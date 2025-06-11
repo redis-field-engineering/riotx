@@ -21,7 +21,7 @@ public abstract class AbstractExport extends AbstractJobCommand {
     @ArgGroup(exclusive = false)
     private FlushingStepArgs flushingStepArgs = new FlushingStepArgs();
 
-    @Option(names = "--mem-limit", description = "Max mem usage for a key to be read, for example 12KB 5MB.", paramLabel = "<size>")
+    @Option(names = "--mem-limit", defaultValue = "${RIOT_MEM_LIMIT:-0}", description = "Max mem usage for a key to be read, for example 12KB 5MB.", paramLabel = "<size>")
     private DataSize memoryLimit = DataSize.ofBytes(0);
 
     @Option(names = "--mem-samples", description = "Number of nested values to sample in key memory usage.", paramLabel = "<int>")
