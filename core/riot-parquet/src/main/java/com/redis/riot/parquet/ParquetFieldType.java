@@ -21,7 +21,10 @@ public enum ParquetFieldType {
 			LogicalTypeAnnotation.timestampType(true, LogicalTypeAnnotation.TimeUnit.MILLIS)),
 
 	// Special types
-	UUID(PrimitiveTypeName.BINARY, LogicalTypeAnnotation.uuidType());
+	UUID(PrimitiveTypeName.BINARY, LogicalTypeAnnotation.uuidType()),
+	
+	// List type (represented as a group type, not primitive)
+	LIST(null, LogicalTypeAnnotation.listType());
 
 	private final PrimitiveTypeName primitiveType;
 	private final LogicalTypeAnnotation logicalType;

@@ -10,6 +10,7 @@ import org.apache.parquet.hadoop.api.WriteSupport;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.RecordConsumer;
 import org.apache.parquet.schema.GroupType;
+import org.apache.parquet.schema.LogicalTypeAnnotation;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Type;
@@ -58,12 +59,16 @@ class MapWriteSupport extends WriteSupport<Map<String, Object>> {
 		if (field.isPrimitive()) {
 			writePrimitive(value, field.asPrimitiveType());
 		} else {
-			if (value instanceof Map) {
+			GroupType groupType = field.asGroupType();
+			
+			// Check if this is a LIST logical type
+			if (isListType(groupType)) {
+				writeList(value, groupType);
+			} else if (value instanceof Map) {
 				@SuppressWarnings("unchecked")
 				Map<String, Object> mapValue = (Map<String, Object>) value;
 				consumer.startGroup();
 
-				GroupType groupType = field.asGroupType();
 				for (Type subField : groupType.getFields()) {
 					String subFieldName = subField.getName();
 					if (mapValue.containsKey(subFieldName)) {
@@ -125,6 +130,119 @@ class MapWriteSupport extends WriteSupport<Map<String, Object>> {
 			break;
 		default:
 			throw new UnsupportedOperationException("Cannot write " + primitiveType.getPrimitiveTypeName());
+		}
+	}
+	
+	/**
+	 * Checks if a GroupType represents a LIST logical type.
+	 */
+	private static boolean isListType(GroupType groupType) {
+		LogicalTypeAnnotation logicalType = groupType.getLogicalTypeAnnotation();
+		return logicalType instanceof LogicalTypeAnnotation.ListLogicalTypeAnnotation;
+	}
+	
+	/**
+	 * Writes a list/array value according to Parquet LIST logical type structure.
+	 */
+	private void writeList(Object value, GroupType listGroupType) {
+		// Convert various array types to Object[]
+		Object[] elements = convertToObjectArray(value);
+		
+		if (elements.length == 0) {
+			// Don't write anything for empty arrays to avoid Parquet validation error
+			return;
+		}
+		
+		consumer.startGroup(); // Start the LIST group
+		
+		// The LIST structure has one repeated field (usually named "list")
+		Type listField = listGroupType.getFields().get(0);
+		String listFieldName = listField.getName();
+		int listFieldIndex = listGroupType.getFieldIndex(listFieldName);
+		
+		// Write each element as a repeated field
+		for (Object element : elements) {
+			if (element != null) {
+				consumer.startField(listFieldName, listFieldIndex);
+				
+				if (listField.isPrimitive()) {
+					// Simple repeated primitive
+					writePrimitive(element, listField.asPrimitiveType());
+				} else {
+					// Repeated group with element field
+					GroupType elementGroupType = listField.asGroupType();
+					consumer.startGroup();
+					
+					// Typically has one field named "element"
+					Type elementField = elementGroupType.getFields().get(0);
+					String elementFieldName = elementField.getName();
+					int elementFieldIndex = elementGroupType.getFieldIndex(elementFieldName);
+					
+					consumer.startField(elementFieldName, elementFieldIndex);
+					writeValue(element, elementField);
+					consumer.endField(elementFieldName, elementFieldIndex);
+					
+					consumer.endGroup();
+				}
+				
+				consumer.endField(listFieldName, listFieldIndex);
+			}
+		}
+		
+		consumer.endGroup(); // End the LIST group
+	}
+	
+	/**
+	 * Converts various array types to Object[].
+	 */
+	private Object[] convertToObjectArray(Object value) {
+		if (value instanceof Object[]) {
+			return (Object[]) value;
+		} else if (value instanceof float[]) {
+			float[] floatArray = (float[]) value;
+			Object[] objArray = new Object[floatArray.length];
+			for (int i = 0; i < floatArray.length; i++) {
+				objArray[i] = floatArray[i];
+			}
+			return objArray;
+		} else if (value instanceof double[]) {
+			double[] doubleArray = (double[]) value;
+			Object[] objArray = new Object[doubleArray.length];
+			for (int i = 0; i < doubleArray.length; i++) {
+				objArray[i] = doubleArray[i];
+			}
+			return objArray;
+		} else if (value instanceof int[]) {
+			int[] intArray = (int[]) value;
+			Object[] objArray = new Object[intArray.length];
+			for (int i = 0; i < intArray.length; i++) {
+				objArray[i] = intArray[i];
+			}
+			return objArray;
+		} else if (value instanceof long[]) {
+			long[] longArray = (long[]) value;
+			Object[] objArray = new Object[longArray.length];
+			for (int i = 0; i < longArray.length; i++) {
+				objArray[i] = longArray[i];
+			}
+			return objArray;
+		} else if (value instanceof boolean[]) {
+			boolean[] boolArray = (boolean[]) value;
+			Object[] objArray = new Object[boolArray.length];
+			for (int i = 0; i < boolArray.length; i++) {
+				objArray[i] = boolArray[i];
+			}
+			return objArray;
+		} else if (value instanceof Iterable) {
+			// Handle List, Collection, etc.
+			java.util.List<Object> list = new java.util.ArrayList<>();
+			for (Object item : (Iterable<?>) value) {
+				list.add(item);
+			}
+			return list.toArray();
+		} else {
+			// Single element, treat as array of one
+			return new Object[] { value };
 		}
 	}
 }

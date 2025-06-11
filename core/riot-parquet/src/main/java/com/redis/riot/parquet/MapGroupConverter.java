@@ -7,41 +7,48 @@ import org.apache.parquet.io.api.Converter;
 import org.apache.parquet.io.api.GroupConverter;
 import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.Type;
+import org.apache.parquet.schema.LogicalTypeAnnotation;
 
 class MapGroupConverter extends GroupConverter {
+    protected Map<String, Object> current;
+    private final Converter[] converters;
 
-	protected Map<String, Object> current;
-	private Converter[] converters;
+    MapGroupConverter(MapGroupConverter parent, GroupType schema) {
+        this.converters = new Converter[schema.getFieldCount()];
+        for (int i = 0; i < schema.getFieldCount(); i++) {
+            String name = schema.getFieldName(i);
+            Type type = schema.getType(i);
+            if (type.isPrimitive()) {
+                converters[i] = new MapPrimitiveConverter(this, name, type);
+            } else {
+                GroupType gt = type.asGroupType();
+                if (isListType(gt)) {
+                    converters[i] = new ListGroupConverter(this, name, gt);
+                } else {
+                    converters[i] = new MapGroupConverter(this, gt);
+                }
+            }
+        }
+    }
 
-	MapGroupConverter(MapGroupConverter parent, GroupType schema) {
-		converters = new Converter[schema.getFieldCount()];
+    @Override
+    public void start() {
+        current = new LinkedHashMap<>();
+    }
 
-		for (int i = 0; i < converters.length; i++) {
-			final String field = schema.getFieldName(i);
-			final Type type = schema.getType(i);
-			if (type.isPrimitive()) {
-				converters[i] = new MapPrimitiveConverter(this, field, type);
-			} else {
-				converters[i] = new MapGroupConverter(this, type.asGroupType());
-			}
-		}
-	}
+    @Override
+    public Converter getConverter(int i) {
+        return converters[i];
+    }
 
-	@Override
-	public void start() {
-		current = new LinkedHashMap<>();
-	}
+    @Override
+    public void end() { }
 
-	@Override
-	public Converter getConverter(int fieldIndex) {
-		return converters[fieldIndex];
-	}
+    public Map<String, Object> getCurrentRecord() {
+        return current;
+    }
 
-	@Override
-	public void end() {
-	}
-
-	public Map<String, Object> getCurrentRecord() {
-		return current;
-	}
+    private static boolean isListType(GroupType gt) {
+        return gt.getLogicalTypeAnnotation() instanceof LogicalTypeAnnotation.ListLogicalTypeAnnotation;
+    }
 }

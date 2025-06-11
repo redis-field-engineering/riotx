@@ -9,25 +9,25 @@ import java.util.function.UnaryOperator;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
-public class MapFilteringFunction implements UnaryOperator<Map<String, String>> {
+public class MapFilteringFunction<T> implements UnaryOperator<Map<String, T>> {
 
     private Collection<String> includes;
 
     private Collection<String> excludes;
 
-    public MapFilteringFunction excludes(Collection<String> fields) {
+    public MapFilteringFunction<T> excludes(Collection<String> fields) {
         this.excludes = new HashSet<>(fields);
         return this;
     }
 
-    public MapFilteringFunction includes(Collection<String> fields) {
+    public MapFilteringFunction<T> includes(Collection<String> fields) {
         includes = new HashSet<>(fields);
         return this;
     }
 
     @Override
-    public Map<String, String> apply(Map<String, String> source) {
-        Map<String, String> filtered = ObjectUtils.isEmpty(includes) ? source : new LinkedHashMap<>();
+    public Map<String, T> apply(Map<String, T> source) {
+        Map<String, T> filtered = ObjectUtils.isEmpty(includes) ? source : new LinkedHashMap<>();
         if (!CollectionUtils.isEmpty(includes)) {
             includes.forEach(f -> filtered.put(f, source.get(f)));
         }
