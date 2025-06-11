@@ -1,6 +1,7 @@
 package com.redis.riot;
 
 import com.redis.batch.gen.Generator;
+import com.redis.batch.operation.Xadd;
 import com.redis.riot.core.*;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.db.DatabaseObject;
@@ -12,8 +13,6 @@ import com.redis.riot.rdi.ChangeEventValue;
 import com.redis.riot.rdi.RdiOffsetStore;
 import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.GeneratorItemReader;
-import com.redis.batch.operation.Xadd;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
