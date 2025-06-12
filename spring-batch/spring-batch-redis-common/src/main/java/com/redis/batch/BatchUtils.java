@@ -120,7 +120,7 @@ public abstract class BatchUtils {
         return t -> true;
     }
 
-    public static Tags tags(KeyEvent<?> item, String status) {
+    public static Tags tags(KeyValue<?> item, String status) {
         return Tags.of("event", tagValue(item.getEvent()), "status", status, "type", tagValue(item.getType()));
     }
 
@@ -181,13 +181,6 @@ public abstract class BatchUtils {
         return new Range(min, max);
     }
 
-    public static <K> String toString(K key) {
-        if (key instanceof byte[]) {
-            return new String((byte[]) key, StandardCharsets.UTF_8);
-        }
-        return String.valueOf(key);
-    }
-
     public static <K, V, I, O> List<RedisFuture<O>> execute(RedisAsyncCommands<K, V> commands, List<? extends I> items,
             BiFunction<RedisAsyncCommands<K, V>, I, RedisFuture<O>> function) {
         List<RedisFuture<O>> futures = new ArrayList<>();
@@ -241,6 +234,30 @@ public abstract class BatchUtils {
         byte[] bytes = new byte[Float.BYTES * input.length];
         ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer().put(input);
         return bytes;
+    }
+
+    public static <K> String keyToString(K key) {
+        if (key instanceof byte[]) {
+            return new String((byte[]) key, StandardCharsets.UTF_8);
+        }
+        return String.valueOf(key);
+    }
+
+    public static <K> boolean keyEquals(K key1, K key2) {
+        if (key1 == null) {
+            return key2 == null;
+        }
+        if (key1 instanceof byte[] && key2 instanceof byte[]) {
+            return Arrays.equals((byte[]) key1, (byte[]) key2);
+        }
+        return key1.equals(key2);
+    }
+
+    public static <K> int keyHashCode(K key) {
+        if (key instanceof byte[]) {
+            return Arrays.hashCode((byte[]) key);
+        }
+        return key.hashCode();
     }
 
 }

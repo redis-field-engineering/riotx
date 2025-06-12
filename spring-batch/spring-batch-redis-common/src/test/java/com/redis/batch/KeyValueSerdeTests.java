@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.DoubleNode;
 import com.redis.batch.gen.Generator;
-import com.redis.batch.gen.ItemType;
 import com.redis.lettucemod.timeseries.Sample;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -48,7 +47,7 @@ class KeyValueSerdeTests {
         ts.setKey(key);
         ts.setMemoryUsage(memoryUsage);
         ts.setTtl(ttl);
-        ts.setType(ItemType.TIMESERIES.getString());
+        ts.setType(KeyType.TIMESERIES.getString());
         Sample sample1 = Sample.of(Instant.now().toEpochMilli(), 123.456);
         Sample sample2 = Sample.of(Instant.now().toEpochMilli() + 1000, 456.123);
         ts.setValue(Arrays.asList(sample1, sample2));

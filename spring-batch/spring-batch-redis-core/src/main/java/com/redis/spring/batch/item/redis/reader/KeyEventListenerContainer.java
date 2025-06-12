@@ -6,7 +6,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.redis.batch.KeyEvent;
+import com.redis.batch.KeyType;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -91,16 +91,16 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
     }
 
     @SuppressWarnings("unchecked")
-    private KeyEvent<K> keyEventNotification(PubSubMessage<K, V> m) {
+    private KeyValue<K> keyEventNotification(PubSubMessage<K, V> m) {
         return keyEvent((K) m.getMessage(), suffix(m.getChannel()));
     }
 
-    private KeyEvent<K> keySpaceNotification(PubSubMessage<K, V> m) {
+    private KeyValue<K> keySpaceNotification(PubSubMessage<K, V> m) {
         return keyEvent(keyEncoder.apply(suffix(m.getChannel())), valueDecoder.apply(m.getMessage()));
     }
 
     private Subscription receive(String pattern, KeyEventListener<K> listener,
-            Function<PubSubMessage<K, V>, KeyEvent<K>> mapper) {
+            Function<PubSubMessage<K, V>, KeyValue<K>> mapper) {
         return pubSubListenerContainer.receive(keyEncoder.apply(pattern), new KeyEventMessageListener<>(listener, mapper));
     }
 
@@ -108,9 +108,9 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
 
         private final KeyEventListener<K> keyEventListener;
 
-        private final Function<PubSubMessage<K, V>, KeyEvent<K>> mapper;
+        private final Function<PubSubMessage<K, V>, KeyValue<K>> mapper;
 
-        public KeyEventMessageListener(KeyEventListener<K> listener, Function<PubSubMessage<K, V>, KeyEvent<K>> mapper) {
+        public KeyEventMessageListener(KeyEventListener<K> listener, Function<PubSubMessage<K, V>, KeyValue<K>> mapper) {
             this.keyEventListener = listener;
             this.mapper = mapper;
         }
@@ -131,27 +131,29 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
         return null;
     }
 
-    private static <K> KeyEvent<K> keyEvent(K key, String event) {
-        String type = type(event);
-        KeyEvent<K> keyEvent = new KeyEvent<>();
+    private static <K> KeyValue<K> keyEvent(K key, String event) {
+        KeyType type = type(event);
+        KeyValue<K> keyEvent = new KeyValue<>();
         keyEvent.setKey(key);
         keyEvent.setEvent(event);
-        keyEvent.setType(type);
+        if (type != null) {
+            keyEvent.setType(type.getString());
+        }
         return keyEvent;
     }
 
-    public static String type(String event) {
+    public static KeyType type(String event) {
         if (event == null) {
             return null;
         }
         if (event.startsWith("xgroup-")) {
-            return KeyValue.TYPE_STREAM;
+            return KeyType.STREAM;
         }
         if (event.startsWith("ts.")) {
-            return KeyValue.TYPE_TIMESERIES;
+            return KeyType.TIMESERIES;
         }
         if (event.startsWith("json.")) {
-            return KeyValue.TYPE_JSON;
+            return KeyType.JSON;
         }
         switch (event) {
             case "set":
@@ -159,7 +161,7 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
             case "incrby":
             case "incrbyfloat":
             case "append":
-                return KeyValue.TYPE_STRING;
+                return KeyType.STRING;
             case "lpush":
             case "rpush":
             case "rpop":
@@ -168,18 +170,18 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
             case "lset":
             case "lrem":
             case "ltrim":
-                return KeyValue.TYPE_LIST;
+                return KeyType.LIST;
             case "hset":
             case "hincrby":
             case "hincrbyfloat":
             case "hdel":
-                return KeyValue.TYPE_HASH;
+                return KeyType.HASH;
             case "sadd":
             case "spop":
             case "sinterstore":
             case "sunionstore":
             case "sdiffstore":
-                return KeyValue.TYPE_SET;
+                return KeyType.SET;
             case "zincr":
             case "zadd":
             case "zrem":
@@ -188,12 +190,14 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
             case "zdiffstore":
             case "zinterstore":
             case "zunionstore":
-                return KeyValue.TYPE_ZSET;
+                return KeyType.ZSET;
             case "xadd":
             case "xtrim":
             case "xdel":
             case "xsetid":
-                return KeyValue.TYPE_STREAM;
+                return KeyType.STREAM;
+            case "del":
+                return KeyType.NONE;
             default:
                 return null;
         }

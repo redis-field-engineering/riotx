@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.redis.spring.batch.UniqueBlockingQueue;
-import com.redis.batch.Key;
 import com.redis.batch.KeyValue;
 import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
@@ -22,12 +21,18 @@ class KeyTests {
 
 	@Test
 	void keySet() {
-		Set<Key<byte[]>> set = new HashSet<>();
-		set.add(new Key<>(new byte[] { 1, 2, 3 }));
-		set.add(new Key<>(new byte[] { 1, 2, 3 }));
+		Set<KeyValue<byte[]>> set = new HashSet<>();
+		set.add(keyValue(new byte[] { 1, 2, 3 }));
+		set.add(keyValue(new byte[] { 1, 2, 3 }));
 		Assertions.assertEquals(1, set.size());
-		set.add(new Key<>(new byte[] { 1, 2 }));
+		set.add(keyValue(new byte[] { 1, 2 }));
 		Assertions.assertEquals(2, set.size());
+	}
+
+	private KeyValue<byte[]> keyValue(byte[] key) {
+		KeyValue<byte[]> keyValue = new KeyValue<>();
+		keyValue.setKey(key);
+		return keyValue;
 	}
 	
 	@Test
@@ -53,11 +58,11 @@ class KeyTests {
 	
 	@Test
 	void uniqueQueueByteArray() throws InterruptedException {
-		UniqueBlockingQueue<Key<byte[]>> queue = new UniqueBlockingQueue<>();
-		queue.offer(new Key<>(new byte[] { 1, 2, 3 }));
-		queue.offer(new Key<>(new byte[] { 3, 4, 5 }));
+		UniqueBlockingQueue<KeyValue<byte[]>> queue = new UniqueBlockingQueue<>();
+		queue.offer(keyValue(new byte[] { 1, 2, 3 }));
+		queue.offer(keyValue(new byte[] { 3, 4, 5 }));
 		Assertions.assertEquals(2, queue.size());
-		queue.offer(new Key<>(new byte[] { 1, 2, 3 }));
+		queue.offer(keyValue(new byte[] { 1, 2, 3 }));
 		Assertions.assertEquals(2, queue.size());
 		Assertions.assertArrayEquals(new byte[] { 1, 2, 3 }, queue.poll().getKey());
 		Assertions.assertEquals(1, queue.size());

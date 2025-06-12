@@ -12,7 +12,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.redis.batch.KeyEvent;
+import com.redis.batch.KeyType;
 import org.springframework.util.CollectionUtils;
 
 import com.redis.batch.KeyValue;
@@ -49,8 +49,8 @@ public class DefaultKeyComparator<K, V> implements KeyComparator<K> {
     }
 
     private Status status(KeyValue<K> source, KeyValue<K> target) {
-        if (KeyEvent.TYPE_NONE.equalsIgnoreCase(target.getType())) {
-            if (KeyEvent.TYPE_NONE.equalsIgnoreCase(source.getType())) {
+        if (KeyType.NONE.getString().equalsIgnoreCase(target.getType())) {
+            if (KeyType.NONE.getString().equalsIgnoreCase(source.getType())) {
                 return Status.OK;
             }
             return Status.MISSING;
@@ -88,26 +88,23 @@ public class DefaultKeyComparator<K, V> implements KeyComparator<K> {
                 return false;
             }
         }
-        if (KeyValue.TYPE_NONE.equalsIgnoreCase(source.getType())) {
-            return KeyValue.TYPE_NONE.equalsIgnoreCase(target.getType());
-        }
-        String type = source.getType();
+        KeyType type = source.type();
         if (type == null) {
             return Objects.deepEquals(a, b);
         }
         switch (type) {
-            case KeyValue.TYPE_JSON:
-            case KeyValue.TYPE_STRING:
+            case JSON:
+            case STRING:
                 return valueEquals((V) a, (V) b);
-            case KeyValue.TYPE_HASH:
+            case HASH:
                 return mapEquals((Map<K, V>) a, (Map<K, V>) b);
-            case KeyValue.TYPE_LIST:
+            case LIST:
                 return collectionEquals((Collection<V>) a, (Collection<V>) b);
-            case KeyValue.TYPE_SET:
+            case SET:
                 return setEquals((Collection<V>) a, (Collection<V>) b);
-            case KeyValue.TYPE_STREAM:
+            case STREAM:
                 return streamEquals((Collection<StreamMessage<K, V>>) a, (Collection<StreamMessage<K, V>>) b);
-            case KeyValue.TYPE_ZSET:
+            case ZSET:
                 return zsetEquals((Collection<ScoredValue<V>>) a, (Collection<ScoredValue<V>>) b);
             default:
                 return Objects.deepEquals(a, b);

@@ -1,7 +1,7 @@
 package com.redis.spring.batch.test;
 
+import com.redis.batch.*;
 import com.redis.batch.gen.Generator;
-import com.redis.batch.gen.ItemType;
 import com.redis.batch.gen.StreamOptions;
 import com.redis.lettucemod.RedisModulesClient;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
@@ -11,13 +11,9 @@ import com.redis.lettucemod.cluster.RedisModulesClusterClient;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.spring.batch.JobUtils;
 import com.redis.spring.batch.item.PollableItemReader;
+import com.redis.spring.batch.item.redis.GeneratorItemReader;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.batch.BatchUtils;
-import com.redis.batch.KeyValue;
-import com.redis.batch.Range;
-import com.redis.batch.RedisOperation;
-import com.redis.spring.batch.item.redis.GeneratorItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader;
 import com.redis.spring.batch.step.FlushingStepBuilder;
@@ -194,7 +190,7 @@ public abstract class AbstractTestBase {
         Assertions.assertTrue(commands.dbsize() > 0, "Redis database is empty");
     }
 
-    protected GeneratorItemReader generator(int count, ItemType... types) {
+    protected GeneratorItemReader generator(int count, KeyType... types) {
         Generator gen = new Generator();
         if (!ObjectUtils.isEmpty(types)) {
             gen.setTypes(types);
@@ -366,9 +362,8 @@ public abstract class AbstractTestBase {
         redisCommands.configSet("notify-keyspace-events", "AKE");
     }
 
-    protected void generateStreams(TestInfo info, int streamCount, int messageCount)
-            throws JobExecutionException, TimeoutException, InterruptedException {
-        GeneratorItemReader gen = generator(streamCount, ItemType.STREAM);
+    protected void generateStreams(TestInfo info, int streamCount, int messageCount) throws JobExecutionException {
+        GeneratorItemReader gen = generator(streamCount, KeyType.STREAM);
         StreamOptions streamOptions = new StreamOptions();
         streamOptions.setMessageCount(new Range(messageCount, messageCount));
         gen.getGenerator().setStreamOptions(streamOptions);

@@ -4,7 +4,6 @@ import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.batch.KeyValue;
 import com.redis.batch.OperationExecutor;
 import com.redis.batch.RedisOperation;
-import com.redis.batch.KeyEvent;
 import com.redis.batch.operation.KeyValueRead;
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.ReadFrom;
@@ -52,14 +51,14 @@ public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<K
         this.operation = operation;
     }
 
-    public List<KeyValue<K>> read(List<? extends KeyEvent<K>> keyEvents) throws Exception {
-        List<? extends K> keys = keyEvents.stream().map(KeyEvent::getKey).collect(Collectors.toList());
+    public List<KeyValue<K>> read(List<? extends KeyValue<K>> keyEvents) throws Exception {
+        List<? extends K> keys = keyEvents.stream().map(KeyValue::getKey).collect(Collectors.toList());
         List<KeyValue<K>> keyValues = operationExecutor.execute(keys);
         for (int index = 0; index < keyEvents.size(); index++) {
-            KeyEvent<K> keyEvent = keyEvents.get(index);
+            KeyValue<K> keyEvent = keyEvents.get(index);
             KeyValue<K> keyValue = keyValues.get(index);
             keyValue.setEvent(keyEvent.getEvent());
-            keyValue.setTimestamp(keyEvent.getTimestamp());
+            keyValue.setTime(keyEvent.getTime());
         }
         return keyValues;
     }

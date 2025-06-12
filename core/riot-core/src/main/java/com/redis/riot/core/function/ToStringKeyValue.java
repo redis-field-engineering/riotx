@@ -21,7 +21,7 @@ public class ToStringKeyValue<K> implements Function<KeyValue<K>, KeyValue<Strin
 		keyValue.setKey(toStringKeyFunction.apply(item.getKey()));
 		keyValue.setEvent(item.getEvent());
 		keyValue.setMemoryUsage(item.getMemoryUsage());
-		keyValue.setTimestamp(item.getTimestamp());
+		keyValue.setTime(item.getTime());
 		keyValue.setTtl(item.getTtl());
 		keyValue.setType(item.getType());
 		keyValue.setValue(item.getValue());

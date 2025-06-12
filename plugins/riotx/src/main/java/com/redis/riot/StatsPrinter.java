@@ -4,7 +4,7 @@ import com.github.freva.asciitable.AsciiTable;
 import com.github.freva.asciitable.Column;
 import com.github.freva.asciitable.ColumnData;
 import com.github.freva.asciitable.HorizontalAlign;
-import com.redis.batch.KeyValue;
+import com.redis.batch.KeyType;
 import org.springframework.util.unit.DataSize;
 
 import java.io.PrintStream;
@@ -116,14 +116,14 @@ public class StatsPrinter {
     private List<ColumnData<RedisStats.Keyspace>> statsColumns() {
         List<ColumnData<RedisStats.Keyspace>> columns = new ArrayList<>();
         columns.add(string("keyspace", RedisStats.Keyspace::getPrefix));
-        columns.add(number("hash", typeCount(KeyValue.TYPE_HASH)));
-        columns.add(number("json", typeCount(KeyValue.TYPE_JSON)));
-        columns.add(number("list", typeCount(KeyValue.TYPE_LIST)));
-        columns.add(number("set", typeCount(KeyValue.TYPE_SET)));
-        columns.add(number("stream", typeCount(KeyValue.TYPE_STREAM)));
-        columns.add(number("string", typeCount(KeyValue.TYPE_STRING)));
-        columns.add(number("ts", typeCount(KeyValue.TYPE_TIMESERIES)));
-        columns.add(number("zset", typeCount(KeyValue.TYPE_ZSET)));
+        columns.add(number("hash", typeCount(KeyType.HASH)));
+        columns.add(number("json", typeCount(KeyType.JSON)));
+        columns.add(number("list", typeCount(KeyType.LIST)));
+        columns.add(number("set", typeCount(KeyType.SET)));
+        columns.add(number("stream", typeCount(KeyType.STREAM)));
+        columns.add(number("string", typeCount(KeyType.STRING)));
+        columns.add(number("ts", typeCount(KeyType.TIMESERIES)));
+        columns.add(number("zset", typeCount(KeyType.ZSET)));
         columns.add(number("big", row -> format(row.getBigKeys())));
         for (short quantile : quantiles) {
             columns.add(quantileColumn(quantile));
@@ -131,8 +131,8 @@ public class StatsPrinter {
         return columns;
     }
 
-    private Function<RedisStats.Keyspace, String> typeCount(String type) {
-        return row -> format(row.getTypeCounts().getOrDefault(type, 0));
+    private Function<RedisStats.Keyspace, String> typeCount(KeyType type) {
+        return row -> format(row.getTypeCounts().getOrDefault(type.getString(), 0));
     }
 
     private ColumnData<RedisStats.Keyspace> quantileColumn(short quantile) {
@@ -169,7 +169,7 @@ public class StatsPrinter {
     }
 
     private String type(String type) {
-        if (type.equalsIgnoreCase(KeyValue.TYPE_JSON)) {
+        if (KeyType.JSON.getString().equalsIgnoreCase(type)) {
             return "json";
         }
         return type;

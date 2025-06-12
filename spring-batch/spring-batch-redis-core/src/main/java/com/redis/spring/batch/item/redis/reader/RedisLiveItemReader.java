@@ -3,7 +3,6 @@ package com.redis.spring.batch.item.redis.reader;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import com.redis.batch.KeyEvent;
 import com.redis.batch.operation.KeyValueRead;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.StringCodec;
@@ -76,8 +75,8 @@ public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements 
         if (iterator.hasNext()) {
             return iterator.next();
         }
-        HashSet<KeyEvent<K>> keyEvents = new LinkedHashSet<>();
-        KeyEvent<K> keyEvent;
+        HashSet<KeyValue<K>> keyEvents = new LinkedHashSet<>();
+        KeyValue<K> keyEvent;
         while (keyEvents.size() < batchSize && (keyEvent = keyEventReader.poll(timeout, unit)) != null) {
             keyEvents.add(keyEvent);
         }

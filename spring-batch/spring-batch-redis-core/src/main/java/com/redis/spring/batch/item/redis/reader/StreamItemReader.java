@@ -1,10 +1,10 @@
 package com.redis.spring.batch.item.redis.reader;
 
+import com.redis.batch.BatchUtils;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.spring.batch.item.PollableItemReader;
-import com.redis.batch.Key;
 import io.lettuce.core.*;
 import io.lettuce.core.XReadArgs.StreamOffset;
 import io.lettuce.core.api.sync.RedisStreamCommands;
@@ -151,7 +151,7 @@ public class StreamItemReader<K, V> extends AbstractCountingItemReader<StreamMes
     }
 
     public void ack(Iterable<? extends StreamMessage<K, V>> messages) {
-        group(messages).values().stream().forEach(this::ack);
+        group(messages).values().forEach(this::ack);
     }
 
     private void ack(List<StreamMessage<K, V>> messages) {
@@ -165,8 +165,8 @@ public class StreamItemReader<K, V> extends AbstractCountingItemReader<StreamMes
 
     }
 
-    public long ack(K key, String... ids) {
-        return commands.xack(key, consumer.getGroup(), ids);
+    public void ack(K key, String... ids) {
+        commands.xack(key, consumer.getGroup(), ids);
     }
 
     private Map<Key<K>, List<StreamMessage<K, V>>> group(Iterable<? extends StreamMessage<K, V>> messages) {
@@ -286,6 +286,33 @@ public class StreamItemReader<K, V> extends AbstractCountingItemReader<StreamMes
             List<StreamMessage<K, V>> messages = super.read(blockMillis);
             ack(messages);
             return messages;
+        }
+
+    }
+
+    private static class Key<K> {
+
+        private final K key;
+
+        private Key(K key) {
+            this.key = key;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass())
+                return false;
+            Key<?> key1 = (Key<?>) o;
+            return BatchUtils.keyEquals(key, key1.key);
+        }
+
+        @Override
+        public int hashCode() {
+            return BatchUtils.keyHashCode(key);
+        }
+
+        public K getKey() {
+            return key;
         }
 
     }

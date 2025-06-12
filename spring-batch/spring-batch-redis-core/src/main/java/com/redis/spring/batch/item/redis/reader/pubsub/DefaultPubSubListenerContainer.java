@@ -138,14 +138,14 @@ public class DefaultPubSubListenerContainer<K, V> implements PubSubListenerConta
         @Override
         protected void doStart() {
             connection.addListener(listener);
-            log.info(String.format("Subscribing to pattern %s", BatchUtils.toString(pattern)));
+            log.info(String.format("Subscribing to pattern %s", BatchUtils.keyToString(pattern)));
             connection.sync().psubscribe(pattern);
         }
 
         @SuppressWarnings("unchecked")
         @Override
         public void cancel() {
-            log.info(String.format("Unsubscribing from pattern %s", BatchUtils.toString(pattern)));
+            log.info(String.format("Unsubscribing from pattern %s", BatchUtils.keyToString(pattern)));
             connection.sync().punsubscribe(pattern);
             connection.removeListener(listener);
 
@@ -166,14 +166,14 @@ public class DefaultPubSubListenerContainer<K, V> implements PubSubListenerConta
         @Override
         protected void doStart() {
             ((StatefulRedisClusterPubSubConnection<K, V>) connection).addListener(listener);
-            log.info(String.format("Subscribing to pattern %s", BatchUtils.toString(pattern)));
+            log.info(String.format("Subscribing to pattern %s", BatchUtils.keyToString(pattern)));
             ((StatefulRedisClusterPubSubConnection<K, V>) connection).sync().upstream().commands().psubscribe(pattern);
         }
 
         @SuppressWarnings("unchecked")
         @Override
         public void cancel() {
-            log.info(String.format("Unsubscribing from pattern %s", BatchUtils.toString(pattern)));
+            log.info(String.format("Unsubscribing from pattern %s", BatchUtils.keyToString(pattern)));
             ((StatefulRedisClusterPubSubConnection<K, V>) connection).sync().upstream().commands().punsubscribe(pattern);
             ((StatefulRedisClusterPubSubConnection<K, V>) connection).removeListener(listener);
 

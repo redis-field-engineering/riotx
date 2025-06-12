@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.redis.batch.KeyType;
 import com.redis.batch.gen.CollectionOptions;
 import com.redis.batch.gen.Generator;
 import com.redis.batch.gen.StreamOptions;
@@ -61,19 +62,22 @@ class GeneratorTests {
         List<KeyValue<String>> list = readAll(reader);
         Assertions.assertEquals(count, list.size());
         for (KeyValue<String> ds : list) {
-            switch (ds.getType()) {
-                case KeyValue.TYPE_SET:
-                case KeyValue.TYPE_LIST:
-                case KeyValue.TYPE_ZSET:
-                    Assertions.assertEquals(CollectionOptions.DEFAULT_MEMBER_COUNT.getMax(),
-                            ((Collection<?>) ds.getValue()).size());
-                    break;
-                case KeyValue.TYPE_STREAM:
-                    Assertions.assertEquals(StreamOptions.DEFAULT_MESSAGE_COUNT.getMax(),
-                            ((Collection<?>) ds.getValue()).size());
-                    break;
-                default:
-                    break;
+            KeyType type = ds.type();
+            if (type != null) {
+                switch (type) {
+                    case SET:
+                    case LIST:
+                    case ZSET:
+                        Assertions.assertEquals(CollectionOptions.DEFAULT_MEMBER_COUNT.getMax(),
+                                ((Collection<?>) ds.getValue()).size());
+                        break;
+                    case STREAM:
+                        Assertions.assertEquals(StreamOptions.DEFAULT_MESSAGE_COUNT.getMax(),
+                                ((Collection<?>) ds.getValue()).size());
+                        break;
+                    default:
+                        break;
+                }
             }
         }
     }

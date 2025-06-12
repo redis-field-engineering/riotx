@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.redis.batch.KeyType;
 import com.redis.lettucemod.timeseries.AddOptions;
 import com.redis.lettucemod.timeseries.DuplicatePolicy;
 import com.redis.batch.KeyValue;
@@ -26,7 +27,7 @@ public class KeyValueWrite<K, V> implements RedisOperation<K, V, KeyValue<K>, Ob
 
     private final ExpireAt<K, V, KeyValue<K>> expire = expire();
 
-    private final ClassifierOperation<K, V, KeyValue<K>, String> write = writeOperation();
+    private final ClassifierOperation<K, V, KeyValue<K>, KeyType> write = writeOperation();
 
     private WriteMode mode = DEFAULT_MODE;
 
@@ -46,18 +47,18 @@ public class KeyValueWrite<K, V> implements RedisOperation<K, V, KeyValue<K>, Ob
         return stream(items).filter(t -> t.getValue() != null).collect(Collectors.toList());
     }
 
-    private ClassifierOperation<K, V, KeyValue<K>, String> writeOperation() {
-        ClassifierOperation<K, V, KeyValue<K>, String> operation = new ClassifierOperation<>(KeyValue::getType);
-        operation.setOperation(KeyValue.TYPE_HASH, new Hset<>(KeyValue::getKey, KeyValueWrite::value));
-        operation.setOperation(KeyValue.TYPE_JSON, new JsonSet<>(KeyValue::getKey, KeyValueWrite::value));
-        operation.setOperation(KeyValue.TYPE_STRING, new Set<>(KeyValue::getKey, KeyValueWrite::value));
-        operation.setOperation(KeyValue.TYPE_LIST, new Rpush<>(KeyValue::getKey, KeyValueWrite::value));
-        operation.setOperation(KeyValue.TYPE_SET, new Sadd<>(KeyValue::getKey, KeyValueWrite::value));
-        operation.setOperation(KeyValue.TYPE_STREAM, new Xadd<>(KeyValue::getKey, KeyValueWrite::value));
+    private ClassifierOperation<K, V, KeyValue<K>, KeyType> writeOperation() {
+        ClassifierOperation<K, V, KeyValue<K>, KeyType> operation = new ClassifierOperation<>(KeyValue::type);
+        operation.setOperation(KeyType.HASH, new Hset<>(KeyValue::getKey, KeyValueWrite::value));
+        operation.setOperation(KeyType.JSON, new JsonSet<>(KeyValue::getKey, KeyValueWrite::value));
+        operation.setOperation(KeyType.STRING, new Set<>(KeyValue::getKey, KeyValueWrite::value));
+        operation.setOperation(KeyType.LIST, new Rpush<>(KeyValue::getKey, KeyValueWrite::value));
+        operation.setOperation(KeyType.SET, new Sadd<>(KeyValue::getKey, KeyValueWrite::value));
+        operation.setOperation(KeyType.STREAM, new Xadd<>(KeyValue::getKey, KeyValueWrite::value));
         TsAdd<K, V, KeyValue<K>> tsAdd = new TsAdd<>(KeyValue::getKey, KeyValueWrite::value);
         tsAdd.setOptions(AddOptions.<K, V> builder().policy(DuplicatePolicy.LAST).build());
-        operation.setOperation(KeyValue.TYPE_TIMESERIES, tsAdd);
-        operation.setOperation(KeyValue.TYPE_ZSET, new Zadd<>(KeyValue::getKey, KeyValueWrite::value));
+        operation.setOperation(KeyType.TIMESERIES, tsAdd);
+        operation.setOperation(KeyType.ZSET, new Zadd<>(KeyValue::getKey, KeyValueWrite::value));
         return operation;
     }
 
@@ -84,7 +85,7 @@ public class KeyValueWrite<K, V> implements RedisOperation<K, V, KeyValue<K>, Ob
     }
 
     private boolean shouldDelete(KeyValue<K> item) {
-        return mode == WriteMode.OVERWRITE || KeyValue.TYPE_NONE.equalsIgnoreCase(item.getType());
+        return mode == WriteMode.OVERWRITE || item.type() == KeyType.NONE;
     }
 
     @SuppressWarnings("unchecked")
@@ -104,7 +105,7 @@ public class KeyValueWrite<K, V> implements RedisOperation<K, V, KeyValue<K>, Ob
         return expire;
     }
 
-    public ClassifierOperation<K, V, KeyValue<K>, String> getWrite() {
+    public ClassifierOperation<K, V, KeyValue<K>, KeyType> getWrite() {
         return write;
     }
 

@@ -2,6 +2,7 @@ package com.redis.batch.operation;
 
 import com.redis.batch.BatchUtils;
 import com.redis.batch.InitializingOperation;
+import com.redis.batch.KeyType;
 import com.redis.batch.KeyValue;
 import com.redis.lettucemod.timeseries.Sample;
 import io.lettuce.core.RedisFuture;
@@ -136,19 +137,23 @@ public class KeyValueRead<K, V> implements InitializingOperation<K, V, K, KeyVal
 
     @SuppressWarnings("unchecked")
     private Object structValue(KeyValue<K> item, Object value) {
-        if (value == null || item.getType() == null) {
+        if (value == null) {
             return value;
         }
-        switch (item.getType()) {
-            case KeyValue.TYPE_HASH:
+        KeyType type = item.type();
+        if (type == null) {
+            return value;
+        }
+        switch (type) {
+            case HASH:
                 return map((List<Object>) value);
-            case KeyValue.TYPE_SET:
+            case SET:
                 return new HashSet<>((Collection<V>) value);
-            case KeyValue.TYPE_STREAM:
+            case STREAM:
                 return streamMessages(item.getKey(), (Collection<List<Object>>) value);
-            case KeyValue.TYPE_TIMESERIES:
+            case TIMESERIES:
                 return timeseries((List<List<Object>>) value);
-            case KeyValue.TYPE_ZSET:
+            case ZSET:
                 return zset(value);
             default:
                 return value;

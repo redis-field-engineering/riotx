@@ -1,5 +1,6 @@
 package com.redis.riot.core;
 
+import com.redis.batch.KeyType;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.util.Assert;
 
@@ -16,8 +17,7 @@ public class KeyValueFilter<K> implements ItemProcessor<KeyValue<K>, KeyValue<K>
 
     @Override
     public KeyValue<K> process(KeyValue<K> item) throws Exception {
-        if (!KeyValue.TYPE_NONE.equalsIgnoreCase(item.getType()) && item.getValue() != null
-                && item.getMemoryUsage() > memoryLimit) {
+        if (item.type() != KeyType.NONE && item.getValue() != null && item.getMemoryUsage() > memoryLimit) {
             return null;
         }
         return item;

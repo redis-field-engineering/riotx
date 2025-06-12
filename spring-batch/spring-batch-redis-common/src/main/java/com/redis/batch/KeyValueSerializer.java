@@ -44,17 +44,17 @@ public class KeyValueSerializer extends StdSerializer<KeyValue> {
         Object value = kv.getValue();
         if (value != null) {
             gen.writeFieldName(KeyValueDeserializer.VALUE);
-            serializeValue(gen, serializers, kv.getType(), value);
+            serializeValue(gen, serializers, kv.type(), value);
         }
 
         gen.writeEndObject();
     }
 
     @SuppressWarnings("unchecked")
-    private void serializeValue(JsonGenerator gen, SerializerProvider serializers, String type, Object value)
+    private void serializeValue(JsonGenerator gen, SerializerProvider serializers, KeyType type, Object value)
             throws IOException {
         switch (type) {
-            case KeyValue.TYPE_STREAM:
+            case STREAM:
                 gen.writeStartArray();
                 for (StreamMessage<String, String> message : (Collection<StreamMessage<String, String>>) value) {
                     gen.writeStartObject();
@@ -66,7 +66,7 @@ public class KeyValueSerializer extends StdSerializer<KeyValue> {
                 gen.writeEndArray();
                 break;
 
-            case KeyValue.TYPE_ZSET:
+            case ZSET:
                 gen.writeStartArray();
                 for (ScoredValue<String> sv : (Set<ScoredValue<String>>) value) {
                     gen.writeStartObject();
@@ -77,7 +77,7 @@ public class KeyValueSerializer extends StdSerializer<KeyValue> {
                 gen.writeEndArray();
                 break;
 
-            case KeyValue.TYPE_TIMESERIES:
+            case TIMESERIES:
                 gen.writeStartArray();
                 for (Sample sample : (Collection<Sample>) value) {
                     gen.writeStartObject();
@@ -88,17 +88,17 @@ public class KeyValueSerializer extends StdSerializer<KeyValue> {
                 gen.writeEndArray();
                 break;
 
-            case KeyValue.TYPE_HASH:
+            case HASH:
                 serializers.defaultSerializeValue((Map<?, ?>) value, gen);
                 break;
 
-            case KeyValue.TYPE_STRING:
-            case KeyValue.TYPE_JSON:
+            case STRING:
+            case JSON:
                 gen.writeString((String) value);
                 break;
 
-            case KeyValue.TYPE_LIST:
-            case KeyValue.TYPE_SET:
+            case LIST:
+            case SET:
                 serializers.defaultSerializeValue(value, gen);
                 break;
 
