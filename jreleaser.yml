@@ -39,8 +39,10 @@ release:
       enabled: true
     changelog:
       formatted: ALWAYS
+      format: '- {{commitTitle}}'
       preset: conventional-commits
       contributors:
+        enabled: false
         format: '- {{contributorName}}{{#contributorUsernameAsLink}} ({{.}}){{/contributorUsernameAsLink}}'
       contentTemplate: 'src/jreleaser/changelog.tpl'
       extraProperties:
