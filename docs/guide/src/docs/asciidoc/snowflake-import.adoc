@@ -139,8 +139,7 @@ sources:
   riotx:
     type: external
     # Redis Insight requires a connection element but it's not actually used by RDI
-    connection:
-      type: mariadb
+    connection: {}
 
 targets:
   target:
@@ -148,8 +147,8 @@ targets:
       type: redis
       host: # Target database hostname
       port: # Target database port
-
 processors:
+
 
 -----
 
@@ -163,6 +162,7 @@ output:
   - uses: redis.write
     with:
       connection: target
+      data_type: hash
       key:
         expression: concat(['order:', ORDER_ID])
         language: jmespath
