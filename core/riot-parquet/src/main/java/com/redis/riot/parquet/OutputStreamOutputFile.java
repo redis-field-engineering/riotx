@@ -13,12 +13,17 @@ import org.apache.parquet.io.PositionOutputStream;
  * This class is needed to convert the OutputStream into a format used by
  * ParquetFileWriter
  */
-public class OutputStreamOutputFile implements OutputFile {
+public class OutputStreamOutputFile implements OutputFile, AutoCloseable {
 
 	private final OutputStream outputStream;
 
 	public OutputStreamOutputFile(OutputStream outputStream) {
 		this.outputStream = outputStream;
+	}
+
+	@Override
+	public void close() throws Exception {
+		outputStream.close();
 	}
 
 	@Override

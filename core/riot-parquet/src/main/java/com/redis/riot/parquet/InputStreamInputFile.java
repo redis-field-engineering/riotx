@@ -14,13 +14,18 @@ import org.apache.parquet.io.SeekableInputStream;
  * This class is needed to convert the InputStream into a format read by
  * ParquetFileReader
  */
-public class InputStreamInputFile implements InputFile {
+public class InputStreamInputFile implements InputFile, AutoCloseable {
 
 	private final InputStream stream;
 	private long length;
 
 	public InputStreamInputFile(InputStream stream) {
 		this.stream = stream;
+	}
+
+	@Override
+	public void close() throws Exception {
+		stream.close();
 	}
 
 	@Override

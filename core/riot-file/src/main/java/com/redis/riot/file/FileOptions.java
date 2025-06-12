@@ -3,6 +3,7 @@ package com.redis.riot.file;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -42,6 +43,8 @@ public class FileOptions {
     private char quoteCharacter = DEFAULT_QUOTE_CHARACTER;
 
     private final Set<Consumer<ObjectMapper>> objectMapperConfigurers = new LinkedHashSet<>();
+
+    private Map<String, String> properties;
 
     public void addObjectMapperConfigurer(Consumer<ObjectMapper> configurer) {
         this.objectMapperConfigurers.add(configurer);
@@ -113,6 +116,14 @@ public class FileOptions {
 
     public void setEncoding(Charset encoding) {
         this.encoding = encoding;
+    }
+
+    public Map<String, String> getProperties() {
+        return properties;
+    }
+
+    public void setProperties(Map<String, String> properties) {
+        this.properties = properties;
     }
 
 }

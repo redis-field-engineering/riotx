@@ -1,7 +1,7 @@
 dependencies {
     implementation project(':spring-batch-redis-common')
     implementation project(':spring-batch-redis-infrastructure')
-    implementation(group: 'org.apache.parquet', name: 'parquet-avro', version: parquetVersion) {
+    api(group: 'org.apache.parquet', name: 'parquet-avro', version: parquetVersion) {
         exclude group: 'org.slf4j', module: 'slf4j-reload4j'
     }
     api(group: 'org.apache.parquet', name: 'parquet-hadoop', version: parquetVersion) {

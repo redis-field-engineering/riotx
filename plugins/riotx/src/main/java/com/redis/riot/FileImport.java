@@ -76,6 +76,7 @@ public class FileImport extends AbstractRedisImport {
     private ParquetFileItemReader parquetFileReader(Resource resource, ReadOptions options) {
         ParquetFileItemReader reader = new ParquetFileItemReader();
         reader.setResource(resource);
+        reader.setProperties(options.getProperties());
         if (options.getMaxItemCount() > 0) {
             reader.setMaxItemCount(options.getMaxItemCount());
         }
