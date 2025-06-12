@@ -1,0 +1,270 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'ElastiCache database replication to Redis Cloud'
+Parameters:
+  ContainerImage:
+    Type: String
+    Default: 'riotx/riotx:early-access'
+    Description: The container image to use for the task
+  ContainerCpu:
+    Type: Number
+    Default: 256
+    Description: The number of CPU units to reserve for the container
+    AllowedValues: [256, 512, 1024, 2048, 4096]
+  ContainerMemory:
+    Type: Number
+    Default: 512
+    Description: The amount of memory (in MiB) to reserve for the container
+    AllowedValues: [512, 1024, 2048, 3072, 4096, 5120, 6144, 7168, 8192]
+  TaskFamily:
+    Type: String
+    Default: 'task-definition-cfn'
+    Description: The name of the task definition family
+  ContainerName:
+    Type: String
+    Default: 'riotx-replication'
+    Description: The name of the container
+  ExecutionRoleArn:
+    Type: String
+    Default: ''
+    Description: 'The ARN of the task execution role (leave empty to create one automatically)'
+  LogGroup:
+    Type: String
+    Default: '/ecs/fargate-task-definition'
+    Description: The CloudWatch log group for container logs
+  LogLevel:
+    Type: String
+    Default: 'INFO'
+    Description: Log level
+    AllowedValues: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE']
+  Progress:
+    Type: String
+    Default: 'LOG'
+    AllowedValues: ['BLOCK', 'BAR', 'ASCII', 'LOG', 'NONE']
+    Description: 'Progress reporting style (default: LOG)'
+  NetworkMode:
+    Type: String
+    Default: 'awsvpc'
+    Description: The Docker networking mode to use
+    AllowedValues: ['awsvpc', 'bridge', 'host', 'none']
+  SourceRedisURI:
+    Type: String
+    Description: 'Source Redis URI (e.g., rediss://source-host:6379)'
+    AllowedPattern: '^redis[s]?://.*:[0-9]+$'
+    ConstraintDescription: 'Must be a valid Redis URI format: redis://host:port or rediss://host:port'
+  TargetRedisURI:
+    Type: String
+    Description: 'Target Redis URI (e.g., redis://target-host:19619)'
+    AllowedPattern: '^redis[s]?://.*:[0-9]+$'
+    ConstraintDescription: 'Must be a valid Redis URI format: redis://host:port or rediss://host:port'
+  BatchSize:
+    Type: Number
+    Default: 50
+    MinValue: 1
+    MaxValue: 1000
+    Description: 'Number of items in each batch (default: 50)'
+  ThreadCount:
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 10
+    Description: 'Number of concurrent threads to use for batch processing (default: 1)'
+  SourceCluster:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 'Enable source cluster mode'
+  SourceTlsVerify:
+    Type: String
+    Default: 'FULL'
+    AllowedValues: ['NONE', 'CA', 'FULL']
+    Description: 'Source Redis TLS verification (NONE: no verification, CA: CA and cert without hostname match, FULL: full verification).'
+  SourceUser:
+    Type: String
+    Default: ''
+    Description: 'Username to use when connecting to the source server (optional)'
+  SourcePassword:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: 'Password to use when connecting to the source server (optional)'
+  TargetCluster:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 'Enable target cluster mode'
+  TargetTlsVerify:
+    Type: String
+    Default: 'FULL'
+    AllowedValues: ['NONE', 'CA', 'FULL']
+    Description: 'Target TLS verification (NONE: no verification, CA: CA and cert without hostname match, FULL: full verification).'
+  TargetUser:
+    Type: String
+    Default: ''
+    Description: 'Username to use when connecting to the target server (optional)'
+  TargetPassword:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: 'Password to use when connecting to the target server (optional)'
+  SyncStruct:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 'Enable type-based replication (default: false)'
+  SyncMode:
+    Type: String
+    Default: 'SCAN'
+    AllowedValues: ['SCAN', 'LIVE', 'LIVEONLY']
+    Description: 'Replication mode (SCAN: one-time scan, LIVE: scan + live changes, LIVEONLY: only live changes)'
+  CompareMode:
+    Type: String
+    Default: 'QUICK'
+    AllowedValues: ['FULL', 'QUICK', 'NONE']
+    Description: 'Compare mode after replication (FULL: full comparison, QUICK: quick comparison, NONE: no comparison)'
+  MemoryLimit:
+    Type: String
+    Default: '0'
+    Description: 'Max memory usage for a key to be read (e.g., 12KB, 5MB). Set to 0 for no limit.'
+  KeyPattern:
+    Type: String
+    Default: ''
+    Description: 'Pattern of keys to read (glob pattern, default: all keys)'
+  KeyType:
+    Type: String
+    Default: ''
+    Description: 'Type of keys to read (default: all types)'
+  ScanCount:
+    Type: Number
+    Default: 100
+    MinValue: 1
+    Description: 'How many keys to read at once on each scan iteration'
+  ReadBatch:
+    Type: Number
+    Default: 50
+    MinValue: 1
+    Description: 'Number of values each reader thread should read in a pipelined call'
+  EventQueue:
+    Type: Number
+    Default: 10000
+    MinValue: 1
+    Description: 'Capacity of the keyspace notification queue'
+  DryRun:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 'Enable dummy writes (no actual data written)'
+  Rate:
+    Type: String
+    Default: ''
+    Description: 'Limit number of items written per second (e.g., 100, 5k). Empty for no limit.'
+
+Conditions:
+  CreateExecutionRole: !Equals [!Ref ExecutionRoleArn, '']
+
+Resources:
+  # IAM Role for ECS Task Execution (if not provided)
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Condition: CreateExecutionRole
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: CloudWatchLogsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  MigrationTaskDefinition:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Command:
+            - replicate
+          Essential: true
+          Image: !Ref ContainerImage
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              mode: non-blocking
+              max-buffer-size: 25m
+              awslogs-create-group: 'true'
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          Name: !Ref ContainerName
+          Environment:
+            - Name: RIOT_LOG
+              Value: !Ref LogLevel
+            - Name: RIOT_PROGRESS
+              Value: !Ref Progress
+            - Name: RIOT_SOURCE
+              Value: !Ref SourceRedisURI
+            - Name: RIOT_TARGET
+              Value: !Ref TargetRedisURI
+            - Name: RIOT_SOURCE_CLUSTER
+              Value: !Ref SourceCluster
+            - Name: RIOT_TARGET_CLUSTER
+              Value: !Ref TargetCluster
+            - Name: RIOT_SOURCE_TLS_VERIFY
+              Value: !Ref SourceTlsVerify
+            - Name: RIOT_TARGET_TLS_VERIFY
+              Value: !Ref TargetTlsVerify
+            - Name: RIOT_SOURCE_USER
+              Value: !Ref SourceUser
+            - Name: RIOT_SOURCE_PASSWORD
+              Value: !Ref SourcePassword
+            - Name: RIOT_TARGET_USER
+              Value: !Ref TargetUser
+            - Name: RIOT_TARGET_PASSWORD
+              Value: !Ref TargetPassword
+            - Name: RIOT_BATCH
+              Value: !Ref BatchSize
+            - Name: RIOT_THREADS
+              Value: !Ref ThreadCount
+            - Name: RIOT_SYNC_STRUCT
+              Value: !Ref SyncStruct
+            - Name: RIOT_SYNC_MODE
+              Value: !Ref SyncMode
+            - Name: RIOT_COMPARE
+              Value: !Ref CompareMode
+            - Name: RIOT_MEM_LIMIT
+              Value: !Ref MemoryLimit
+            - Name: RIOT_KEY_PATTERN
+              Value: !Ref KeyPattern
+            - Name: RIOT_KEY_TYPE
+              Value: !Ref KeyType
+            - Name: RIOT_SCAN_COUNT
+              Value: !Ref ScanCount
+            - Name: RIOT_READ_BATCH
+              Value: !Ref ReadBatch
+            - Name: RIOT_EVENT_QUEUE
+              Value: !Ref EventQueue
+            - Name: RIOT_DRY_RUN
+              Value: !Ref DryRun
+            - Name: RIOT_RATE
+              Value: !Ref Rate
+      Cpu: !Ref ContainerCpu
+      ExecutionRoleArn: !If [CreateExecutionRole, !GetAtt TaskExecutionRole.Arn, !Ref ExecutionRoleArn]
+      Family: !Ref TaskFamily
+      Memory: !Ref ContainerMemory
+      NetworkMode: !Ref NetworkMode
+      RequiresCompatibilities:
+        - FARGATE
+Outputs:
+  TaskDefinitionArn:
+    Description: The ARN of the created task definition
+    Value: !Ref MigrationTaskDefinition

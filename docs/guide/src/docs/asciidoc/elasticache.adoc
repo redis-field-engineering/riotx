@@ -131,4 +131,95 @@ Do note that the source database is specified first and the target database is s
 * Once migration is completed, ensure that application traffic gets redirected to Redis endpoint successfully.
 * It is recommended to perform the migration process during low traffic hours so as to avoid chances of data loss.
 
+== CloudFormation Template for AWS ECS
+
+For users who prefer to run migrations using AWS ECS Fargate, a CloudFormation template is available that automates the deployment of RIOT-X replication tasks.
+
+The template link:{site-url}/riot-migration.yaml[riot-migration.yaml] creates an ECS task definition that can be used to run ElastiCache to Redis migrations in a containerized environment.
+
+=== Key Features
+
+* **Automated ECS Task Definition**: Creates a Fargate-compatible task definition with configurable CPU and memory settings
+* **Environment Variable Configuration**: All RIOT-X parameters are exposed as CloudFormation parameters and passed as environment variables
+* **IAM Role Management**: Automatically creates the necessary execution role if not provided
+* **CloudWatch Logging**: Integrated logging to CloudWatch with configurable log levels
+* **Security**: Sensitive parameters like passwords are marked with NoEcho for security
+
+=== Usage
+
+==== Using AWS CLI
+
+1. Deploy the CloudFormation template:
++
+[source,console]
+----
+aws cloudformation create-stack \
+  --stack-name elasticache-migration \
+  --template-body file://riot-migration.yaml \
+  --parameters ParameterKey=SourceRedisURI,ParameterValue=rediss://source-host:6379 \
+               ParameterKey=TargetRedisURI,ParameterValue=redis://target-host:19619 \
+  --capabilities CAPABILITY_IAM
+----
+
+2. Run the migration task using ECS:
++
+[source,console]
+----
+aws ecs run-task \
+  --cluster your-cluster-name \
+  --task-definition task-definition-cfn \
+  --launch-type FARGATE \
+  --network-configuration "awsvpcConfiguration={subnets=[subnet-12345],securityGroups=[sg-12345],assignPublicIp=ENABLED}"
+----
+
+==== Using AWS Management Console
+
+1. **Deploy the CloudFormation Stack:**
+   a. Navigate to the AWS CloudFormation console
+   b. Click *Create stack* → *With new resources (standard)*
+   c. Under *Template source*, select *Upload a template file*
+   d. Click *Choose file* and upload the `riot-migration.yaml` template
+   e. Click *Next*
+   f. Enter a stack name (e.g., `elasticache-migration`)
+   g. Fill in the required parameters:
+      * *SourceRedisURI*: Your ElastiCache endpoint (e.g., `rediss://source-host:6379`)
+      * *TargetRedisURI*: Your target Redis endpoint (e.g., `redis://target-host:19619`)
+      * Configure additional parameters as needed (authentication, clustering, performance settings)
+   h. Click *Next* through the stack options
+   i. On the review page, check *I acknowledge that AWS CloudFormation might create IAM resources*
+   j. Click *Submit*
+   k. Wait for the stack to reach *CREATE_COMPLETE* status
+
+2. **Run the Migration Task:**
+   a. Navigate to the Amazon ECS console
+   b. Select your cluster or create a new one if needed
+   c. Click *Tasks* tab, then *Run new task*
+   d. Select *Launch type*: *Fargate*
+   e. Under *Task definition*, select the family created by CloudFormation (default: `task-definition-cfn`)
+   f. Choose the latest revision
+   g. Configure networking:
+      * Select your VPC
+      * Choose subnets (ensure they have internet access for pulling container images)
+      * Select or create a security group allowing outbound connections
+      * Enable *Auto-assign public IP* if using public subnets
+   h. Click *Run task*
+   i. Monitor the task status and logs in the ECS console
+
+3. **Monitor Progress:**
+   a. Go to CloudWatch Logs
+   b. Find the log group `/ecs/fargate-task-definition` (or the custom log group you specified)
+   c. View the log stream to monitor migration progress and any errors
+
+=== Configuration Parameters
+
+The template supports all major RIOT-X replication parameters including:
+
+* **Connection Settings**: Source/target URIs, TLS configuration, authentication
+* **Replication Mode**: SCAN (snapshot), LIVE (continuous), or LIVEONLY
+* **Performance Tuning**: Batch sizes, thread counts, memory limits
+* **Filtering**: Key patterns, key types, memory limits
+* **Monitoring**: Progress reporting, logging levels, CloudWatch integration
+
+Refer to the template parameters for complete configuration options and their descriptions.
+
 

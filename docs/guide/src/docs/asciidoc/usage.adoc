@@ -36,7 +36,7 @@ include::{includedir}/env.adoc[leveloffset=+1]
 
 == Man Page
 
-https://redis-field-engineering.github.io/riotx/manpage/riotx[{project-title} man page].
+{site-url}/manpage/riotx[{project-title} man page].
 
 :leveloffset: +1
 include::{includedir}/datagen.adoc[]

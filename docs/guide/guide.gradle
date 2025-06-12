@@ -14,16 +14,17 @@ dependencies {
 asciidoctor {
     configurations 'asciidoctorExtensions'
     forkOptions {
-      // Fix issue with JDK16+
-      jvmArgs("--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED")
+        // Fix issue with JDK16+
+        jvmArgs("--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED")
     }
     attributes = [
-            numbered                : false,
-            'source-highlighter'    : 'coderay',
-            'coderay-linenums-mode' : 'table',
-            'testdir'               : '../../../../../plugins/riotx/src/test/resources',
-            'app'                   : 'riotx',
-            'toclevels'             : 3
+            numbered               : false,
+            'source-highlighter'   : 'coderay',
+            'coderay-linenums-mode': 'table',
+            'testdir'              : '../../../../../plugins/riotx/src/test/resources',
+            'app'                  : 'riotx',
+            'toclevels'            : 3,
+            'site-url'             : 'https://redis-field-engineering.github.io/riotx'
 
     ]
     dependsOn ':aggregateCopyDocFiles'
