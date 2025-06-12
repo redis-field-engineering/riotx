@@ -1,43 +1,33 @@
 package com.redis.spring.batch.test;
 
+import com.redis.batch.KeyType;
+import com.redis.batch.KeyValue;
+import com.redis.batch.Range;
+import com.redis.batch.gen.StreamOptions;
+import com.redis.lettucemod.api.StatefulRedisModulesConnection;
+import com.redis.lettucemod.api.sync.RedisModulesCommands;
+import com.redis.lettucemod.utils.ConnectionBuilder;
+import com.redis.spring.batch.item.redis.GeneratorItemReader;
+import com.redis.spring.batch.item.redis.RedisItemReader;
+import com.redis.spring.batch.item.redis.RedisItemWriter;
+import com.redis.spring.batch.item.redis.reader.*;
+import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
+import com.redis.testcontainers.RedisServer;
+import io.lettuce.core.AbstractRedisClient;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.codec.RedisCodec;
+import io.lettuce.core.codec.StringCodec;
+import org.junit.jupiter.api.*;
+import org.springframework.batch.core.JobExecutionException;
+import org.springframework.batch.item.support.ListItemWriter;
+import org.testcontainers.lifecycle.Startable;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import com.redis.batch.gen.ItemType;
-import com.redis.batch.gen.StreamOptions;
-import com.redis.lettucemod.utils.ConnectionBuilder;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInfo;
-import org.springframework.batch.core.JobExecutionException;
-import org.springframework.batch.item.support.ListItemWriter;
-import org.testcontainers.lifecycle.Startable;
-
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.lettucemod.api.sync.RedisModulesCommands;
-import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.batch.KeyValue;
-import com.redis.batch.Range;
-import com.redis.spring.batch.item.redis.GeneratorItemReader;
-import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
-import com.redis.spring.batch.item.redis.reader.KeyComparator;
-import com.redis.spring.batch.item.redis.reader.KeyComparison;
-import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
-import com.redis.spring.batch.item.redis.reader.KeyComparisonItemReader;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-import com.redis.testcontainers.RedisServer;
-
-import io.lettuce.core.AbstractRedisClient;
-import io.lettuce.core.RedisURI;
-import io.lettuce.core.codec.RedisCodec;
-import io.lettuce.core.codec.StringCodec;
 
 public abstract class AbstractTargetTestBase extends AbstractTestBase {
 
@@ -174,7 +164,7 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
         if (reader instanceof RedisScanItemReader) {
             generate(info, generator(130));
         } else {
-            GeneratorItemReader generator = generator(1, ItemType.STREAM);
+            GeneratorItemReader generator = generator(1, KeyType.STREAM);
             StreamOptions streamOptions = generator.getGenerator().getStreamOptions();
             streamOptions.setMessageCount(Range.of(3));
             streamOptions.getBodyOptions().setFieldCount(Range.of(1));

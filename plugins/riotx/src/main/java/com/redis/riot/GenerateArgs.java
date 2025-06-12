@@ -1,5 +1,6 @@
 package com.redis.riot;
 
+import com.redis.batch.KeyType;
 import com.redis.batch.Range;
 import com.redis.batch.gen.*;
 import lombok.ToString;
@@ -21,7 +22,7 @@ public class GenerateArgs {
     private Range keyRange = Generator.DEFAULT_KEY_RANGE;
 
     @Option(arity = "1..*", names = "--type", description = "Types of data structures to generate: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<type>")
-    private List<ItemType> types = Generator.defaultTypes();
+    private List<KeyType> types = Generator.defaultTypes();
 
     @Option(names = "--index", description = "Name of index to create that matches JSON or hash type.", paramLabel = "<name>")
     private String index;
@@ -172,11 +173,11 @@ public class GenerateArgs {
         this.keyRange = keyRange;
     }
 
-    public List<ItemType> getTypes() {
+    public List<KeyType> getTypes() {
         return types;
     }
 
-    public void setTypes(List<ItemType> types) {
+    public void setTypes(List<KeyType> types) {
         this.types = types;
     }
 

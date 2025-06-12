@@ -44,8 +44,8 @@ public class RedisScanItemReader<K, V> extends RedisItemReader<K, V> {
         return args;
     }
 
-    private KeyEvent<K> keyEvent(K key) {
-        KeyEvent<K> keyEvent = new KeyEvent<>();
+    private KeyValue<K> keyEvent(K key) {
+        KeyValue<K> keyEvent = new KeyValue<>();
         keyEvent.setKey(key);
         keyEvent.setEvent(SCAN_EVENT);
         return keyEvent;
@@ -56,11 +56,11 @@ public class RedisScanItemReader<K, V> extends RedisItemReader<K, V> {
     }
 
     public List<KeyValue<K>> fetch(int count) throws Exception {
-        List<KeyEvent<K>> keys = new ArrayList<>();
+        List<KeyValue<K>> keys = new ArrayList<>();
         while (keys.size() < count && keyIterator.hasNext()) {
             K key = keyIterator.next();
             if (acceptKey(key)) {
-                KeyEvent<K> keyEvent = keyEvent(key);
+                KeyValue<K> keyEvent = keyEvent(key);
                 keys.add(keyEvent);
             }
         }

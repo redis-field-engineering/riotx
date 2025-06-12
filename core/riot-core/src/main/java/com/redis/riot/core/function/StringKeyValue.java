@@ -21,7 +21,7 @@ public class StringKeyValue<K> implements Function<KeyValue<String>, KeyValue<K>
 		keyValue.setEvent(item.getEvent());
 		keyValue.setKey(stringKeyFunction.apply(item.getKey()));
 		keyValue.setMemoryUsage(item.getMemoryUsage());
-		keyValue.setTimestamp(item.getTimestamp());
+		keyValue.setTime(item.getTime());
 		keyValue.setTtl(item.getTtl());
 		keyValue.setType(item.getType());
 		keyValue.setValue(item.getValue());

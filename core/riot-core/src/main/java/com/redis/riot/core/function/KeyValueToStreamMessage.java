@@ -25,7 +25,7 @@ public class KeyValueToStreamMessage implements ItemProcessor<KeyValue<String>, 
     public StreamMessage<String, String> process(KeyValue<String> struct) throws Exception {
         Map<String, String> body = new LinkedHashMap<>();
         body.put("key", struct.getKey());
-        body.put("time", String.valueOf(struct.getTimestamp()));
+        body.put("time", String.valueOf(struct.getTime()));
         body.put("type", struct.getType());
         body.put("ttl", String.valueOf(struct.getTtl()));
         body.put("mem", String.valueOf(struct.getMemoryUsage()));
@@ -37,9 +37,9 @@ public class KeyValueToStreamMessage implements ItemProcessor<KeyValue<String>, 
         if (struct.getType() == null) {
             return null;
         }
-        switch (struct.getType()) {
-            case KeyValue.TYPE_STRING:
-            case KeyValue.TYPE_JSON:
+        switch (struct.type()) {
+            case STRING:
+            case JSON:
                 return (String) struct.getValue();
             default:
                 return mapper.writeValueAsString(struct.getValue());

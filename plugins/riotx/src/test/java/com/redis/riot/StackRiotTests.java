@@ -2,8 +2,8 @@ package com.redis.riot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.redis.batch.KeyType;
 import com.redis.batch.gen.Generator;
-import com.redis.batch.gen.ItemType;
 import com.redis.batch.gen.MapOptions;
 import com.redis.lettucemod.search.Field;
 import com.redis.lettucemod.search.IndexInfo;
@@ -12,7 +12,6 @@ import com.redis.lettucemod.search.SuggetOptions;
 import com.redis.lettucemod.timeseries.MRangeOptions;
 import com.redis.lettucemod.timeseries.RangeResult;
 import com.redis.lettucemod.timeseries.TimeRange;
-import com.redis.riot.core.CompareMode;
 import com.redis.riot.core.Expression;
 import com.redis.riot.core.QuietMapAccessor;
 import com.redis.riot.file.xml.XmlItemReader;
@@ -189,14 +188,15 @@ class StackRiotTests extends RiotTests {
         List<? extends KeyValue<String>> records = readAll(info, reader);
         Assertions.assertEquals(redisCommands.dbsize(), records.size());
         for (KeyValue<String> record : records) {
-            if (record.getType() == null) {
+            KeyType type = record.type();
+            if (type == null) {
                 continue;
             }
-            switch (record.getType()) {
-                case KeyValue.TYPE_HASH:
+            switch (type) {
+                case HASH:
                     Assertions.assertEquals(record.getValue(), redisCommands.hgetall(record.getKey()));
                     break;
-                case KeyValue.TYPE_STRING:
+                case STRING:
                     Assertions.assertEquals(record.getValue(), redisCommands.get(record.getKey()));
                     break;
                 default:
@@ -518,10 +518,10 @@ class StackRiotTests extends RiotTests {
     void replicateKeyExclude(TestInfo info) throws Throwable {
         String filename = "replicate-key-exclude";
         int goodCount = 200;
-        GeneratorItemReader gen = generator(goodCount, ItemType.HASH);
+        GeneratorItemReader gen = generator(goodCount, KeyType.HASH);
         generate(info, gen);
         int badCount = 100;
-        GeneratorItemReader generator2 = generator(badCount, ItemType.HASH);
+        GeneratorItemReader generator2 = generator(badCount, KeyType.HASH);
         generator2.getGenerator().setKeyspace("bad");
         generate(testInfo(info, "2"), generator2);
         Assertions.assertEquals(badCount, keyCount("bad:*"));
@@ -535,8 +535,8 @@ class StackRiotTests extends RiotTests {
         int goodCount = 200;
         int badCount = 100;
         enableKeyspaceNotifications();
-        generateAsync(testInfo(info, "gen-1"), generator(goodCount, ItemType.HASH));
-        GeneratorItemReader generator2 = generator(badCount, ItemType.HASH);
+        generateAsync(testInfo(info, "gen-1"), generator(goodCount, KeyType.HASH));
+        GeneratorItemReader generator2 = generator(badCount, KeyType.HASH);
         generator2.getGenerator().setKeyspace("bad");
         generateAsync(testInfo(info, "gen-2"), generator2);
         execute(info, filename);
@@ -548,7 +548,7 @@ class StackRiotTests extends RiotTests {
 
     @Test
     void replicateLiveOnlyStruct(TestInfo info) throws Exception {
-        ItemType[] types = new ItemType[] { ItemType.HASH, ItemType.STRING };
+        KeyType[] types = new KeyType[] { KeyType.HASH, KeyType.STRING };
         enableKeyspaceNotifications();
         GeneratorItemReader generator = generator(3500, types);
         generator.setCurrentItemCount(3001);
@@ -635,7 +635,7 @@ class StackRiotTests extends RiotTests {
     @Test
     void replicateKeyProcessor(TestInfo info) throws Throwable {
         String filename = "replicate-key-processor";
-        GeneratorItemReader gen = generator(1, ItemType.HASH);
+        GeneratorItemReader gen = generator(1, KeyType.HASH);
         generate(info, gen);
         Long sourceSize = redisCommands.dbsize();
         Assertions.assertTrue(sourceSize > 0);
@@ -686,7 +686,7 @@ class StackRiotTests extends RiotTests {
 
     @Test
     void compareKeyProcessor(TestInfo info) throws Throwable {
-        GeneratorItemReader gen = generator(1, ItemType.HASH);
+        GeneratorItemReader gen = generator(1, KeyType.HASH);
         generate(info, gen);
         Long sourceSize = redisCommands.dbsize();
         Assertions.assertTrue(sourceSize > 0);

@@ -1,10 +1,10 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import com.redis.batch.KeyEvent;
+import com.redis.batch.BatchUtils;
+import com.redis.batch.KeyValue;
 import com.redis.spring.batch.UniqueBlockingQueue;
 import com.redis.spring.batch.item.AbstractCountingItemReader;
 import com.redis.spring.batch.item.PollableItemReader;
-import com.redis.batch.BatchUtils;
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.codec.RedisCodec;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -20,8 +20,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
-public class KeyEventItemReader<K, V> extends AbstractCountingItemReader<KeyEvent<K>>
-        implements PollableItemReader<KeyEvent<K>> {
+public class KeyEventItemReader<K, V> extends AbstractCountingItemReader<KeyValue<K>>
+        implements PollableItemReader<KeyValue<K>> {
 
     public static final int DEFAULT_QUEUE_CAPACITY = 10000;
 
@@ -41,9 +41,9 @@ public class KeyEventItemReader<K, V> extends AbstractCountingItemReader<KeyEven
 
     private String keyPattern;
 
-    private Predicate<KeyEvent<K>> filter = Predicates.isTrue();
+    private Predicate<KeyValue<K>> filter = Predicates.isTrue();
 
-    protected BlockingQueue<KeyEvent<K>> queue;
+    protected BlockingQueue<KeyValue<K>> queue;
 
     public KeyEventItemReader(AbstractRedisClient client, RedisCodec<K, V> codec) {
         this.listenerContainer = KeyEventListenerContainer.create(client, codec);
@@ -66,14 +66,14 @@ public class KeyEventItemReader<K, V> extends AbstractCountingItemReader<KeyEven
         return Tag.of("name", getName());
     }
 
-    private void onKeyEvent(KeyEvent<K> keyEvent) {
+    private void onKeyEvent(KeyValue<K> keyEvent) {
         if (filter.test(keyEvent)) {
             boolean added = queue.offer(keyEvent);
             String status = added ? BatchMetrics.STATUS_SUCCESS : BatchMetrics.STATUS_FAILURE;
             Tags tags = BatchUtils.tags(keyEvent, status).and(nameTag());
             BatchUtils.createCounter(meterRegistry, METRIC_NAME, COUNTER_DESCRIPTION, tags).increment();
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Key event key=%s event=%s type=%s: %s", BatchUtils.toString(keyEvent.getKey()),
+                log.debug(String.format("Key event key=%s event=%s type=%s: %s", BatchUtils.keyToString(keyEvent.getKey()),
                         keyEvent.getEvent(), keyEvent.getType(), status));
             }
         }
@@ -92,16 +92,16 @@ public class KeyEventItemReader<K, V> extends AbstractCountingItemReader<KeyEven
     }
 
     @Override
-    protected KeyEvent<K> doRead() throws Exception {
+    protected KeyValue<K> doRead() throws Exception {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public KeyEvent<K> poll(long timeout, TimeUnit unit) throws Exception {
+    public KeyValue<K> poll(long timeout, TimeUnit unit) throws Exception {
         return queue.poll(timeout, unit);
     }
 
-    public BlockingQueue<KeyEvent<K>> getQueue() {
+    public BlockingQueue<KeyValue<K>> getQueue() {
         return queue;
     }
 
@@ -133,11 +133,11 @@ public class KeyEventItemReader<K, V> extends AbstractCountingItemReader<KeyEven
         return meterRegistry;
     }
 
-    public Predicate<KeyEvent<K>> getFilter() {
+    public Predicate<KeyValue<K>> getFilter() {
         return filter;
     }
 
-    public void setFilter(Predicate<KeyEvent<K>> filter) {
+    public void setFilter(Predicate<KeyValue<K>> filter) {
         this.filter = filter;
     }
 

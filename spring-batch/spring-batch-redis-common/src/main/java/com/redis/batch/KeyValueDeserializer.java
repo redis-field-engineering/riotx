@@ -79,25 +79,29 @@ public class KeyValueDeserializer extends StdDeserializer<KeyValue> {
         return keyValue;
     }
 
-    private Object value(String type, JsonNode node, DeserializationContext ctxt) throws IOException {
+    private Object value(String typeString, JsonNode node, DeserializationContext ctxt) throws IOException {
+        if (typeString == null) {
+            return null;
+        }
+        KeyType type = KeyType.of(typeString);
         if (type == null) {
             return null;
         }
         switch (type) {
-            case KeyValue.TYPE_STREAM:
+            case STREAM:
                 return streamMessages((ArrayNode) node, ctxt);
-            case KeyValue.TYPE_ZSET:
+            case ZSET:
                 return scoredValues((ArrayNode) node);
-            case KeyValue.TYPE_TIMESERIES:
+            case TIMESERIES:
                 return samples((ArrayNode) node);
-            case KeyValue.TYPE_HASH:
+            case HASH:
                 return ctxt.readTreeAsValue(node, Map.class);
-            case KeyValue.TYPE_STRING:
-            case KeyValue.TYPE_JSON:
+            case STRING:
+            case JSON:
                 return node.asText();
-            case KeyValue.TYPE_LIST:
+            case LIST:
                 return ctxt.readTreeAsValue(node, Collection.class);
-            case KeyValue.TYPE_SET:
+            case SET:
                 return ctxt.readTreeAsValue(node, Set.class);
             default:
                 return null;

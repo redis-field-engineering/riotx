@@ -3,6 +3,7 @@ package com.redis.riot.core.function;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
+import com.redis.batch.KeyType;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.util.CollectionUtils;
 
@@ -19,7 +20,7 @@ public class StreamItemProcessor implements ItemProcessor<KeyValue<String>, KeyV
     @SuppressWarnings("unchecked")
     @Override
     public KeyValue<String> process(KeyValue<String> t) {
-        if (t.getValue() != null && KeyValue.TYPE_STREAM.equals(t.getType())) {
+        if (t.getValue() != null && t.type() == KeyType.STREAM) {
             Collection<StreamMessage<?, ?>> messages = (Collection<StreamMessage<?, ?>>) t.getValue();
             if (CollectionUtils.isEmpty(messages)) {
                 if (prune) {

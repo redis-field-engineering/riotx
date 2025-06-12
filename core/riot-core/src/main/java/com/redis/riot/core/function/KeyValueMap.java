@@ -47,24 +47,24 @@ public class KeyValueMap implements Function<KeyValue<String>, Map<String, Objec
         if (item.getType() == null || item.getValue() == null) {
             return Collections.emptyMap();
         }
-        switch (item.getType()) {
-            case KeyValue.TYPE_NONE:
+        switch (item.type()) {
+            case NONE:
                 return Collections.emptyMap();
-            case KeyValue.TYPE_HASH:
+            case HASH:
                 return hash.apply((Map<String, String>) item.getValue());
-            case KeyValue.TYPE_LIST:
+            case LIST:
                 return list.apply((Collection<String>) item.getValue());
-            case KeyValue.TYPE_SET:
+            case SET:
                 return set.apply((Set<String>) item.getValue());
-            case KeyValue.TYPE_ZSET:
+            case ZSET:
                 return zset.apply((Set<ScoredValue<String>>) item.getValue());
-            case KeyValue.TYPE_STREAM:
+            case STREAM:
                 return stream.apply((Collection<StreamMessage<String, String>>) item.getValue());
-            case KeyValue.TYPE_JSON:
+            case JSON:
                 return json.apply((String) item.getValue());
-            case KeyValue.TYPE_STRING:
+            case STRING:
                 return string.apply((String) item.getValue());
-            case KeyValue.TYPE_TIMESERIES:
+            case TIMESERIES:
                 return timeseries.apply((Collection<Sample>) item.getValue());
             default:
                 return defaultFunction.apply(item.getValue());

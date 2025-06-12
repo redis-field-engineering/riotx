@@ -9,7 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.redis.batch.gen.ItemType;
+import com.redis.batch.KeyType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +55,7 @@ class PostgresTests extends DbTests {
 		try (Statement statement = dbConnection.createStatement()) {
 			statement.execute("CREATE TABLE mytable (id smallint NOT NULL, field1 bpchar, field2 bpchar)");
 			statement.execute("ALTER TABLE ONLY mytable ADD CONSTRAINT pk_mytable PRIMARY KEY (id)");
-			GeneratorItemReader generator = generator(73, ItemType.HASH);
+			GeneratorItemReader generator = generator(73, KeyType.HASH);
 			generate(info, generator);
 			execute(info, filename, r -> executeDatabaseExport(r, info));
 			statement.execute("SELECT COUNT(*) AS count FROM mytable");

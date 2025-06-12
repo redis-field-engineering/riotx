@@ -1,24 +1,20 @@
 package com.redis.riot;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
-
+import com.redis.batch.KeyType;
+import com.redis.batch.KeyValue;
+import com.redis.batch.Range;
+import com.redis.riot.core.function.KeyValueMap;
+import com.redis.riot.core.function.StringToMapFunction;
+import io.lettuce.core.cluster.SlotHash;
+import io.lettuce.core.codec.StringCodec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import com.redis.riot.core.function.StringToMapFunction;
-import com.redis.riot.core.function.KeyValueMap;
-import com.redis.batch.KeyValue;
-import com.redis.batch.Range;
+import java.util.*;
+import java.util.function.Predicate;
 
-import io.lettuce.core.cluster.SlotHash;
-import io.lettuce.core.codec.StringCodec;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProcessorTests {
 
@@ -39,7 +35,7 @@ class ProcessorTests {
     @Test
     void slotExact() {
         KeyFilterArgs options = new KeyFilterArgs();
-        options.setSlots(Arrays.asList(new Range(7638, 7638)));
+        options.setSlots(Collections.singletonList(new Range(7638, 7638)));
         Predicate<String> predicate = keyFilter(options);
         assertTrue(predicate.test("abc"));
         assertFalse(predicate.test("abcd"));
@@ -58,15 +54,15 @@ class ProcessorTests {
     }
 
     private List<Range> slotRangeList(int start, int end) {
-        return Arrays.asList(new Range(start, end));
+        return Collections.singletonList(new Range(start, end));
     }
 
     @Test
     void kitchenSink() {
         KeyFilterArgs options = new KeyFilterArgs();
-        options.setExcludes(Arrays.asList("foo"));
-        options.setIncludes(Arrays.asList("foo1"));
-        options.setSlots(Arrays.asList(new Range(0, SlotHash.SLOT_COUNT)));
+        options.setExcludes(Collections.singletonList("foo"));
+        options.setIncludes(Collections.singletonList("foo1"));
+        options.setSlots(Collections.singletonList(new Range(0, SlotHash.SLOT_COUNT)));
         Predicate<String> predicate = keyFilter(options);
         assertFalse(predicate.test("foo"));
         assertFalse(predicate.test("bar"));
@@ -78,14 +74,14 @@ class ProcessorTests {
         KeyValueMap processor = new KeyValueMap();
         KeyValue<String> string = new KeyValue<>();
         string.setKey("beer:1");
-        string.setType(KeyValue.TYPE_STRING);
+        string.setType(KeyType.STRING.getString());
         String value = "sdfsdf";
         string.setValue(value);
         Map<String, ?> stringMap = processor.apply(string);
         Assertions.assertEquals(value, stringMap.get(StringToMapFunction.DEFAULT_KEY));
         KeyValue<String> hash = new KeyValue<>();
         hash.setKey("beer:2");
-        hash.setType(KeyValue.TYPE_HASH);
+        hash.setType(KeyType.HASH.getString());
         Map<String, String> map = new HashMap<>();
         map.put("field1", "value1");
         hash.setValue(map);

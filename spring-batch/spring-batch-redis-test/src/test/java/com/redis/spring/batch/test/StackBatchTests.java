@@ -1,10 +1,10 @@
 package com.redis.spring.batch.test;
 
 import com.redis.batch.BatchUtils;
+import com.redis.batch.KeyType;
 import com.redis.batch.KeyValue;
 import com.redis.batch.Range;
 import com.redis.batch.gen.Generator;
-import com.redis.batch.gen.ItemType;
 import com.redis.batch.gen.MapOptions;
 import com.redis.batch.gen.TimeSeriesOptions;
 import com.redis.batch.operation.*;
@@ -134,10 +134,10 @@ class StackBatchTests extends BatchTests {
     void readLiveType(TestInfo info) throws Exception {
         generateAsync(info, generator(100));
         RedisLiveItemReader<String, String> reader = liveStructReader();
-        reader.setKeyType(ItemType.HASH.getString());
+        reader.setKeyType(KeyType.HASH.getString());
         ListItemWriter<KeyValue<String>> writer = new ListItemWriter<>();
         run(info, reader, writer);
-        writer.getWrittenItems().forEach(v -> Assertions.assertEquals(KeyValue.TYPE_HASH, v.getType()));
+        writer.getWrittenItems().forEach(v -> Assertions.assertEquals(KeyType.HASH, v.type()));
     }
 
     @Test
@@ -170,7 +170,7 @@ class StackBatchTests extends BatchTests {
         KeyValue<String> ds = reader.read();
         Assertions.assertEquals(key, ds.getKey());
         assertTtlEquals(ttl, ds.getTtl());
-        Assertions.assertEquals(KeyValue.TYPE_HASH, ds.getType());
+        Assertions.assertEquals(KeyType.HASH, ds.type());
         Assertions.assertTrue(ds.getMemoryUsage() > 0);
         reader.close();
     }
@@ -283,7 +283,7 @@ class StackBatchTests extends BatchTests {
     void readMultipleStreams(TestInfo info) throws Exception {
         String consumerGroup = "consumerGroup";
         generateStreams(info, 3, 277);
-        KeyScanArgs args = KeyScanArgs.Builder.type(ItemType.STREAM.getString());
+        KeyScanArgs args = KeyScanArgs.Builder.type(KeyType.STREAM.getString());
         final List<String> keys = ScanIterator.scan(redisCommands, args).stream().collect(Collectors.toList());
         for (String key : keys) {
             long count = redisCommands.xlen(key);
@@ -378,28 +378,28 @@ class StackBatchTests extends BatchTests {
     @Test
     void writeLpush(TestInfo info) throws Exception {
         int count = 73;
-        GeneratorItemReader gen = generator(count, ItemType.STRING);
+        GeneratorItemReader gen = generator(count, KeyType.STRING);
         Lpush<String, String, KeyValue<String>> lpush = new Lpush<>(KeyValue::getKey,
                 v -> Arrays.asList((String) v.getValue()));
         RedisItemWriter<String, String, KeyValue<String>> writer = writer(lpush);
         run(info, gen, writer);
         assertEquals(count, redisCommands.dbsize());
         for (String key : redisCommands.keys("*")) {
-            assertEquals(KeyValue.TYPE_LIST, redisCommands.type(key));
+            assertEquals(KeyType.LIST.getString(), redisCommands.type(key));
         }
     }
 
     @Test
     void writeRpush(TestInfo info) throws Exception {
         int count = 73;
-        GeneratorItemReader gen = generator(count, ItemType.STRING);
+        GeneratorItemReader gen = generator(count, KeyType.STRING);
         Rpush<String, String, KeyValue<String>> rpush = new Rpush<>(KeyValue::getKey,
                 v -> Arrays.asList((String) v.getValue()));
         RedisItemWriter<String, String, KeyValue<String>> writer = writer(rpush);
         run(info, gen, writer);
         assertEquals(count, redisCommands.dbsize());
         for (String key : redisCommands.keys("*")) {
-            assertEquals(KeyValue.TYPE_LIST, redisCommands.type(key));
+            assertEquals(KeyType.LIST.getString(), redisCommands.type(key));
         }
     }
 
@@ -407,20 +407,20 @@ class StackBatchTests extends BatchTests {
     @Test
     void writeLpushAll(TestInfo info) throws Exception {
         int count = 73;
-        GeneratorItemReader gen = generator(count, ItemType.LIST);
+        GeneratorItemReader gen = generator(count, KeyType.LIST);
         Lpush<String, String, KeyValue<String>> lpush = new Lpush<>(KeyValue::getKey, v -> (Collection<String>) v.getValue());
         RedisItemWriter<String, String, KeyValue<String>> writer = writer(lpush);
         run(info, gen, writer);
         assertEquals(count, redisCommands.dbsize());
         for (String key : redisCommands.keys("*")) {
-            assertEquals(KeyValue.TYPE_LIST, redisCommands.type(key));
+            assertEquals(KeyType.LIST.getString(), redisCommands.type(key));
         }
     }
 
     @Test
     void writeExpire(TestInfo info) throws Exception {
         int count = 73;
-        GeneratorItemReader gen = generator(count, ItemType.STRING);
+        GeneratorItemReader gen = generator(count, KeyType.STRING);
         Expire<String, String, KeyValue<String>> expire = new Expire<>(KeyValue::getKey);
         expire.setTtl(1);
         RedisItemWriter<String, String, KeyValue<String>> writer = writer(expire);
@@ -432,7 +432,7 @@ class StackBatchTests extends BatchTests {
     @Test
     void writeExpireAt(TestInfo info) throws Exception {
         int count = 73;
-        GeneratorItemReader gen = generator(count, ItemType.STRING);
+        GeneratorItemReader gen = generator(count, KeyType.STRING);
         ExpireAt<String, String, KeyValue<String>> expire = new ExpireAt<>(KeyValue::getKey);
         expire.setTimestamp(Instant.now());
         RedisItemWriter<String, String, KeyValue<String>> writer = writer(expire);
@@ -452,8 +452,9 @@ class StackBatchTests extends BatchTests {
         run(info, reader, writer);
         assertEquals(1, redisCommands.dbsize());
         assertEquals(values.size(), redisCommands.zcard(key));
-        assertEquals(60, redisCommands
-                .zrangebyscore(key, io.lettuce.core.Range.from(Boundary.including(0), Boundary.including(5))).size());
+        assertEquals(60,
+                redisCommands.zrangebyscore(key, io.lettuce.core.Range.from(Boundary.including(0), Boundary.including(5)))
+                        .size());
     }
 
     @Test
@@ -464,7 +465,7 @@ class StackBatchTests extends BatchTests {
             values.add(String.valueOf(index));
         }
         ListItemReader<String> reader = new ListItemReader<>(values);
-        Sadd<String, String, String> sadd = new Sadd<>(t -> key, v -> Arrays.asList(v));
+        Sadd<String, String, String> sadd = new Sadd<>(t -> key, Collections::singletonList);
         RedisItemWriter<String, String, String> writer = writer(sadd);
         run(info, reader, writer);
         assertEquals(1, redisCommands.dbsize());
@@ -483,7 +484,7 @@ class StackBatchTests extends BatchTests {
         }
         ListItemReader<Map<String, String>> reader = new ListItemReader<>(messages);
         Xadd<String, String, Map<String, String>> xadd = new Xadd<>(t -> stream,
-                m -> Arrays.asList(new StreamMessage<>(null, null, m)));
+                m -> Collections.singletonList(new StreamMessage<>(null, null, m)));
         xadd.setArgs(null);
         RedisItemWriter<String, String, Map<String, String>> writer = writer(xadd);
         run(info, reader, writer);
@@ -503,10 +504,10 @@ class StackBatchTests extends BatchTests {
 
     @Test
     void writeStructOverwrite(TestInfo info) throws Exception {
-        GeneratorItemReader gen1 = generator(100, ItemType.HASH);
+        GeneratorItemReader gen1 = generator(100, KeyType.HASH);
         gen1.getGenerator().setHashOptions(hashOptions(new Range(5, 5)));
         generate(info, gen1);
-        GeneratorItemReader gen2 = generator(100, ItemType.HASH);
+        GeneratorItemReader gen2 = generator(100, KeyType.HASH);
         gen2.getGenerator().setHashOptions(hashOptions(new Range(10, 10)));
         generate(testInfo(info, "target"), gen2);
         replicate(info, scanStructReader(), structWriter());
@@ -515,10 +516,10 @@ class StackBatchTests extends BatchTests {
 
     @Test
     void writeStructMerge(TestInfo info) throws Exception {
-        GeneratorItemReader gen1 = generator(100, ItemType.HASH);
+        GeneratorItemReader gen1 = generator(100, KeyType.HASH);
         gen1.getGenerator().setHashOptions(hashOptions(new Range(5, 5)));
         generate(info, gen1);
-        GeneratorItemReader gen2 = generator(100, ItemType.HASH);
+        GeneratorItemReader gen2 = generator(100, KeyType.HASH);
         gen2.getGenerator().setHashOptions(hashOptions(new Range(10, 10)));
         generate(testInfo(info, "target"), gen2);
         RedisScanItemReader<String, String> reader = scanStructReader();
@@ -557,7 +558,7 @@ class StackBatchTests extends BatchTests {
     @Test
     void compareStreams(TestInfo info) throws Exception {
         GeneratorItemReader gen = generator(10);
-        gen.getGenerator().setTypes(ItemType.STREAM);
+        gen.getGenerator().setTypes(KeyType.STREAM);
         generate(info, gen);
         replicate(info, scanStructReader(), structWriter());
         List<KeyComparison<String>> stats = compare(info);
@@ -595,7 +596,7 @@ class StackBatchTests extends BatchTests {
                 key = targetRedisCommands.randomkey();
             } while (key == null);
             String type = targetRedisCommands.type(key);
-            if (KeyValue.TYPE_STRING.equals(type)) {
+            if (KeyType.STRING.getString().equals(type)) {
                 if (!typeChanges.contains(key)) {
                     valueChanges.add(key);
                 }
@@ -667,7 +668,7 @@ class StackBatchTests extends BatchTests {
         reader.open(new ExecutionContext());
         KeyValue<String> ds = reader.read();
         Assertions.assertEquals(key, ds.getKey());
-        Assertions.assertEquals(ItemType.TIMESERIES.getString(), ds.getType());
+        Assertions.assertEquals(KeyType.TIMESERIES, ds.type());
         Assertions.assertEquals(Arrays.asList(samples), ds.getValue());
         reader.close();
     }
@@ -684,7 +685,7 @@ class StackBatchTests extends BatchTests {
         Function<String, byte[]> toByteArrayKeyFunction = BatchUtils.toByteArrayKeyFunction(StringCodec.UTF8);
         KeyValue<byte[]> ds = reader.read();
         Assertions.assertArrayEquals(toByteArrayKeyFunction.apply(key), ds.getKey());
-        Assertions.assertEquals(ItemType.TIMESERIES.getString(), ds.getType());
+        Assertions.assertEquals(KeyType.TIMESERIES, ds.type());
         Assertions.assertEquals(Arrays.asList(samples), ds.getValue());
         reader.close();
     }
@@ -706,7 +707,7 @@ class StackBatchTests extends BatchTests {
     @Test
     void writeTsAddAll(TestInfo info) throws Exception {
         int count = 10;
-        GeneratorItemReader reader = generator(count, ItemType.TIMESERIES);
+        GeneratorItemReader reader = generator(count, KeyType.TIMESERIES);
         AddOptions<String, String> addOptions = AddOptions.<String, String> builder().policy(DuplicatePolicy.LAST).build();
         TsAdd<String, String, KeyValue<String>> tsadd = new TsAdd<>(KeyValue::getKey, t -> (Collection<Sample>) t.getValue());
         tsadd.setOptions(addOptions);
@@ -714,7 +715,8 @@ class StackBatchTests extends BatchTests {
         run(info, reader, writer);
         for (int index = 1; index <= count; index++) {
             Assertions.assertEquals(TimeSeriesOptions.DEFAULT_SAMPLE_COUNT.getMin(),
-                    redisCommands.tsRange(reader.getGenerator().key(index), TimeRange.unbounded(), RangeOptions.builder().build()).size(), 2);
+                    redisCommands.tsRange(reader.getGenerator().key(index), TimeRange.unbounded(),
+                            RangeOptions.builder().build()).size(), 2);
         }
     }
 

@@ -2,6 +2,7 @@ package com.redis.batch.gen;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.redis.batch.KeyType;
 import com.redis.batch.KeyValue;
 import com.redis.batch.Range;
 import com.redis.lettucemod.timeseries.Sample;
@@ -18,8 +19,6 @@ import java.util.stream.Stream;
 
 public class Generator {
 
-    public static final String EVENT = "datagen";
-
     public static final String DEFAULT_KEYSPACE = "gen";
 
     public static final String DEFAULT_KEY_SEPARATOR = ":";
@@ -34,9 +33,9 @@ public class Generator {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public static List<ItemType> defaultTypes() {
-        return Arrays.asList(ItemType.HASH, ItemType.JSON, ItemType.LIST, ItemType.SET, ItemType.STREAM, ItemType.STRING,
-                ItemType.ZSET);
+    public static List<KeyType> defaultTypes() {
+        return Arrays.asList(KeyType.HASH, KeyType.JSON, KeyType.LIST, KeyType.SET, KeyType.STREAM, KeyType.STRING,
+                KeyType.ZSET);
     }
 
     private String keySeparator = DEFAULT_KEY_SEPARATOR;
@@ -63,7 +62,7 @@ public class Generator {
 
     private ZsetOptions zsetOptions = new ZsetOptions();
 
-    private List<ItemType> types = defaultTypes();
+    private List<KeyType> types = defaultTypes();
 
     private final AtomicLong currentIndex = new AtomicLong();
 
@@ -83,7 +82,7 @@ public class Generator {
         return keyspace + keySeparator + index;
     }
 
-    private Object value(String key, ItemType type) throws JsonProcessingException {
+    private Object value(String key, KeyType type) throws JsonProcessingException {
         switch (type) {
             case HASH:
                 return hash();
@@ -199,10 +198,9 @@ public class Generator {
 
     public KeyValue<String> next() throws JsonProcessingException {
         String key = key();
-        ItemType type = type();
+        KeyType type = type();
         KeyValue<String> keyValue = new KeyValue<>();
         keyValue.setKey(key);
-        keyValue.setEvent(EVENT);
         keyValue.setType(type.getString());
         keyValue.setTtl(ttl());
         keyValue.setValue(value(key, type));
@@ -210,7 +208,7 @@ public class Generator {
         return keyValue;
     }
 
-    private ItemType type() {
+    private KeyType type() {
         return types.get((int) currentIndex.get() % types.size());
     }
 
@@ -317,15 +315,15 @@ public class Generator {
         this.zsetOptions = zsetOptions;
     }
 
-    public List<ItemType> getTypes() {
+    public List<KeyType> getTypes() {
         return types;
     }
 
-    public void setTypes(List<ItemType> types) {
+    public void setTypes(List<KeyType> types) {
         this.types = types;
     }
 
-    public void setTypes(ItemType... types) {
+    public void setTypes(KeyType... types) {
         setTypes(Arrays.asList(types));
     }
 

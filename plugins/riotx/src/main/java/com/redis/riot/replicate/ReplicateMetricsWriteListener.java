@@ -47,7 +47,7 @@ public class ReplicateMetricsWriteListener<K> implements ItemWriteListener<KeyVa
     }
 
     private void onItem(KeyValue<K> item, String status) {
-        Duration lag = Duration.between(item.getTimestamp(), Instant.now());
+        Duration lag = Duration.between(item.getTime(), Instant.now());
         Tags tags = BatchUtils.tags(item, status);
         RiotUtils.latencyTimer(meterRegistry, LAG_TIMER_NAME, LAG_TIMER_DESCRIPTION, lag, tags);
         if (item.getMemoryUsage() > 0) {

@@ -1,7 +1,7 @@
 package com.redis.riot;
 
+import com.redis.batch.KeyType;
 import com.redis.batch.gen.Generator;
-import com.redis.batch.gen.ItemType;
 import com.redis.lettucemod.search.CreateOptions;
 import com.redis.lettucemod.search.Field;
 import com.redis.riot.core.PrefixedNumber;
@@ -73,7 +73,7 @@ public class Generate extends AbstractRedisCommand {
     }
 
     private boolean isJson() {
-        return generateArgs.getTypes().contains(ItemType.JSON);
+        return generateArgs.getTypes().contains(KeyType.JSON);
     }
 
     @SuppressWarnings("unchecked")

@@ -15,9 +15,7 @@ import java.util.stream.Collectors;
 import com.redis.riot.core.Throughput;
 import org.springframework.util.unit.DataSize;
 
-import com.redis.batch.Key;
 import com.redis.batch.KeyValue;
-import com.redis.batch.KeyEvent;
 import com.tdunning.math.stats.TDigest;
 
 public class RedisStats {
@@ -26,15 +24,15 @@ public class RedisStats {
 
     private final Map<String, InternalKeyspace> keyspaces = new LinkedHashMap<>();
 
-    private Function<Key<String>, String> keyspaceFunction = keyspaceFunction(DEFAULT_KEYSPACE_REGEX);
+    private Function<KeyValue<String>, String> keyspaceFunction = keyspaceFunction(DEFAULT_KEYSPACE_REGEX);
 
     private Predicate<KeyValue<String>> bigKeyPredicate = kv -> true;
 
-    private InternalKeyspace keyspace(Key<String> key) {
+    private InternalKeyspace keyspace(KeyValue<String> key) {
         return keyspaces.computeIfAbsent(keyspaceFunction.apply(key), InternalKeyspace::new);
     }
 
-    public void onKeyEvent(KeyEvent<String> keyEvent) {
+    public void onKeyEvent(KeyValue<String> keyEvent) {
         InternalKeyspace keyspace = keyspace(keyEvent);
         InternalBigKey bigKey = keyspace.getBigKeys().get(keyEvent.getKey());
         if (bigKey != null) {
@@ -67,7 +65,7 @@ public class RedisStats {
         setKeyspaceFunction(keyspaceFunction(pattern));
     }
 
-    public void setKeyspaceFunction(Function<Key<String>, String> function) {
+    public void setKeyspaceFunction(Function<KeyValue<String>, String> function) {
         this.keyspaceFunction = function;
     }
 
@@ -103,15 +101,15 @@ public class RedisStats {
         return key;
     }
 
-    public static Function<Key<String>, String> keyspaceFunction(String regex) {
+    public static Function<KeyValue<String>, String> keyspaceFunction(String regex) {
         return new KeyspaceFunction(regex);
     }
 
-    public static Function<Key<String>, String> keyspaceFunction(Pattern pattern) {
+    public static Function<KeyValue<String>, String> keyspaceFunction(Pattern pattern) {
         return new KeyspaceFunction(pattern);
     }
 
-    public static class KeyspaceFunction implements Function<Key<String>, String> {
+    public static class KeyspaceFunction implements Function<KeyValue<String>, String> {
 
         private final Pattern pattern;
 
@@ -124,7 +122,7 @@ public class RedisStats {
         }
 
         @Override
-        public String apply(Key<String> t) {
+        public String apply(KeyValue<String> t) {
             Matcher matcher = pattern.matcher(t.getKey());
             if (matcher.find()) {
                 return matcher.group(1);
@@ -224,7 +222,9 @@ public class RedisStats {
 
     }
 
-    public static class BigKey extends Key<String> {
+    public static class BigKey {
+
+        private String key;
 
         private String type;
 
@@ -260,9 +260,19 @@ public class RedisStats {
             return DataSize.ofBytes(writeThroughput * memoryUsage.toBytes());
         }
 
+        public String getKey() {
+            return key;
+        }
+
+        public void setKey(String key) {
+            this.key = key;
+        }
+
     }
 
-    private static class InternalBigKey extends Key<String> {
+    private static class InternalBigKey {
+
+        private String key;
 
         private String type;
 
@@ -292,6 +302,14 @@ public class RedisStats {
 
         public void setMemoryUsage(DataSize size) {
             this.memoryUsage = size;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public void setKey(String key) {
+            this.key = key;
         }
 
     }
