@@ -57,7 +57,13 @@ Instance of Java https://docs.oracle.com/javase/8/docs/api/java/text/DecimalForm
 Instance of Lettuce https://www.lettuce.io/core/release/api/io/lettuce/core/api/sync/RedisCommands.html[RedisCommands].
 The `replicate` command exposes 2 command objects named `source` and `target`.
 
-`geo`:: Convenience function that takes a longitude and a latitude to produce a RediSearch geo-location string in the form `longitude,latitude` (e.g. `location=#geo(lon,lat)`)
+`floatsToBytes`:: Convert an array of floats to a byte array so that the hash field can be indexed as vector (see https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/[Redis Vectors]).
++
+For example if the field `vector` is an array of floats: `--proc embedding="#floatsToBytes(vector)"`
+
+`geo`:: Convenience function for RediSearch geo-location strings in the form `longitude,latitude`.
++
+For example with longitude and latitude fields `lon` and `lat`:  `--proc location="#geo(lon,lat)"`
 
 .Processor example
 [source,console,subs="verbatim,attributes"]
