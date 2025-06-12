@@ -1,8 +1,8 @@
 package com.redis.riot;
 
+import com.redis.batch.BatchUtils;
 import com.redis.lettucemod.search.GeoLocation;
 import com.redis.riot.core.Expression;
-import com.redis.riot.core.RiotUtils;
 import lombok.ToString;
 import net.datafaker.Faker;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
@@ -27,6 +27,10 @@ public class EvaluationContextArgs {
 
     public static final String VAR_FAKER = "faker";
 
+    public static final String FUNCTION_GEO = "geo";
+
+    public static final String FUNCTION_FLOAT_ARRAY_TO_BYTES = "floatsToBytes";
+
     @Option(arity = "1..*", names = "--var", description = "SpEL expressions for context variables, in the form var=\"exp\". For details see https://docs.spring.io/spring-framework/reference/core/expressions.html", paramLabel = "<v=exp>")
     private Map<String, Expression> varExpressions = new LinkedHashMap<>();
 
@@ -40,7 +44,17 @@ public class EvaluationContextArgs {
 
     public StandardEvaluationContext evaluationContext() {
         StandardEvaluationContext context = new StandardEvaluationContext();
-        RiotUtils.registerFunction(context, "geo", GeoLocation.class, "toString", String.class, String.class);
+        try {
+            context.registerFunction(FUNCTION_GEO, GeoLocation.class.getDeclaredMethod("toString", String.class, String.class));
+        } catch (NoSuchMethodException e) {
+            throw new UnsupportedOperationException("Could not register function " + FUNCTION_GEO, e);
+        }
+        try {
+            context.registerFunction(FUNCTION_FLOAT_ARRAY_TO_BYTES,
+                    BatchUtils.class.getDeclaredMethod("toByteArray", float[].class));
+        } catch (NoSuchMethodException e) {
+            throw new UnsupportedOperationException("Could not register function " + FUNCTION_FLOAT_ARRAY_TO_BYTES, e);
+        }
         context.setVariable(VAR_DATE, new SimpleDateFormat(dateFormat));
         context.setVariable(VAR_NUMBER, new DecimalFormat(numberFormat));
         context.setVariable(VAR_FAKER, new Faker());
@@ -51,6 +65,11 @@ public class EvaluationContextArgs {
             varExpressions.forEach((k, v) -> context.setVariable(k, v.getValue(context)));
         }
         return context;
+    }
+
+    private void registerFunction(StandardEvaluationContext context, String functionName, Class<?> clazz, String methodName,
+            Class<?>... parameterTypes) {
+
     }
 
     public Map<String, Expression> getVarExpressions() {

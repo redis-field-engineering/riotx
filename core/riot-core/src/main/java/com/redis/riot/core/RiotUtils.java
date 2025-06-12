@@ -8,9 +8,7 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.batch.item.support.CompositeItemProcessor;
 import org.springframework.batch.item.support.CompositeItemWriter;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 
 import java.io.*;
@@ -20,7 +18,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -120,20 +117,6 @@ public abstract class RiotUtils {
 
     public static String toString(ByteArrayOutputStream out) {
         return out.toString(UTF_8);
-    }
-
-    public static void registerFunction(StandardEvaluationContext context, String functionName, Class<?> clazz,
-            String methodName, Class<?>... parameterTypes) {
-        try {
-            context.registerFunction(functionName, clazz.getDeclaredMethod(methodName, parameterTypes));
-        } catch (Exception e) {
-            throw new UnsupportedOperationException(
-                    String.format("Could not get method %s.%s", ClassUtils.getQualifiedName(clazz), methodName), e);
-        }
-    }
-
-    public static <S, T> Predicate<S> predicate(Function<S, T> function, Predicate<T> predicate) {
-        return s -> predicate.test(function.apply(s));
     }
 
     @SuppressWarnings("unchecked")
