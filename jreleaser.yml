@@ -128,6 +128,8 @@ assemble:
         ignoreMissingDeps: true
         targets:
           - 'plugins/riotx/build/libs/riotx-{{projectVersion}}.jar'
+      options:
+        - '--add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED'
       additionalModuleNames:
         - 'java.security.sasl'
         - 'java.security.jgss'
