@@ -117,6 +117,9 @@ assemble:
       active: ALWAYS
       java:
         version: '21'
+        jvmOptions:
+          universal:
+            - '--add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED'
       imageName: '{{distributionName}}-{{projectEffectiveVersion}}'
       executable: riotx
       fileSets:
@@ -128,8 +131,6 @@ assemble:
         ignoreMissingDeps: true
         targets:
           - 'plugins/riotx/build/libs/riotx-{{projectVersion}}.jar'
-      args:
-        - '--add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED'
       additionalModuleNames:
         - 'java.security.sasl'
         - 'java.security.jgss'
