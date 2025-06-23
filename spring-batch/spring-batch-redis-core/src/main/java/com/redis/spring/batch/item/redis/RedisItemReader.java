@@ -1,16 +1,13 @@
 package com.redis.spring.batch.item.redis;
 
-import com.redis.spring.batch.item.AbstractCountingItemReader;
-import com.redis.batch.KeyValue;
+import com.redis.batch.KeyEvent;
 import com.redis.batch.OperationExecutor;
-import com.redis.batch.RedisOperation;
-import com.redis.batch.operation.KeyValueRead;
+import com.redis.batch.RedisBatchOperation;
+import com.redis.batch.operation.KeyValueReadOperation;
+import com.redis.spring.batch.item.AbstractCountingItemReader;
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.ReadFrom;
 import io.lettuce.core.codec.RedisCodec;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
-import org.springframework.data.util.Predicates;
 import org.springframework.util.Assert;
 import org.springframework.util.unit.DataSize;
 
@@ -18,7 +15,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<KeyValue<K>> {
+public abstract class RedisItemReader<K, V, T> extends AbstractCountingItemReader<T> {
 
     public static final int DEFAULT_POOL_SIZE = OperationExecutor.DEFAULT_POOL_SIZE;
 
@@ -26,7 +23,7 @@ public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<K
 
     protected final RedisCodec<K, V> codec;
 
-    private final RedisOperation<K, V, K, KeyValue<K>> operation;
+    private final RedisBatchOperation<K, V, KeyEvent<K>, T> operation;
 
     private int poolSize = DEFAULT_POOL_SIZE;
 
@@ -38,29 +35,19 @@ public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<K
 
     protected String keyType;
 
-    protected MeterRegistry meterRegistry = Metrics.globalRegistry;
-
     protected AbstractRedisClient client;
 
-    private OperationExecutor<K, V, K, KeyValue<K>> operationExecutor;
+    private OperationExecutor<K, V, KeyEvent<K>, T> operationExecutor;
 
-    private Predicate<K> keyFilter = Predicates.isTrue();
+    private Predicate<KeyEvent<K>> keyEventFilter = t -> true;
 
-    protected RedisItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, K, KeyValue<K>> operation) {
+    protected RedisItemReader(RedisCodec<K, V> codec, RedisBatchOperation<K, V, KeyEvent<K>, T> operation) {
         this.codec = codec;
         this.operation = operation;
     }
 
-    public List<KeyValue<K>> read(List<? extends KeyValue<K>> keyEvents) throws Exception {
-        List<? extends K> keys = keyEvents.stream().map(KeyValue::getKey).collect(Collectors.toList());
-        List<KeyValue<K>> keyValues = operationExecutor.execute(keys);
-        for (int index = 0; index < keyEvents.size(); index++) {
-            KeyValue<K> keyEvent = keyEvents.get(index);
-            KeyValue<K> keyValue = keyValues.get(index);
-            keyValue.setEvent(keyEvent.getEvent());
-            keyValue.setTime(keyEvent.getTime());
-        }
-        return keyValues;
+    public List<T> read(List<? extends KeyEvent<K>> keyEvents) throws Exception {
+        return operationExecutor.execute(keyEvents.stream().filter(keyEventFilter).collect(Collectors.toList()));
     }
 
     @Override
@@ -83,15 +70,7 @@ public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<K
         }
     }
 
-    protected boolean acceptKeyType(String type) {
-        return keyType == null || keyType.equalsIgnoreCase(type);
-    }
-
-    protected boolean acceptKey(K key) {
-        return keyFilter.test(key);
-    }
-
-    public RedisOperation<K, V, K, KeyValue<K>> getOperation() {
+    public RedisBatchOperation<K, V, KeyEvent<K>, T> getOperation() {
         return operation;
     }
 
@@ -105,14 +84,6 @@ public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<K
 
     public void setClient(AbstractRedisClient client) {
         this.client = client;
-    }
-
-    public MeterRegistry getMeterRegistry() {
-        return meterRegistry;
-    }
-
-    public void setMeterRegistry(MeterRegistry registry) {
-        this.meterRegistry = registry;
     }
 
     public int getPoolSize() {
@@ -139,20 +110,16 @@ public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<K
         this.batchSize = size;
     }
 
-    public void setMemoryLimit(long limit) {
-        setMemoryLimit(DataSize.ofBytes(limit));
-    }
-
     public void setMemoryLimit(DataSize limit) {
         Assert.notNull(limit, "Limit must not be null");
-        if (operation instanceof KeyValueRead) {
-            ((KeyValueRead<K, V>) operation).limit(limit.toBytes());
+        if (operation instanceof KeyValueReadOperation) {
+            ((KeyValueReadOperation) operation).setLimit(limit.toBytes());
         }
     }
 
     public void setMemoryUsageSamples(int samples) {
-        if (operation instanceof KeyValueRead) {
-            ((KeyValueRead<K, V>) operation).memoryUsageSamples(samples);
+        if (operation instanceof KeyValueReadOperation) {
+            ((KeyValueReadOperation) operation).setSamples(samples);
         }
     }
 
@@ -172,12 +139,12 @@ public abstract class RedisItemReader<K, V> extends AbstractCountingItemReader<K
         this.keyType = keyType;
     }
 
-    public Predicate<K> getKeyFilter() {
-        return keyFilter;
+    public Predicate<KeyEvent<K>> getKeyEventFilter() {
+        return keyEventFilter;
     }
 
-    public void setKeyFilter(Predicate<K> filter) {
-        this.keyFilter = filter;
+    public void setKeyEventFilter(Predicate<KeyEvent<K>> predicate) {
+        this.keyEventFilter = predicate;
     }
 
 }

@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.redis.batch.KeyType;
+import com.redis.batch.KeyValueEvent;
 import com.redis.batch.gen.CollectionOptions;
 import com.redis.batch.gen.Generator;
 import com.redis.batch.gen.StreamOptions;
@@ -18,8 +19,6 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ParseException;
 import org.springframework.batch.item.UnexpectedInputException;
 
-import com.redis.batch.KeyValue;
-
 class GeneratorTests {
 
     @Test
@@ -27,14 +26,14 @@ class GeneratorTests {
         int count = 123;
         GeneratorItemReader reader = new GeneratorItemReader(new Generator());
         reader.setMaxItemCount(count);
-        List<KeyValue<String>> list = readAll(reader);
+        List<KeyValueEvent<String>> list = readAll(reader);
         Assertions.assertEquals(count, list.size());
     }
 
-    private List<KeyValue<String>> readAll(GeneratorItemReader reader)
+    private List<KeyValueEvent<String>> readAll(GeneratorItemReader reader)
             throws UnexpectedInputException, ParseException, Exception {
-        List<KeyValue<String>> list = new ArrayList<>();
-        KeyValue<String> ds;
+        List<KeyValueEvent<String>> list = new ArrayList<>();
+        KeyValueEvent<String> ds;
         while ((ds = reader.read()) != null) {
             list.add(ds);
         }
@@ -47,9 +46,10 @@ class GeneratorTests {
         int count = size * 100;
         GeneratorItemReader reader = new GeneratorItemReader(new Generator());
         reader.setMaxItemCount(count);
-        List<KeyValue<String>> items = readAll(reader);
-        Map<String, List<KeyValue<String>>> byType = items.stream().collect(Collectors.groupingBy(KeyValue::getType));
-        for (List<KeyValue<String>> values : byType.values()) {
+        List<KeyValueEvent<String>> items = readAll(reader);
+        Map<String, List<KeyValueEvent<String>>> byType = items.stream().collect(Collectors.groupingBy(
+                KeyValueEvent::getType));
+        for (List<KeyValueEvent<String>> values : byType.values()) {
             Assertions.assertEquals(count / size, values.size());
         }
     }
@@ -59,10 +59,10 @@ class GeneratorTests {
         int count = 123;
         GeneratorItemReader reader = new GeneratorItemReader(new Generator());
         reader.setMaxItemCount(count);
-        List<KeyValue<String>> list = readAll(reader);
+        List<KeyValueEvent<String>> list = readAll(reader);
         Assertions.assertEquals(count, list.size());
-        for (KeyValue<String> ds : list) {
-            KeyType type = ds.type();
+        for (KeyValueEvent<String> ds : list) {
+            KeyType type = KeyType.of(ds.getType());
             if (type != null) {
                 switch (type) {
                     case SET:
@@ -87,14 +87,14 @@ class GeneratorTests {
         GeneratorItemReader reader = new GeneratorItemReader(new Generator());
         reader.setMaxItemCount(10);
         reader.open(new ExecutionContext());
-        KeyValue<String> keyValue = reader.read();
+        KeyValueEvent<String> keyValueEvent = reader.read();
         Assertions.assertEquals(
                 Generator.DEFAULT_KEYSPACE + Generator.DEFAULT_KEY_SEPARATOR + Generator.DEFAULT_KEY_RANGE.getMin(),
-                keyValue.getKey());
+                keyValueEvent.getKey());
         String lastKey;
         do {
-            lastKey = keyValue.getKey();
-        } while ((keyValue = reader.read()) != null);
+            lastKey = keyValueEvent.getKey();
+        } while ((keyValueEvent = reader.read()) != null);
         Assertions.assertEquals(Generator.DEFAULT_KEYSPACE + Generator.DEFAULT_KEY_SEPARATOR + 10, lastKey);
     }
 
@@ -104,7 +104,7 @@ class GeneratorTests {
         GeneratorItemReader reader = new GeneratorItemReader(new Generator());
         reader.open(new ExecutionContext());
         reader.setMaxItemCount(456);
-        KeyValue<String> ds1 = reader.read();
+        KeyValueEvent<String> ds1 = reader.read();
         assertEquals("gen:1", ds1.getKey());
         int actualCount = 1;
         while (reader.read() != null) {

@@ -1,7 +1,6 @@
 package com.redis.riot.operation;
 
-import com.redis.batch.RedisOperation;
-import com.redis.batch.operation.AbstractWriteOperation;
+import com.redis.batch.RedisBatchOperation;
 import com.redis.batch.operation.Expire;
 import com.redis.batch.operation.ExpireAt;
 import picocli.CommandLine.ArgGroup;
@@ -18,7 +17,7 @@ public class ExpireCommand extends AbstractOperationCommand {
     private ExpireTtlArgs ttlArgs = new ExpireTtlArgs();
 
     @Override
-    public RedisOperation<byte[], byte[], Map<String, Object>, Object> operation() {
+    public RedisBatchOperation<byte[], byte[], Map<String, Object>, Object> operation() {
         if (ttlArgs.getTimeField() != null || ttlArgs.getTime() != null) {
             ExpireAt<byte[], byte[], Map<String, Object>> operation = new ExpireAt<>(keyFunction());
             if (ttlArgs.getTime() == null) {

@@ -102,7 +102,7 @@ public class MemcachedTests {
             MemcachedEntry actual = new MemcachedEntry();
             actual.setKey(entry.getKey());
             actual.setValue(client.get(entry.getKey(), transcoder));
-            Assertions.assertEquals(entry, actual);
+            assertEquals(entry, actual);
         }
     }
 
@@ -125,10 +125,20 @@ public class MemcachedTests {
             Assertions.assertEquals(count, readEntries.size());
             for (MemcachedEntry entry : entries) {
                 MemcachedEntry readEntry = readEntryMap.get(entry.getKey());
-                Assertions.assertEquals(entry, readEntry);
+                assertEquals(entry, readEntry);
             }
         } finally {
             reader.close();
+        }
+    }
+
+    private void assertEquals(MemcachedEntry expected, MemcachedEntry actual) {
+        Assertions.assertEquals(expected.getKey(), actual.getKey());
+        Assertions.assertArrayEquals(expected.getValue(), actual.getValue());
+        if (expected.getExpiration() == null) {
+            Assertions.assertNull(actual.getExpiration());
+        } else {
+            Assertions.assertEquals(expected.getExpiration().getEpochSecond(), actual.getExpiration().getEpochSecond());
         }
     }
 
@@ -152,7 +162,7 @@ public class MemcachedTests {
             Assertions.assertEquals(count, readEntries.size());
             for (MemcachedEntry entry : entries) {
                 MemcachedEntry readEntry = readEntryMap.get(entry.getKey());
-                Assertions.assertEquals(entry, readEntry);
+                assertEquals(entry, readEntry);
             }
         } finally {
             reader.close();

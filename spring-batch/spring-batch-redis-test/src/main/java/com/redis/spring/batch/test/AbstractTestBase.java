@@ -102,11 +102,11 @@ public abstract class AbstractTestBase {
 
     protected TaskExecutorJobLauncher jobLauncher;
 
-    protected RedisScanItemReader<byte[], byte[]> scanDumpReader() {
+    protected RedisScanItemReader<byte[], byte[], KeyValueEvent<byte[]>> scanDumpReader() {
         return client(RedisScanItemReader.dump());
     }
 
-    protected <K, V, R extends RedisItemReader<K, V>> R client(R reader) {
+    protected <K, V, T, R extends RedisItemReader<K, V, T>> R client(R reader) {
         reader.setClient(redisClient);
         return reader;
     }
@@ -116,11 +116,11 @@ public abstract class AbstractTestBase {
         return writer;
     }
 
-    protected RedisScanItemReader<String, String> scanStructReader() {
-        return client(RedisScanItemReader.struct());
+    protected RedisScanItemReader<String, String, KeyValueEvent<String>> scanStructReader() {
+        return client(RedisScanItemReader.struct(StringCodec.UTF8));
     }
 
-    protected <K, V> RedisScanItemReader<K, V> scanStructReader(RedisCodec<K, V> codec) {
+    protected <K, V> RedisScanItemReader<K, V, KeyValueEvent<K>> scanStructReader(RedisCodec<K, V> codec) {
         return client(RedisScanItemReader.struct(codec));
     }
 
@@ -325,7 +325,7 @@ public abstract class AbstractTestBase {
     protected JobExecution generate(TestInfo info, AbstractRedisClient client, GeneratorItemReader reader)
             throws JobExecutionException {
         TestInfo testInfo = testInfo(info, "generate");
-        RedisItemWriter<String, String, KeyValue<String>> writer = client(RedisItemWriter.struct());
+        RedisItemWriter<String, String, KeyValueEvent<String>> writer = client(RedisItemWriter.struct());
         return run(testInfo, reader, writer);
     }
 
@@ -410,7 +410,7 @@ public abstract class AbstractTestBase {
         return BatchUtils.toStringKeyFunction(ByteArrayCodec.INSTANCE).apply(key);
     }
 
-    protected <T> RedisItemWriter<String, String, T> writer(RedisOperation<String, String, T, Object> operation) {
+    protected <T> RedisItemWriter<String, String, T> writer(RedisBatchOperation<String, String, T, Object> operation) {
         return client(RedisItemWriter.operation(operation));
     }
 

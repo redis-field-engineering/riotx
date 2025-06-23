@@ -1,9 +1,9 @@
 package com.redis.riot;
 
+import com.redis.batch.KeyValueEvent;
 import com.redis.riot.core.RedisContext;
-import com.redis.riot.core.function.KeyValueMap;
+import com.redis.riot.core.function.KeyValueEventToMap;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
-import com.redis.batch.KeyValue;
 import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
@@ -33,8 +33,8 @@ public abstract class AbstractRedisExport extends AbstractExport {
         return redisArgs.redisContext();
     }
 
-    protected ItemProcessor<KeyValue<String>, Map<String, Object>> mapProcessor() {
-        KeyValueMap mapFunction = new KeyValueMap();
+    protected ItemProcessor<KeyValueEvent<String>, Map<String, Object>> mapProcessor() {
+        KeyValueEventToMap mapFunction = new KeyValueEventToMap();
         if (keyRegex != null) {
             mapFunction.setKey(new RegexNamedGroupFunction(keyRegex));
         }

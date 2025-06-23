@@ -1,11 +1,10 @@
 package com.redis.riot;
 
+import com.redis.batch.KeyValueEvent;
 import com.redis.riot.core.Expression;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.TemplateExpression;
-import com.redis.riot.core.function.ConsumerUnaryOperator;
 import com.redis.riot.core.function.StreamItemProcessor;
-import com.redis.batch.KeyValue;
 import lombok.ToString;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
@@ -40,31 +39,40 @@ public class KeyValueProcessorArgs {
     @Option(names = "--stream-prune", defaultValue = "${RIOT_STREAM_PRUNE}", description = "Drop empty streams.")
     private boolean prune;
 
-    public ItemProcessor<KeyValue<String>, KeyValue<String>> processor(EvaluationContext context) {
-        List<ItemProcessor<KeyValue<String>, KeyValue<String>>> processors = new ArrayList<>();
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public <T> ItemProcessor<KeyValueEvent<String>, KeyValueEvent<String>> processor(EvaluationContext context) {
+        List<ItemProcessor<KeyValueEvent<String>, KeyValueEvent<String>>> processors = new ArrayList<>();
         if (keyExpression != null) {
-            processors.add(processor(t -> t.setKey(keyExpression.getValue(context, t))));
+            processors.add(processor(e -> e.setKey(keyExpression.getValue(context, e))));
         }
         if (noTtl) {
-            processors.add(processor(t -> t.setTtl(null)));
+            processors.add(processor(e -> e.setTtl(null)));
         }
         if (ttlExpression != null) {
-            processors.add(processor(t -> t.setTtl(Instant.ofEpochMilli(ttlExpression.getLong(context, t)))));
+            processors.add(processor(e -> e.setTtl(Instant.ofEpochMilli(ttlExpression.getLong(context, e)))));
         }
         if (typeExpression != null) {
-            processors.add(processor(t -> t.setType(typeExpression.getString(context, t))));
+            processors.add(processor(e -> e.setType(typeExpression.getString(context, e))));
         }
         if (!streamMessageIds || prune) {
             StreamItemProcessor streamProcessor = new StreamItemProcessor();
             streamProcessor.setDropMessageIds(!streamMessageIds);
             streamProcessor.setPrune(prune);
-            processors.add(streamProcessor);
+            processors.add((ItemProcessor) streamProcessor);
         }
         return RiotUtils.processor(processors);
     }
 
-    private <T> ItemProcessor<T, T> processor(Consumer<T> consumer) {
-        return new FunctionItemProcessor<>(new ConsumerUnaryOperator<>(consumer));
+    private <T> ItemProcessor<KeyValueEvent<String>, KeyValueEvent<String>> processor(
+            Consumer<KeyValueEvent<String>> consumer) {
+        return new FunctionItemProcessor<>(e -> {
+            consumer.accept(e);
+            return e;
+        });
+    }
+
+    private void setKey(KeyValueEvent<String> event) {
+
     }
 
     public TemplateExpression getKeyExpression() {

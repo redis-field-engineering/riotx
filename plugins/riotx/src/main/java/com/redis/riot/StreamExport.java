@@ -1,14 +1,14 @@
 package com.redis.riot;
 
-import com.redis.riot.core.RiotUtils;
-import com.redis.riot.core.function.KeyValueToStreamMessage;
+import com.redis.batch.KeyValueEvent;
+import com.redis.riot.core.function.KeyValueEventToStreamMessage;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.batch.KeyValue;
 import com.redis.spring.batch.item.redis.reader.KeyEventItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
 import com.redis.batch.operation.Xadd;
 import com.redis.riot.core.job.RiotStep;
 import io.lettuce.core.StreamMessage;
+import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
 import picocli.CommandLine.ArgGroup;
@@ -47,14 +47,15 @@ public class StreamExport extends AbstractRedisTargetExport {
         super.configureTarget(writer);
     }
 
-    private RiotStep<KeyValue<String>, StreamMessage<String, String>> step() {
-        RedisLiveItemReader<String, String> reader = RedisLiveItemReader.struct();
+    private RiotStep<KeyValueEvent<String>, StreamMessage<String, String>> step() {
+        RedisLiveItemReader<String, String, KeyValueEvent<String>> reader = RedisLiveItemReader.struct(
+                StringCodec.UTF8);
         configureSource(reader);
         RedisItemWriter<String, String, StreamMessage<String, String>> writer = writer();
         configureTarget(writer);
-        ItemProcessor<KeyValue<String>, StreamMessage<String, String>> processor = RiotUtils.processor(keyValueFilter(),
-                new KeyValueToStreamMessage(stream));
-        RiotStep<KeyValue<String>, StreamMessage<String, String>> step = step(STEP_NAME, reader, writer);
+        ItemProcessor<KeyValueEvent<String>, StreamMessage<String, String>> processor = new KeyValueEventToStreamMessage(
+                stream);
+        RiotStep<KeyValueEvent<String>, StreamMessage<String, String>> step = step(STEP_NAME, reader, writer);
         step.setItemProcessor(processor);
         return step;
     }
@@ -66,14 +67,14 @@ public class StreamExport extends AbstractRedisTargetExport {
 
     @Override
     protected Supplier<String> extraMessage(RiotStep<?, ?> step) {
-        return () -> liveExtraMessage((RedisLiveItemReader<?, ?>) step.getItemReader());
+        return () -> liveExtraMessage((RedisLiveItemReader<?, ?, ?>) step.getItemReader());
     }
 
     private RedisItemWriter<String, String, StreamMessage<String, String>> writer() {
         return RedisItemWriter.operation(new Xadd<>(t -> stream, Arrays::asList));
     }
 
-    private String liveExtraMessage(RedisLiveItemReader<?, ?> reader) {
+    private String liveExtraMessage(RedisLiveItemReader<?, ?, ?> reader) {
         KeyEventItemReader<?, ?> keyReader = reader.getKeyEventReader();
         if (keyReader == null || keyReader.getQueue() == null) {
             return "";

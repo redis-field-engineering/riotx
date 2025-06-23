@@ -2,8 +2,7 @@ package com.redis.riot.db;
 
 import com.redis.riot.core.InMemoryOffsetStore;
 import com.redis.riot.core.OffsetStore;
-import com.redis.spring.batch.item.AbstractCountingItemReader;
-import com.redis.spring.batch.item.PollableItemReader;
+import com.redis.spring.batch.item.AbstractCountingPollableItemReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ExecutionContext;
@@ -21,8 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-public class SnowflakeStreamItemReader extends AbstractCountingItemReader<SnowflakeStreamRow>
-        implements PollableItemReader<SnowflakeStreamRow> {
+public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReader<SnowflakeStreamRow> {
 
     private static final String OFFSET_SQL = "SELECT SYSTEM$STREAM_GET_TABLE_TIMESTAMP(?)";
 
@@ -135,12 +133,7 @@ public class SnowflakeStreamItemReader extends AbstractCountingItemReader<Snowfl
     }
 
     @Override
-    protected SnowflakeStreamRow doRead() throws Exception {
-        throw new UnsupportedOperationException("Read operation is not supported");
-    }
-
-    @Override
-    public synchronized SnowflakeStreamRow poll(long timeout, TimeUnit unit) throws Exception {
+    protected synchronized SnowflakeStreamRow doPoll(long timeout, TimeUnit unit) throws Exception {
         SnowflakeStreamRow item = reader.read();
         if (item == null) {
             if (nextOffset != null) {

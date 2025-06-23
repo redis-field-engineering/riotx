@@ -1,12 +1,14 @@
 package com.redis.riot;
 
+import com.redis.batch.KeyOperation;
+import com.redis.batch.KeyType;
+import com.redis.batch.KeyValueEvent;
+import com.redis.batch.operation.KeyValueWrite;
 import com.redis.riot.core.InetSocketAddressList;
 import com.redis.riot.core.MemcachedContext;
 import com.redis.riot.core.RedisMemcachedContext;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.batch.KeyValue;
-import com.redis.batch.operation.KeyValueWrite;
 import com.redis.spring.batch.memcached.MemcachedEntry;
 import com.redis.spring.batch.memcached.MemcachedItemReader;
 import com.redis.spring.batch.memcached.MemcachedItemWriter;
@@ -106,16 +108,19 @@ public class MemcachedReplicate extends AbstractJobCommand {
             MemcachedItemWriter writer = new MemcachedItemWriter(targetContext.getMemcachedContext()::safeMemcachedClient);
             return step(STEP_NAME, reader, writer);
         }
-        RedisItemWriter<String, byte[], KeyValue<String>> writer = new RedisItemWriter<>(
+        RedisItemWriter<String, byte[], KeyValueEvent<String>> writer = new RedisItemWriter<>(
                 RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE), new KeyValueWrite<>());
-        RiotStep<MemcachedEntry, KeyValue<String>> step = step(STEP_NAME, reader, writer);
-        step.setItemProcessor(this::keyValue);
+        RiotStep<MemcachedEntry, KeyValueEvent<String>> step = step(STEP_NAME, reader, writer);
+        step.setItemProcessor(this::keyValueEvent);
         return step;
     }
 
-    private KeyValue<String> keyValue(MemcachedEntry entry) {
-        KeyValue<String> kv = new KeyValue<>();
+    private KeyValueEvent<String> keyValueEvent(MemcachedEntry entry) {
+        KeyValueEvent<String> kv = new KeyValueEvent<>();
+        kv.setTimestamp(entry.getTimestamp());
         kv.setKey(entry.getKey());
+        kv.setOperation(KeyOperation.READ);
+        kv.setType(KeyType.STRING.getString());
         kv.setValue(entry.getValue());
         kv.setTtl(entry.getExpiration());
         return kv;

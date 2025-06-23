@@ -6,6 +6,7 @@ import io.lettuce.core.SetArgs;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 
 import java.util.List;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 
 public class Set<K, V, T> extends AbstractValueWriteOperation<K, V, V, T> {
@@ -31,8 +32,8 @@ public class Set<K, V, T> extends AbstractValueWriteOperation<K, V, V, T> {
     }
 
     @Override
-    public List<RedisFuture<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
-        return BatchUtils.execute(commands, items, this::execute);
+    public List<Future<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
+        return execute(commands, items, this::execute);
     }
 
     @SuppressWarnings("rawtypes")

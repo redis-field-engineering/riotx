@@ -1,9 +1,9 @@
 package com.redis.riot;
 
-import com.redis.batch.KeyValue;
+import com.redis.batch.KeyStatEvent;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.reader.KeyEventListenerContainer;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-import com.redis.riot.core.job.RiotStep;
 import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Job;
@@ -61,8 +61,7 @@ public class Stats extends AbstractRedisCommand {
 
     @Override
     protected Job job() throws Exception {
-        RedisScanItemReader<String, String> reader = RedisScanItemReader.type();
-        reader.setMemoryLimit(-1);
+        RedisScanItemReader<String, String, KeyStatEvent<String>> reader = RedisScanItemReader.stats();
         reader.setMemoryUsageSamples(memoryUsageSamples);
         configure(reader);
         RedisStats stats = new RedisStats();
@@ -72,7 +71,7 @@ public class Stats extends AbstractRedisCommand {
                 getRedisContext().client(), StringCodec.UTF8);
         int database = getRedisContext().uri().getDatabase();
         StatsWriter writer = new StatsWriter(stats, listenerContainer, database, readerArgs.getKeyPattern());
-        RiotStep<KeyValue<String>, KeyValue<String>> step = step(STEP_NAME, reader, writer);
+        RiotStep<KeyStatEvent<String>, KeyStatEvent<String>> step = step(STEP_NAME, reader, writer);
         step.addListener(new ExecutionListener(statsPrinter(stats)));
         return job(step);
     }
@@ -91,13 +90,13 @@ public class Stats extends AbstractRedisCommand {
     }
 
     @Override
-    protected void configure(RedisScanItemReader<?, ?> reader) {
+    protected void configure(RedisScanItemReader<?, ?, ?> reader) {
         log.info("Configuring reader with {}", readerArgs);
         super.configure(reader);
         readerArgs.configure(reader);
     }
 
-    private static class StatsWriter extends AbstractItemStreamItemWriter<KeyValue<String>> {
+    private static class StatsWriter extends AbstractItemStreamItemWriter<KeyStatEvent<String>> {
 
         private final RedisStats stats;
 
@@ -129,8 +128,8 @@ public class Stats extends AbstractRedisCommand {
         }
 
         @Override
-        public void write(Chunk<? extends KeyValue<String>> chunk) throws Exception {
-            chunk.forEach(stats::keyValue);
+        public void write(Chunk<? extends KeyStatEvent<String>> chunk) throws Exception {
+            chunk.forEach(stats::onStatEvent);
         }
 
     }

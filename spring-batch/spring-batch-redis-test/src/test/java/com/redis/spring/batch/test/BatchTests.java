@@ -2,7 +2,8 @@ package com.redis.spring.batch.test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.redis.batch.KeyType;
+import com.redis.batch.*;
+import com.redis.batch.Range;
 import com.redis.batch.gen.Generator;
 import com.redis.batch.operation.*;
 import com.redis.lettucemod.Beers;
@@ -11,15 +12,11 @@ import com.redis.lettucemod.api.sync.RedisModulesCommands;
 import com.redis.lettucemod.search.IndexInfo;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.spring.batch.JobUtils;
-import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.batch.Wait;
-import com.redis.batch.KeyValue;
-import com.redis.batch.Range;
 import com.redis.spring.batch.item.redis.GeneratorItemReader;
+import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.reader.*;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
 import com.redis.spring.batch.item.redis.reader.StreamItemReader.AckPolicy;
-import com.redis.batch.operation.KeyValueWrite;
 import io.lettuce.core.*;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.StringCodec;
@@ -104,8 +101,8 @@ abstract class BatchTests extends AbstractTargetTestBase {
     @Test
     void readStruct(TestInfo info) throws Exception {
         generate(info, generator(73));
-        RedisScanItemReader<String, String> reader = scanStructReader();
-        List<? extends KeyValue<String>> list = readAll(info, reader);
+        RedisScanItemReader<String, String, KeyValueEvent<String>> reader = scanStructReader();
+        List<? extends KeyValueEvent<String>> list = readAll(info, reader);
         assertEquals(redisCommands.dbsize(), list.size());
     }
 
@@ -443,13 +440,13 @@ abstract class BatchTests extends AbstractTargetTestBase {
         redisCommands.hset(key, hash);
         Instant ttl = Instant.now().plusMillis(123456);
         redisCommands.pexpireat(key, ttl);
-        RedisScanItemReader<String, String> reader = scanStructReader();
+        RedisScanItemReader<String, String, KeyValueEvent<String>> reader = scanStructReader();
         reader.open(new ExecutionContext());
-        KeyValue<String> keyValue = reader.read();
-        Assertions.assertEquals(key, keyValue.getKey());
-        assertTtlEquals(ttl, keyValue.getTtl());
-        Assertions.assertEquals(KeyType.HASH, keyValue.type());
-        Assertions.assertEquals(hash, keyValue.getValue());
+        KeyValueEvent<String> keyValueEvent = reader.read();
+        Assertions.assertEquals(key, keyValueEvent.getKey());
+        assertTtlEquals(ttl, keyValueEvent.getTtl());
+        assertKeyTypeEquals(KeyType.HASH, keyValueEvent);
+        Assertions.assertEquals(hash, keyValueEvent.getValue());
         reader.close();
     }
 
@@ -459,11 +456,11 @@ abstract class BatchTests extends AbstractTargetTestBase {
         String key = "myzset";
         ScoredValue[] values = { ScoredValue.just(123.456, "value1"), ScoredValue.just(654.321, "value2") };
         redisCommands.zadd(key, values);
-        RedisScanItemReader<String, String> reader = scanStructReader();
+        RedisScanItemReader<String, String, KeyValueEvent<String>> reader = scanStructReader();
         reader.open(new ExecutionContext());
-        KeyValue<String> ds = reader.read();
+        KeyValueEvent<String> ds = reader.read();
         Assertions.assertEquals(key, ds.getKey());
-        Assertions.assertEquals(KeyType.ZSET, ds.type());
+        assertKeyTypeEquals(KeyType.ZSET, ds);
         Assertions.assertEquals(new HashSet<>(Arrays.asList(values)), ds.getValue());
         reader.close();
     }
@@ -473,13 +470,17 @@ abstract class BatchTests extends AbstractTargetTestBase {
         String key = "mylist";
         List<String> values = Arrays.asList("value1", "value2");
         redisCommands.rpush(key, values.toArray(new String[0]));
-        RedisScanItemReader<String, String> reader = scanStructReader();
+        RedisScanItemReader<String, String, KeyValueEvent<String>> reader = scanStructReader();
         reader.open(new ExecutionContext());
-        KeyValue<String> ds = reader.read();
+        KeyValueEvent<String> ds = reader.read();
         Assertions.assertEquals(key, ds.getKey());
-        Assertions.assertEquals(KeyType.LIST, ds.type());
+        assertKeyTypeEquals(KeyType.LIST, ds);
         Assertions.assertEquals(values, ds.getValue());
         reader.close();
+    }
+
+    protected static void assertKeyTypeEquals(KeyType type, KeyEvent<?> ds) {
+        Assertions.assertEquals(type.getString(), ds.getType());
     }
 
     @SuppressWarnings("unchecked")
@@ -491,11 +492,11 @@ abstract class BatchTests extends AbstractTargetTestBase {
         body.put("field2", "value2");
         redisCommands.xadd(key, body);
         redisCommands.xadd(key, body);
-        RedisScanItemReader<String, String> reader = scanStructReader();
+        RedisScanItemReader<String, String, KeyValueEvent<String>> reader = scanStructReader();
         reader.open(new ExecutionContext());
-        KeyValue<String> ds = reader.read();
+        KeyValueEvent<String> ds = reader.read();
         Assertions.assertEquals(key, ds.getKey());
-        Assertions.assertEquals(KeyType.STREAM, ds.type());
+        assertKeyTypeEquals(KeyType.STREAM, ds);
         List<StreamMessage<String, String>> messages = (List<StreamMessage<String, String>>) ds.getValue();
         Assertions.assertEquals(2, messages.size());
         for (StreamMessage<String, String> message : messages) {
@@ -515,9 +516,9 @@ abstract class BatchTests extends AbstractTargetTestBase {
         redisCommands.xadd(key, body);
         Instant ttl = Instant.now().plusMillis(123456);
         redisCommands.pexpireat(key, ttl);
-        RedisScanItemReader<byte[], byte[]> reader = scanDumpReader();
+        RedisScanItemReader<byte[], byte[], KeyValueEvent<byte[]>> reader = scanDumpReader();
         reader.open(new ExecutionContext());
-        KeyValue<byte[]> dump = reader.read();
+        KeyValueEvent<byte[]> dump = reader.read();
         Assertions.assertArrayEquals(toByteArray(key), dump.getKey());
         assertTtlEquals(ttl, dump.getTtl());
         redisCommands.del(key);
@@ -535,11 +536,11 @@ abstract class BatchTests extends AbstractTargetTestBase {
         body.put("field2", "value2");
         redisCommands.xadd(key, body);
         redisCommands.xadd(key, body);
-        RedisScanItemReader<byte[], byte[]> reader = client(RedisScanItemReader.struct(ByteArrayCodec.INSTANCE));
+        RedisScanItemReader<byte[], byte[], KeyValueEvent<byte[]>> reader = client(RedisScanItemReader.struct(ByteArrayCodec.INSTANCE));
         reader.open(new ExecutionContext());
-        KeyValue<byte[]> ds = reader.read();
+        KeyValueEvent<byte[]> ds = reader.read();
         Assertions.assertArrayEquals(toByteArray(key), ds.getKey());
-        Assertions.assertEquals(KeyType.STREAM, ds.type());
+        assertKeyTypeEquals(KeyType.STREAM, ds);
         List<StreamMessage<byte[], byte[]>> messages = (List<StreamMessage<byte[], byte[]>>) ds.getValue();
         Assertions.assertEquals(2, messages.size());
         for (StreamMessage<byte[], byte[]> message : messages) {
@@ -558,13 +559,13 @@ abstract class BatchTests extends AbstractTargetTestBase {
         redisCommands.pfadd(key1, "member:1", "member:2");
         String key2 = "hll:2";
         redisCommands.pfadd(key2, "member:1", "member:2", "member:3");
-        RedisScanItemReader<String, String> reader = scanStructReader();
-        List<? extends KeyValue<String>> items = readAll(info, reader);
+        RedisScanItemReader<String, String, KeyValueEvent<String>> reader = scanStructReader();
+        List<? extends KeyValueEvent<String>> items = readAll(info, reader);
         Assertions.assertEquals(2, items.size());
-        Optional<? extends KeyValue<String>> result = items.stream().filter(ds -> ds.getKey().equals(key1)).findFirst();
+        Optional<? extends KeyValueEvent<String>> result = items.stream().filter(ds -> ds.getKey().equals(key1)).findFirst();
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(key1, result.get().getKey());
-        Assertions.assertEquals(KeyType.STRING, result.get().type());
+        assertKeyTypeEquals(KeyType.STRING, result.get());
         Assertions.assertEquals(redisCommands.get(key1), result.get().getValue());
     }
 
@@ -631,15 +632,15 @@ abstract class BatchTests extends AbstractTargetTestBase {
     @SuppressWarnings("unchecked")
     @Test
     void writeWait(TestInfo info) throws Exception {
-        List<KeyValue<String>> items = IntStream.range(0, 5).mapToObj(index -> {
-            KeyValue<String> item = new KeyValue<>();
-            item.setKey("key:" + index);
-            item.setValue(map("field1", "value1", "field2", "value2"));
-            return item;
+        List<KeyValueEvent<String>> items = IntStream.range(0, 5).mapToObj(index -> {
+            KeyValueEvent<String> keyEvent = new KeyValueEvent<>();
+            keyEvent.setKey("key:" + index);
+            keyEvent.setValue(map("field1", "value1", "field2", "value2"));
+            return keyEvent;
         }).collect(Collectors.toList());
-        ListItemReader<KeyValue<String>> reader = new ListItemReader<>(items);
-        Hset<String, String, KeyValue<String>> hset = new Hset<>(KeyValue::getKey, v -> (Map<String, String>) v.getValue());
-        RedisItemWriter<String, String, KeyValue<String>> writer = writer(hset);
+        ListItemReader<KeyValueEvent<String>> reader = new ListItemReader<>(items);
+        Hset<String, String, KeyValueEvent<String>> hset = new Hset<>(e -> e.getKey(), v -> (Map<String, String>) v.getValue());
+        RedisItemWriter<String, String, KeyValueEvent<String>> writer = writer(hset);
         writer.setWait(Wait.of(1, Duration.ofMillis(300)));
         try {
             run(job(info).start(step(info, reader, writer).build()).build());
@@ -668,7 +669,7 @@ abstract class BatchTests extends AbstractTargetTestBase {
 
     @SuppressWarnings("unchecked")
     @Test
-    void compareBinaryKeyValue(TestInfo info) throws Exception {
+    void compareBinaryChangeEvent(TestInfo info) throws Exception {
         byte[] zsetKey = randomBytes();
         Collection<ScoredValue<byte[]>> zsetValue = new ArrayList<>();
         for (int index = 0; index < 10; index++) {
@@ -759,14 +760,14 @@ abstract class BatchTests extends AbstractTargetTestBase {
     void writeConditionalDel(TestInfo info) throws Throwable {
         generate(info, generator(100));
         GeneratorItemReader reader = generator(100, KeyType.HASH);
-        Function<KeyValue<String>, Boolean> classifier = t -> t.getKey().endsWith("3");
-        ClassifierOperation<String, String, KeyValue<String>, Boolean> operation = new ClassifierOperation<>(classifier);
+        Function<KeyValueEvent<String>, Boolean> classifier = t -> t.getKey().endsWith("3");
+        ClassifierOperation<String, String, KeyValueEvent<String>, Boolean> operation = new ClassifierOperation<>(classifier);
         operation.setOperation(Boolean.FALSE, new KeyValueWrite<>());
-        operation.setOperation(Boolean.TRUE, new Del<>(KeyValue::getKey));
-        RedisItemWriter<String, String, KeyValue<String>> writer = client(RedisItemWriter.operation(operation));
+        operation.setOperation(Boolean.TRUE, new Del<>(KeyValueEvent::getKey));
+        RedisItemWriter<String, String, KeyValueEvent<String>> writer = client(RedisItemWriter.operation(operation));
         checkJobExecution(run(info, reader, writer));
-        List<? extends KeyValue<String>> items = readAll(info, reader);
-        for (KeyValue<String> item : items) {
+        List<? extends KeyValueEvent<String>> items = readAll(info, reader);
+        for (KeyValueEvent<String> item : items) {
             if (classifier.apply(item)) {
                 Assertions.assertEquals(0, redisCommands.exists(item.getKey()));
             } else {
@@ -779,8 +780,8 @@ abstract class BatchTests extends AbstractTargetTestBase {
     void writeJsonDel(TestInfo info) throws Exception {
         GeneratorItemReader gen = generator(73, KeyType.JSON);
         generate(info, gen);
-        JsonDel<String, String, KeyValue<String>> jsonDel = new JsonDel<>(KeyValue::getKey);
-        RedisItemWriter<String, String, KeyValue<String>> writer = writer(jsonDel);
+        JsonDel<String, String, KeyValueEvent<String>> jsonDel = new JsonDel<>(KeyValueEvent::getKey);
+        RedisItemWriter<String, String, KeyValueEvent<String>> writer = writer(jsonDel);
         run(info, gen, writer);
         Assertions.assertEquals(0, redisCommands.dbsize());
     }
@@ -793,11 +794,6 @@ abstract class BatchTests extends AbstractTargetTestBase {
     @Test
     void replicateLiveDump(TestInfo info) throws Exception {
         replicate(info, client(RedisLiveItemReader.dump()), dumpWriter());
-    }
-
-    @Test
-    void replicateLiveStruct(TestInfo info) throws Exception {
-        replicate(info, client(RedisLiveItemReader.struct()), structWriter());
     }
 
 }

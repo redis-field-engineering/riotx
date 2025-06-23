@@ -1,19 +1,15 @@
 package com.redis.riot.core.function;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-
+import com.redis.batch.KeyType;
+import com.redis.batch.KeyValueEvent;
 import com.redis.lettucemod.timeseries.Sample;
-import com.redis.batch.KeyValue;
-
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.StreamMessage;
 
-public class KeyValueMap implements Function<KeyValue<String>, Map<String, Object>> {
+import java.util.*;
+import java.util.function.Function;
+
+public class KeyValueEventToMap implements Function<KeyValueEvent<String>, Map<String, Object>> {
 
     private Function<String, Map<String, String>> key = t -> Collections.emptyMap();
 
@@ -36,18 +32,22 @@ public class KeyValueMap implements Function<KeyValue<String>, Map<String, Objec
     private Function<Object, Map<String, String>> defaultFunction = s -> Collections.emptyMap();
 
     @Override
-    public Map<String, Object> apply(KeyValue<String> item) {
+    public Map<String, Object> apply(KeyValueEvent<String> item) {
         Map<String, Object> map = new LinkedHashMap<>(key.apply(item.getKey()));
         map.putAll(value(item));
         return map;
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, String> value(KeyValue<String> item) {
-        if (item.getType() == null || item.getValue() == null) {
+    private Map<String, String> value(KeyValueEvent<String> item) {
+        if (item.getValue() == null) {
             return Collections.emptyMap();
         }
-        switch (item.type()) {
+        KeyType type = KeyType.of(item.getType());
+        if (type == null) {
+            return Collections.emptyMap();
+        }
+        switch (type) {
             case NONE:
                 return Collections.emptyMap();
             case HASH:

@@ -100,15 +100,15 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
             }
         }
         if (reader instanceof RedisScanItemReader) {
-            return size((RedisScanItemReader<?, ?>) reader);
+            return size((RedisScanItemReader<?, ?, ?>) reader);
         }
-        if (reader instanceof KeyComparisonItemReader<?, ?>) {
-            return size(((KeyComparisonItemReader<?, ?>) reader).getSourceReader());
+        if (reader instanceof KeyComparisonItemReader<?, ?, ?>) {
+            return size(((KeyComparisonItemReader<?, ?, ?>) reader).getSourceReader());
         }
         return -1;
     }
 
-    private long size(RedisScanItemReader<?, ?> reader) {
+    private long size(RedisScanItemReader<?, ?, ?> reader) {
         return RedisScanSizeEstimator.from(reader.getClient(), reader.getKeyPattern(), reader.getKeyType()).getAsLong();
     }
 

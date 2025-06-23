@@ -1,15 +1,16 @@
 package com.redis.batch.operation;
 
 import java.util.List;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 
 import com.redis.batch.BatchUtils;
-import com.redis.batch.RedisOperation;
+import com.redis.batch.RedisBatchOperation;
 
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 
-public class Del<K, V, T> implements RedisOperation<K, V, T, Object> {
+public class Del<K, V, T> implements RedisBatchOperation<K, V, T, Object> {
 
     private final Function<T, K> keyFunction;
 
@@ -18,8 +19,8 @@ public class Del<K, V, T> implements RedisOperation<K, V, T, Object> {
     }
 
     @Override
-    public List<RedisFuture<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
-        return BatchUtils.execute(commands, items, this::execute);
+    public List<Future<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
+        return execute(commands, items, this::execute);
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })

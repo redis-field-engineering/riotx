@@ -1,17 +1,16 @@
 package com.redis.riot.replicate;
 
 import com.redis.batch.BatchUtils;
-import com.redis.batch.KeyValue;
+import com.redis.batch.KeyValueEvent;
 import com.redis.riot.core.RiotUtils;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import org.springframework.batch.core.ItemReadListener;
-import org.springframework.batch.core.observability.BatchMetrics;
 
 import java.time.Duration;
 import java.time.Instant;
 
-public class ReplicateMetricsReadListener<K> implements ItemReadListener<KeyValue<K>> {
+public class ReplicateMetricsReadListener<K> implements ItemReadListener<KeyValueEvent<K>> {
 
     public static final String METRICS_PREFIX = "riotx.replication.read.";
 
@@ -22,10 +21,10 @@ public class ReplicateMetricsReadListener<K> implements ItemReadListener<KeyValu
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
 
     @Override
-    public void afterRead(KeyValue<K> item) {
-        Duration latency = Duration.between(Instant.now(), item.getTime());
+    public void afterRead(KeyValueEvent<K> item) {
+        Duration latency = Duration.between(Instant.now(), item.getTimestamp());
         RiotUtils.latencyTimer(meterRegistry, LAG_TIMER_NAME, LAG_TIMER_DESCRIPTION, latency,
-                BatchUtils.tags(item, BatchMetrics.STATUS_SUCCESS));
+                BatchUtils.tags(item.getEvent(), item.getType(), true));
     }
 
     public void setMeterRegistry(MeterRegistry registry) {

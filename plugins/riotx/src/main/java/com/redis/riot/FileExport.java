@@ -3,15 +3,15 @@ package com.redis.riot;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.redis.batch.KeyValue;
+import com.redis.batch.KeyValueEvent;
 import com.redis.batch.KeyValueSerializer;
-import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.file.*;
 import com.redis.riot.parquet.GenericParquetWriter;
 import com.redis.riot.parquet.ParquetFileItemWriter;
 import com.redis.riot.parquet.ParquetFileNameMap;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
+import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
@@ -87,7 +87,7 @@ public class FileExport extends AbstractRedisExport {
 
     private void configure(ObjectMapper mapper) {
         SimpleModule module = new SimpleModule();
-        module.addSerializer(KeyValue.class, new KeyValueSerializer());
+        module.addSerializer(KeyValueEvent.class, new KeyValueSerializer());
         mapper.registerModule(module);
         mapper.registerModule(new JavaTimeModule());
     }
@@ -96,8 +96,8 @@ public class FileExport extends AbstractRedisExport {
     protected Job job() throws Exception {
         WritableResource resource = resourceFactory.writableResource(file, writeOptions);
         MimeType type = mimeType(resource);
-        RiotStep<KeyValue<String>, ?> step = step(STEP_NAME, reader(), writer(resource, type));
-        step.setItemProcessor(RiotUtils.processor(keyValueFilter(), processor(type)));
+        RiotStep<KeyValueEvent<String>, ?> step = step(STEP_NAME, reader(), writer(resource, type));
+        step.setItemProcessor((ItemProcessor) processor(type));
         return job(step);
     }
 
@@ -114,8 +114,8 @@ public class FileExport extends AbstractRedisExport {
         return writeOptions.getContentType();
     }
 
-    private RedisScanItemReader<String, String> reader() {
-        RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
+    private RedisScanItemReader<String, String, KeyValueEvent<String>> reader() {
+        RedisScanItemReader<String, String, KeyValueEvent<String>> reader = RedisScanItemReader.struct(StringCodec.UTF8);
         configureSource(reader);
         return reader;
     }
@@ -130,7 +130,7 @@ public class FileExport extends AbstractRedisExport {
                 || ResourceMap.TEXT.equals(type) || ParquetFileNameMap.MIME_TYPE_PARQUET.equals(type);
     }
 
-    private ItemProcessor<KeyValue<String>, ?> processor(MimeType type) {
+    private ItemProcessor<KeyValueEvent<String>, ?> processor(MimeType type) {
         if (isFlatFile(type) || contentType == ContentType.MAP) {
             return mapProcessor();
         }
@@ -138,16 +138,16 @@ public class FileExport extends AbstractRedisExport {
     }
 
     private Map<String, Object> headerRecord() {
-        RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
+        RedisScanItemReader<String, String, KeyValueEvent<String>> reader = RedisScanItemReader.struct(StringCodec.UTF8);
         configureSource(reader);
         try {
             reader.open(new ExecutionContext());
             try {
-                KeyValue<String> keyValue = reader.read();
-                if (keyValue == null) {
+                KeyValueEvent<String> keyValueEvent = reader.read();
+                if (keyValueEvent == null) {
                     return Collections.emptyMap();
                 }
-                return mapProcessor().process(keyValue);
+                return mapProcessor().process(keyValueEvent);
             } catch (Exception e) {
                 throw new ItemStreamException("Could not read header record", e);
             }

@@ -1,16 +1,14 @@
 package com.redis.riot.replicate;
 
-import java.util.function.Function;
-
+import com.redis.batch.BatchUtils;
+import com.redis.batch.KeyValueEvent;
+import io.lettuce.core.codec.RedisCodec;
 import org.slf4j.Logger;
 import org.springframework.batch.core.ItemReadListener;
 
-import com.redis.batch.BatchUtils;
-import com.redis.batch.KeyValue;
+import java.util.function.Function;
 
-import io.lettuce.core.codec.RedisCodec;
-
-public class ReplicateReadLogger<K> implements ItemReadListener<KeyValue<K>> {
+public class ReplicateReadLogger<K> implements ItemReadListener<KeyValueEvent<K>> {
 
     private final Logger logger;
 
@@ -22,7 +20,7 @@ public class ReplicateReadLogger<K> implements ItemReadListener<KeyValue<K>> {
     }
 
     @Override
-    public void afterRead(KeyValue<K> item) {
+    public void afterRead(KeyValueEvent<K> item) {
         if (logger.isInfoEnabled()) {
             logger.info("Key {}", toString.apply(item.getKey()));
         }

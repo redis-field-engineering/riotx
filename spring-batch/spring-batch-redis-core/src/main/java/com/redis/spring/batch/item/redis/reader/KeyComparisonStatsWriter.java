@@ -1,15 +1,14 @@
 package com.redis.spring.batch.item.redis.reader;
 
+import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
+import org.springframework.batch.item.Chunk;
+import org.springframework.batch.item.ItemWriter;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.springframework.batch.item.Chunk;
-import org.springframework.batch.item.ItemWriter;
-
-import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
 
 public class KeyComparisonStatsWriter<K> implements ItemWriter<KeyComparison<K>> {
 
@@ -20,7 +19,7 @@ public class KeyComparisonStatsWriter<K> implements ItemWriter<KeyComparison<K>>
         chunk.forEach(this::add);
     }
 
-    public long add(KeyComparison<?> comparison) {
+    public long add(KeyComparison<K> comparison) {
         Map<String, AtomicLong> typeCounts = counts.computeIfAbsent(comparison.getStatus(), s -> new HashMap<>());
         AtomicLong count = typeCounts.computeIfAbsent(comparison.getSource().getType(), t -> new AtomicLong());
         return count.incrementAndGet();

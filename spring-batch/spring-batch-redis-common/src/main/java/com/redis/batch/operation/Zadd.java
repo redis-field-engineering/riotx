@@ -1,15 +1,15 @@
 package com.redis.batch.operation;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.function.Function;
-
 import com.redis.batch.BatchUtils;
-
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.ZAddArgs;
 import io.lettuce.core.api.async.RedisAsyncCommands;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.Future;
+import java.util.function.Function;
 
 public class Zadd<K, V, T> extends AbstractValueWriteOperation<K, V, Collection<ScoredValue<V>>, T> {
 
@@ -28,8 +28,8 @@ public class Zadd<K, V, T> extends AbstractValueWriteOperation<K, V, Collection<
     }
 
     @Override
-    public List<RedisFuture<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
-        return BatchUtils.execute(commands, items, this::execute);
+    public List<Future<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
+        return execute(commands, items, this::execute);
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })

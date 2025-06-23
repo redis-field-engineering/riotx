@@ -8,7 +8,7 @@ import com.redis.riot.core.function.PredicateOperator;
 import com.redis.riot.operation.*;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.batch.operation.MultiOperation;
-import com.redis.batch.RedisOperation;
+import com.redis.batch.RedisBatchOperation;
 import com.redis.riot.core.job.RiotStep;
 import io.lettuce.core.codec.ByteArrayCodec;
 import org.springframework.batch.item.ItemProcessor;
@@ -77,11 +77,11 @@ public abstract class AbstractImport extends AbstractJobCommand {
         super.teardown();
     }
 
-    protected List<RedisOperation<byte[], byte[], Map<String, Object>, Object>> operations() {
+    protected List<RedisBatchOperation<byte[], byte[], Map<String, Object>, Object>> operations() {
         return importOperationCommands.stream().map(this::operation).collect(Collectors.toList());
     }
 
-    private RedisOperation<byte[], byte[], Map<String, Object>, Object> operation(OperationCommand command) {
+    private RedisBatchOperation<byte[], byte[], Map<String, Object>, Object> operation(OperationCommand command) {
         command.setEvaluationContext(evaluationContext);
         return command.operation();
     }

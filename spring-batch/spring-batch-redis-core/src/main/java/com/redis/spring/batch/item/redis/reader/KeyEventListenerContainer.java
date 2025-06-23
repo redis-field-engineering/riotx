@@ -1,29 +1,29 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import java.text.MessageFormat;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
+import com.redis.batch.BatchUtils;
+import com.redis.batch.KeyEvent;
+import com.redis.batch.KeyOperation;
 import com.redis.batch.KeyType;
+import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.utils.ConnectionBuilder;
+import com.redis.spring.batch.item.redis.reader.pubsub.PubSubListenerContainer;
+import com.redis.spring.batch.item.redis.reader.pubsub.PubSubMessage;
+import com.redis.spring.batch.item.redis.reader.pubsub.PubSubMessageListener;
+import com.redis.spring.batch.item.redis.reader.pubsub.Subscription;
+import io.lettuce.core.AbstractRedisClient;
+import io.lettuce.core.RedisException;
+import io.lettuce.core.codec.RedisCodec;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.util.Assert;
 
-import com.redis.lettucemod.api.StatefulRedisModulesConnection;
-import com.redis.batch.BatchUtils;
-import com.redis.batch.KeyValue;
-import com.redis.spring.batch.item.redis.reader.pubsub.PubSubListenerContainer;
-import com.redis.spring.batch.item.redis.reader.pubsub.PubSubMessage;
-import com.redis.spring.batch.item.redis.reader.pubsub.PubSubMessageListener;
-import com.redis.spring.batch.item.redis.reader.pubsub.Subscription;
-
-import io.lettuce.core.AbstractRedisClient;
-import io.lettuce.core.RedisException;
-import io.lettuce.core.codec.RedisCodec;
+import java.text.MessageFormat;
+import java.time.Instant;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
 
@@ -34,6 +34,8 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
     public static final String NOTIFY_CONFIG = "notify-keyspace-events";
 
     public static final String NOTIFY_CONFIG_VALUE = "KEA";
+
+    public static final String EVENT_DEL = "del";
 
     private static final String SEPARATOR = ":";
 
@@ -91,16 +93,16 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
     }
 
     @SuppressWarnings("unchecked")
-    private KeyValue<K> keyEventNotification(PubSubMessage<K, V> m) {
+    private KeyEvent<K> keyEventNotification(PubSubMessage<K, V> m) {
         return keyEvent((K) m.getMessage(), suffix(m.getChannel()));
     }
 
-    private KeyValue<K> keySpaceNotification(PubSubMessage<K, V> m) {
+    private KeyEvent<K> keySpaceNotification(PubSubMessage<K, V> m) {
         return keyEvent(keyEncoder.apply(suffix(m.getChannel())), valueDecoder.apply(m.getMessage()));
     }
 
     private Subscription receive(String pattern, KeyEventListener<K> listener,
-            Function<PubSubMessage<K, V>, KeyValue<K>> mapper) {
+            Function<PubSubMessage<K, V>, KeyEvent<K>> mapper) {
         return pubSubListenerContainer.receive(keyEncoder.apply(pattern), new KeyEventMessageListener<>(listener, mapper));
     }
 
@@ -108,9 +110,9 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
 
         private final KeyEventListener<K> keyEventListener;
 
-        private final Function<PubSubMessage<K, V>, KeyValue<K>> mapper;
+        private final Function<PubSubMessage<K, V>, KeyEvent<K>> mapper;
 
-        public KeyEventMessageListener(KeyEventListener<K> listener, Function<PubSubMessage<K, V>, KeyValue<K>> mapper) {
+        public KeyEventMessageListener(KeyEventListener<K> listener, Function<PubSubMessage<K, V>, KeyEvent<K>> mapper) {
             this.keyEventListener = listener;
             this.mapper = mapper;
         }
@@ -131,21 +133,47 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
         return null;
     }
 
-    private static <K> KeyValue<K> keyEvent(K key, String event) {
-        KeyType type = type(event);
-        KeyValue<K> keyEvent = new KeyValue<>();
+    private KeyEvent<K> keyEvent(K key, String event) {
+        KeyEvent<K> keyEvent = new KeyEvent<>();
+        keyEvent.setTimestamp(Instant.now());
         keyEvent.setKey(key);
         keyEvent.setEvent(event);
-        if (type != null) {
-            keyEvent.setType(type.getString());
-        }
+        KeyType keyType = keyType(event);
+        keyEvent.setType(keyType == null ? null : keyType.getString());
+        keyEvent.setOperation(operation(event));
         return keyEvent;
     }
 
-    public static KeyType type(String event) {
-        if (event == null) {
-            return null;
+    private KeyOperation operation(String event) {
+        if (KeyEventListenerContainer.EVENT_DEL.equals(event)) {
+            return KeyOperation.DELETE;
         }
+        return KeyOperation.UPDATE;
+    }
+
+    private void checkNotifyConfig() {
+        Map<String, String> valueMap;
+        try (StatefulRedisModulesConnection<String, String> connection = ConnectionBuilder.client(client).connection()) {
+            try {
+                valueMap = connection.sync().configGet(NOTIFY_CONFIG);
+            } catch (RedisException e) {
+                log.info("Could not check keyspace notification config", e);
+                return;
+            }
+        }
+        String actual = valueMap.getOrDefault(NOTIFY_CONFIG, "");
+        log.info(MessageFormat.format("Retrieved config {0}: {1}", NOTIFY_CONFIG, actual));
+        Set<Character> expected = characterSet(NOTIFY_CONFIG_VALUE);
+        Assert.isTrue(characterSet(actual).containsAll(expected),
+                String.format("Keyspace notifications not property configured. Expected %s '%s' but was '%s'.", NOTIFY_CONFIG,
+                        NOTIFY_CONFIG_VALUE, actual));
+    }
+
+    private static Set<Character> characterSet(String string) {
+        return string.codePoints().mapToObj(c -> (char) c).collect(Collectors.toSet());
+    }
+
+    private static KeyType keyType(String event) {
         if (event.startsWith("xgroup-")) {
             return KeyType.STREAM;
         }
@@ -196,33 +224,11 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
             case "xdel":
             case "xsetid":
                 return KeyType.STREAM;
-            case "del":
+            case EVENT_DEL:
                 return KeyType.NONE;
             default:
                 return null;
         }
-    }
-
-    private void checkNotifyConfig() {
-        Map<String, String> valueMap;
-        try (StatefulRedisModulesConnection<String, String> connection = ConnectionBuilder.client(client).connection()) {
-            try {
-                valueMap = connection.sync().configGet(NOTIFY_CONFIG);
-            } catch (RedisException e) {
-                log.info("Could not check keyspace notification config", e);
-                return;
-            }
-        }
-        String actual = valueMap.getOrDefault(NOTIFY_CONFIG, "");
-        log.info(MessageFormat.format("Retrieved config {0}: {1}", NOTIFY_CONFIG, actual));
-        Set<Character> expected = characterSet(NOTIFY_CONFIG_VALUE);
-        Assert.isTrue(characterSet(actual).containsAll(expected),
-                String.format("Keyspace notifications not property configured. Expected %s '%s' but was '%s'.", NOTIFY_CONFIG,
-                        NOTIFY_CONFIG_VALUE, actual));
-    }
-
-    private static Set<Character> characterSet(String string) {
-        return string.codePoints().mapToObj(c -> (char) c).collect(Collectors.toSet());
     }
 
 }

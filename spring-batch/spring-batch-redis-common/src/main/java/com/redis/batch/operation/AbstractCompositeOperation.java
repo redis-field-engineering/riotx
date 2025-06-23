@@ -1,14 +1,14 @@
 package com.redis.batch.operation;
 
 import com.redis.batch.InitializingOperation;
-import com.redis.batch.RedisOperation;
+import com.redis.batch.RedisBatchOperation;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 
 public abstract class AbstractCompositeOperation<K, V, I, O> implements InitializingOperation<K, V, I, O> {
 
-    protected final RedisOperation<K, V, I, O> delegate;
+    protected final RedisBatchOperation<K, V, I, O> delegate;
 
-    protected AbstractCompositeOperation(RedisOperation<K, V, I, O> delegate) {
+    protected AbstractCompositeOperation(RedisBatchOperation<K, V, I, O> delegate) {
         this.delegate = delegate;
     }
 

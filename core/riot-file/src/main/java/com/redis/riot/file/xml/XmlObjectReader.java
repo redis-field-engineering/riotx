@@ -48,7 +48,6 @@ public class XmlObjectReader<T> {
 		Assert.notNull(resource, "The resource must not be null");
 		this.inputStream = resource.getInputStream();
 		this.reader = XMLInputFactory.newFactory().createXMLStreamReader(this.inputStream);
-		this.mapper = new XmlMapper();
 		if (reader.hasNext()) {
 			reader.next(); // point to root element
 		} else {

@@ -1,7 +1,7 @@
 package com.redis.spring.batch.item.redis.reader;
 
+import com.redis.batch.KeyValueEvent;
 import com.redis.spring.batch.item.AbstractCountingItemReader;
-import com.redis.batch.KeyValue;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemStreamException;
@@ -12,15 +12,15 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-public class KeyComparisonItemReader<K, V> extends AbstractCountingItemReader<KeyComparison<K>> {
+public class KeyComparisonItemReader<K, V, T> extends AbstractCountingItemReader<KeyComparison<K>> {
 
     public static final int DEFAULT_BATCH_SIZE = 50;
 
-    private final RedisScanItemReader<K, V> sourceReader;
+    private final RedisScanItemReader<K, V, KeyValueEvent<K>> sourceReader;
 
-    private final RedisScanItemReader<K, V> targetReader;
+    private final RedisScanItemReader<K, V, KeyValueEvent<K>> targetReader;
 
-    private ItemProcessor<KeyValue<K>, KeyValue<K>> processor;
+    private ItemProcessor<KeyValueEvent<K>, KeyValueEvent<K>> processor;
 
     private int batchSize = DEFAULT_BATCH_SIZE;
 
@@ -28,7 +28,8 @@ public class KeyComparisonItemReader<K, V> extends AbstractCountingItemReader<Ke
 
     private Iterator<KeyComparison<K>> iterator = Collections.emptyIterator();
 
-    public KeyComparisonItemReader(RedisScanItemReader<K, V> sourceReader, RedisScanItemReader<K, V> targetReader) {
+    public KeyComparisonItemReader(RedisScanItemReader<K, V, KeyValueEvent<K>> sourceReader,
+            RedisScanItemReader<K, V, KeyValueEvent<K>> targetReader) {
         this.sourceReader = sourceReader;
         this.targetReader = targetReader;
         this.comparator = new DefaultKeyComparator<>(sourceReader.getCodec());
@@ -70,15 +71,15 @@ public class KeyComparisonItemReader<K, V> extends AbstractCountingItemReader<Ke
         if (iterator.hasNext()) {
             return iterator.next();
         }
-        List<KeyValue<K>> sourceValues = new ArrayList<>();
-        KeyValue<K> sourceValue;
+        List<KeyValueEvent<K>> sourceValues = new ArrayList<>();
+        KeyValueEvent<K> sourceValue;
         while (sourceValues.size() < batchSize && (sourceValue = sourceReader.read()) != null) {
-            KeyValue<K> processedKeyValue = process(sourceValue);
-            if (processedKeyValue != null) {
-                sourceValues.add(processedKeyValue);
+            KeyValueEvent<K> processedKeyValueEvent = process(sourceValue);
+            if (processedKeyValueEvent != null) {
+                sourceValues.add(processedKeyValueEvent);
             }
         }
-        List<KeyValue<K>> targetValues = targetReader.read(sourceValues);
+        List<KeyValueEvent<K>> targetValues = targetReader.read(sourceValues);
         Assert.isTrue(targetValues.size() == sourceValues.size(), "Size mismatch between target and source values");
         List<KeyComparison<K>> comparisons = new ArrayList<>();
         for (int index = 0; index < sourceValues.size(); index++) {
@@ -91,18 +92,18 @@ public class KeyComparisonItemReader<K, V> extends AbstractCountingItemReader<Ke
         return null;
     }
 
-    private KeyValue<K> process(KeyValue<K> keyValue) throws Exception {
+    private KeyValueEvent<K> process(KeyValueEvent<K> keyValueEvent) throws Exception {
         if (processor == null) {
-            return keyValue;
+            return keyValueEvent;
         }
-        return processor.process(keyValue);
+        return processor.process(keyValueEvent);
     }
 
-    public RedisScanItemReader<K, V> getSourceReader() {
+    public RedisScanItemReader<K, V, KeyValueEvent<K>> getSourceReader() {
         return sourceReader;
     }
 
-    public RedisScanItemReader<K, V> getTargetReader() {
+    public RedisScanItemReader<K, V, KeyValueEvent<K>> getTargetReader() {
         return targetReader;
     }
 
@@ -114,11 +115,11 @@ public class KeyComparisonItemReader<K, V> extends AbstractCountingItemReader<Ke
         this.comparator = comparator;
     }
 
-    public ItemProcessor<KeyValue<K>, KeyValue<K>> getProcessor() {
+    public ItemProcessor<KeyValueEvent<K>, KeyValueEvent<K>> getProcessor() {
         return processor;
     }
 
-    public void setProcessor(ItemProcessor<KeyValue<K>, KeyValue<K>> processor) {
+    public void setProcessor(ItemProcessor<KeyValueEvent<K>, KeyValueEvent<K>> processor) {
         this.processor = processor;
     }
 

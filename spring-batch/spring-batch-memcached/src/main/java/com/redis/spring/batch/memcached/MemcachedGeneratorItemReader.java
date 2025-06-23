@@ -29,7 +29,7 @@ public class MemcachedGeneratorItemReader extends AbstractCountingItemReader<Mem
 
     private Range stringLength = DEFAULT_STRING_LENGTH;
 
-    private int startTime;
+    private Instant startTime = Instant.now();
 
     private String key() {
         int index = keyRange.getMin() + (getCurrentItemCount() - 1) % (keyRange.getMax() - keyRange.getMin());
@@ -56,12 +56,20 @@ public class MemcachedGeneratorItemReader extends AbstractCountingItemReader<Mem
 
     @Override
     protected void doOpen() throws Exception {
-        startTime = Math.toIntExact(System.currentTimeMillis() / 1000);
+        // do nothing
     }
 
     @Override
     protected void doClose() throws Exception {
         // do nothing
+    }
+
+    public Instant getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(Instant startTime) {
+        this.startTime = startTime;
     }
 
     @Override
@@ -70,7 +78,7 @@ public class MemcachedGeneratorItemReader extends AbstractCountingItemReader<Mem
         struct.setKey(key());
         struct.setValue(value());
         if (expiration != null) {
-            struct.setExpiration(Instant.ofEpochSecond(startTime + randomInt(expiration)));
+            struct.setExpiration(startTime.plusSeconds(randomInt(expiration)));
         }
         return struct;
     }

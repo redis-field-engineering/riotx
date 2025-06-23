@@ -1,6 +1,7 @@
 package com.redis.riot;
 
-import com.redis.batch.KeyValue;
+import com.redis.batch.KeyStatEvent;
+import com.redis.batch.KeyValueEvent;
 import com.redis.batch.gen.Generator;
 import com.redis.spring.batch.item.redis.GeneratorItemReader;
 import org.junit.jupiter.api.Assertions;
@@ -21,10 +22,17 @@ public class DatabaseStatsTests {
         reader.open(new ExecutionContext());
         RedisStats stats = new RedisStats();
         Random random = new Random();
-        KeyValue<String> item;
+        KeyValueEvent<String> item;
         while ((item = reader.read()) != null) {
-            item.setMemoryUsage(random.nextLong(minMemory, maxMemory));
-            stats.keyValue(item);
+            KeyStatEvent<String> statEvent = new KeyStatEvent<>();
+            statEvent.setKey(item.getKey());
+            statEvent.setTtl(item.getTtl());
+            statEvent.setEvent(item.getEvent());
+            statEvent.setType(item.getType());
+            statEvent.setOperation(item.getOperation());
+            statEvent.setTimestamp(item.getTimestamp());
+            statEvent.setMemoryUsage(random.nextLong(minMemory, maxMemory));
+            stats.onStatEvent(statEvent);
         }
         reader.close();
         long memorySpread = maxMemory - minMemory;

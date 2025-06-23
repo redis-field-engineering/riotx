@@ -1,11 +1,12 @@
 package com.redis.riot;
 
+import com.redis.batch.KeyValueEvent;
 import com.redis.riot.core.RiotUtils;
-import com.redis.riot.core.function.KeyValueMap;
+import com.redis.riot.core.function.KeyValueEventToMap;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
-import com.redis.batch.KeyValue;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.riot.core.job.RiotStep;
+import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
@@ -30,7 +31,7 @@ public class RedisImport extends AbstractTargetRedisImport {
     @Option(names = "--key-regex", description = "Regex for key-field extraction, e.g. '\\w+:(?<id>.+)' extracts an id field from the key", paramLabel = "<rex>")
     private Pattern keyRegex;
 
-    protected void configureSourceRedisReader(RedisScanItemReader<?, ?> reader) {
+    protected void configureSourceRedisReader(RedisScanItemReader<?, ?, ?> reader) {
         sourceRedisContext.configure(reader);
         log.info("Configuring {} with {}", reader.getName(), sourceRedisReaderArgs);
         sourceRedisReaderArgs.configure(reader);
@@ -39,20 +40,21 @@ public class RedisImport extends AbstractTargetRedisImport {
     @Override
     protected Job job() throws Exception {
         Assert.isTrue(hasOperations(), "No Redis command specified");
-        RiotStep<KeyValue<String>, Map<String, Object>> step = step(STEP_NAME, reader(), operationWriter());
-        step.setItemProcessor(RiotUtils.processor(keyValueProcessor(), operationProcessor()));
+        RiotStep<KeyValueEvent<String>, Map<String, Object>> step = step(STEP_NAME, reader(), operationWriter());
+        step.setItemProcessor(RiotUtils.processor(keyValueEventProcessor(), operationProcessor()));
         return job(step);
     }
 
-    private RedisScanItemReader<String, String> reader() {
+    private RedisScanItemReader<String, String, KeyValueEvent<String>> reader() {
         log.info("Creating source Redis reader with {}", sourceRedisReaderArgs);
-        RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
+        RedisScanItemReader<String, String, KeyValueEvent<String>> reader = RedisScanItemReader.struct(
+                StringCodec.UTF8);
         configureSourceRedisReader(reader);
         return reader;
     }
 
-    protected ItemProcessor<KeyValue<String>, Map<String, Object>> keyValueProcessor() {
-        KeyValueMap mapFunction = new KeyValueMap();
+    protected ItemProcessor<KeyValueEvent<String>, Map<String, Object>> keyValueEventProcessor() {
+        KeyValueEventToMap mapFunction = new KeyValueEventToMap();
         if (keyRegex != null) {
             mapFunction.setKey(new RegexNamedGroupFunction(keyRegex));
         }
