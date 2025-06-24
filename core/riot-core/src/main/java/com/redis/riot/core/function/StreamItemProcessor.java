@@ -4,14 +4,13 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 
 import com.redis.batch.KeyType;
+import com.redis.batch.KeyValueEvent;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.util.CollectionUtils;
 
-import com.redis.batch.KeyValue;
-
 import io.lettuce.core.StreamMessage;
 
-public class StreamItemProcessor implements ItemProcessor<KeyValue<String>, KeyValue<String>> {
+public class StreamItemProcessor implements ItemProcessor<KeyValueEvent<String>, KeyValueEvent<String>> {
 
     private boolean prune;
 
@@ -19,8 +18,8 @@ public class StreamItemProcessor implements ItemProcessor<KeyValue<String>, KeyV
 
     @SuppressWarnings("unchecked")
     @Override
-    public KeyValue<String> process(KeyValue<String> t) {
-        if (t.getValue() != null && t.type() == KeyType.STREAM) {
+    public KeyValueEvent<String> process(KeyValueEvent<String> t) {
+        if (t.getValue() != null && KeyType.STREAM.getString().equalsIgnoreCase(t.getType())) {
             Collection<StreamMessage<?, ?>> messages = (Collection<StreamMessage<?, ?>>) t.getValue();
             if (CollectionUtils.isEmpty(messages)) {
                 if (prune) {

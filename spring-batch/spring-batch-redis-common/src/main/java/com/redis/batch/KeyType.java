@@ -14,6 +14,10 @@ public enum KeyType {
         this.string = string;
     }
 
+    public static boolean isNone(String type) {
+        return NONE.getString().equals(type);
+    }
+
     public String getString() {
         return string;
     }

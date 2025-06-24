@@ -1,12 +1,12 @@
 package com.redis.spring.batch.memcached;
 
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Objects;
 
 public class MemcachedEntry {
 
     private String key;
+
+    private Instant timestamp = Instant.now();
 
     private byte[] value;
 
@@ -39,18 +39,12 @@ public class MemcachedEntry {
         this.expiration = expiration;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass())
-            return false;
-        MemcachedEntry that = (MemcachedEntry) o;
-        return Objects.equals(key, that.key) && Objects.deepEquals(value, that.value) && Objects.equals(expiration,
-                that.expiration);
+    public Instant getTimestamp() {
+        return timestamp;
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(key, Arrays.hashCode(value), expiration);
+    public void setTimestamp(Instant timestamp) {
+        this.timestamp = timestamp;
     }
 
 }

@@ -1,9 +1,9 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import com.redis.batch.KeyValue;
+import com.redis.batch.KeyEvent;
 
 public interface KeyEventListener<K> {
 
-    void onKeyEvent(KeyValue<K> keyEvent);
+    void onKeyEvent(KeyEvent<K> keyEvent);
 
 }

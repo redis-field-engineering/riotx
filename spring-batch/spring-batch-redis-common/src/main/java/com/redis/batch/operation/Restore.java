@@ -1,6 +1,6 @@
 package com.redis.batch.operation;
 
-import com.redis.batch.RedisOperation;
+import com.redis.batch.RedisBatchOperation;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.RestoreArgs;
 import io.lettuce.core.api.async.RedisAsyncCommands;
@@ -57,7 +57,7 @@ public class Restore<K, V, T> extends AbstractValueWriteOperation<K, V, byte[], 
         }
         byte[] value = value(item);
         if (value == null) {
-            return RedisOperation.noopRedisFuture();
+            return RedisBatchOperation.noopRedisFuture();
         }
         return commands.restore(key(item), value, args);
 

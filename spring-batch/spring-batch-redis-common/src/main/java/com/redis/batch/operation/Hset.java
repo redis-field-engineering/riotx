@@ -2,6 +2,7 @@ package com.redis.batch.operation;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 
 import com.redis.batch.BatchUtils;
@@ -16,8 +17,8 @@ public class Hset<K, V, T> extends AbstractValueWriteOperation<K, V, Map<K, V>, 
     }
 
     @Override
-    public List<RedisFuture<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
-        return BatchUtils.execute(commands, items, this::execute);
+    public List<Future<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
+        return execute(commands, items, this::execute);
     }
 
     @SuppressWarnings("rawtypes")

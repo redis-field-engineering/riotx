@@ -4,6 +4,11 @@ local function get_type(key)
     return type(result) == "table" and result.ok or result
 end
 
+local function get_dump(key)
+    local ok, result = pcall(redis.call, 'DUMP', key)
+    return ok and result or nil
+end
+
 -- Helper: Return a structured representation of the key based on its type
 local function get_struct(key, t)
     local ok, result
@@ -41,40 +46,40 @@ local function get_memory_usage(key, samples)
 end
 
 -- Helper: Extract value based on mode
-local function get_value(key, type, mode)
-    if mode == 'DUMP' then
-        local ok, result = pcall(redis.call, 'DUMP', key)
-        return ok and result or nil
+local function get_value(key, type, mode, limit, samples)
+    if mode == 'none' then
+        return nil
     end
-    if mode == 'STRUCT' then
+    -- Check that the key exists (Type none means it doesn't exist)
+    if type == 'none' then
+        return nil
+    end
+    if limit > 0 then
+        local mem = get_memory_usage(key, samples)
+        if mem > limit then
+            return nil
+        end
+    end
+    if mode == 'dump' then
+        return get_dump(key)
+    end
+    if mode == 'struct' then
         return get_struct(key, type)
     end
     return nil
 end
 
 -- KEYS[1]: target key
--- ARGV[1]: mode (DUMP, STRUCT, or empty)
+-- ARGV[1]: mode (dump, struct, or none)
 -- ARGV[2]: limit (0: skip, >0: enforce, -1: inspect only)
 -- ARGV[3]: samples (for MEMORY USAGE, optional)
 
-local mode    = ARGV[1] or "DUMP"
+local mode    = ARGV[1] or "none"
 local limit   = tonumber(ARGV[2] or "0")
 local samples = tonumber(ARGV[3] or "0")
 local key     = KEYS[1]
 local ttl     = redis.call('PTTL', key)
 local type    = get_type(key)
-local mem     = 0
-local value   = nil
+local value   = get_value(key, type, mode, limit, samples)
 
--- Check that the key exists (Type none means it doesn't exist)
-if type ~= 'none' then
-    if limit ~= 0 then
-        mem = get_memory_usage(key, samples)
-    end
-
-    if limit <= 0 or mem <= limit then
-        value = get_value(key, type, mode)
-    end
-end
-
-return { ttl, type, mem, value }
+return { ttl, type, value }

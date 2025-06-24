@@ -8,6 +8,7 @@ import io.lettuce.core.api.async.RedisAsyncCommands;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 
 public class Geoadd<K, V, T> extends AbstractValueWriteOperation<K, V, Collection<GeoValue<V>>, T> {
@@ -31,8 +32,8 @@ public class Geoadd<K, V, T> extends AbstractValueWriteOperation<K, V, Collectio
     }
 
     @Override
-    public List<RedisFuture<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
-        return BatchUtils.execute(commands, items, this::execute);
+    public List<Future<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
+        return execute(commands, items, this::execute);
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })

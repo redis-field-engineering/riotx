@@ -4,7 +4,6 @@ import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.ReadFrom;
-import io.lettuce.core.RedisFuture;
 import io.lettuce.core.RedisNoScriptException;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.internal.LettuceAssert;
@@ -18,6 +17,7 @@ import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 import java.util.List;
+import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
 public class OperationExecutor<K, V, I, O> implements AutoCloseable {
@@ -28,7 +28,7 @@ public class OperationExecutor<K, V, I, O> implements AutoCloseable {
 
     public static final String TIMER_DESCRIPTION = "Operation execution duration";
 
-    private final RedisOperation<K, V, I, O> operation;
+    private final RedisBatchOperation<K, V, I, O> operation;
 
     private final RedisCodec<K, V> codec;
 
@@ -42,7 +42,7 @@ public class OperationExecutor<K, V, I, O> implements AutoCloseable {
 
     private GenericObjectPool<StatefulRedisModulesConnection<K, V>> pool;
 
-    public OperationExecutor(RedisCodec<K, V> codec, RedisOperation<K, V, I, O> operation) {
+    public OperationExecutor(RedisCodec<K, V> codec, RedisBatchOperation<K, V, I, O> operation) {
         this.codec = codec;
         this.operation = operation;
     }
@@ -104,7 +104,7 @@ public class OperationExecutor<K, V, I, O> implements AutoCloseable {
     }
 
     private List<O> execute(StatefulRedisModulesConnection<K, V> connection, List<? extends I> items) {
-        List<RedisFuture<O>> futures = operation.execute(connection.async(), items);
+        List<? extends Future<O>> futures = operation.execute(connection.async(), items);
         connection.flushCommands();
         return BatchUtils.getAll(connection.getTimeout(), futures);
     }

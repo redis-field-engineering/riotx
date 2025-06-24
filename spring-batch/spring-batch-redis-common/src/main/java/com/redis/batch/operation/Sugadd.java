@@ -2,11 +2,11 @@ package com.redis.batch.operation;
 
 import com.redis.lettucemod.api.async.RedisModulesAsyncCommands;
 import com.redis.lettucemod.search.Suggestion;
-import com.redis.batch.BatchUtils;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 
 import java.util.List;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -27,8 +27,8 @@ public class Sugadd<K, V, T> extends AbstractValueWriteOperation<K, V, Suggestio
     }
 
     @Override
-    public List<RedisFuture<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
-        return BatchUtils.execute(commands, items, this::execute);
+    public List<Future<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
+        return execute(commands, items, this::execute);
     }
 
     @SuppressWarnings("rawtypes")

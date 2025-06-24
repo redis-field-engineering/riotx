@@ -1,9 +1,9 @@
 package com.redis.riot;
 
 import com.redis.batch.KeyType;
-import com.redis.batch.KeyValue;
+import com.redis.batch.KeyValueEvent;
 import com.redis.batch.Range;
-import com.redis.riot.core.function.KeyValueMap;
+import com.redis.riot.core.function.KeyValueEventToMap;
 import com.redis.riot.core.function.StringToMapFunction;
 import io.lettuce.core.cluster.SlotHash;
 import io.lettuce.core.codec.StringCodec;
@@ -70,16 +70,16 @@ class ProcessorTests {
     }
 
     @Test
-    void keyValueToMap() {
-        KeyValueMap processor = new KeyValueMap();
-        KeyValue<String> string = new KeyValue<>();
+    void keyValueEventToMap() {
+        KeyValueEventToMap processor = new KeyValueEventToMap();
+        KeyValueEvent<String> string = new KeyValueEvent<>();
         string.setKey("beer:1");
         string.setType(KeyType.STRING.getString());
         String value = "sdfsdf";
         string.setValue(value);
         Map<String, ?> stringMap = processor.apply(string);
         Assertions.assertEquals(value, stringMap.get(StringToMapFunction.DEFAULT_KEY));
-        KeyValue<String> hash = new KeyValue<>();
+        KeyValueEvent<String> hash = new KeyValueEvent<>();
         hash.setKey("beer:2");
         hash.setType(KeyType.HASH.getString());
         Map<String, String> map = new HashMap<>();

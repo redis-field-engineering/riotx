@@ -3,8 +3,7 @@ package com.redis.spring.batch.item.redis.reader;
 import com.redis.batch.BatchUtils;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.utils.ConnectionBuilder;
-import com.redis.spring.batch.item.AbstractCountingItemReader;
-import com.redis.spring.batch.item.PollableItemReader;
+import com.redis.spring.batch.item.AbstractCountingPollableItemReader;
 import io.lettuce.core.*;
 import io.lettuce.core.XReadArgs.StreamOffset;
 import io.lettuce.core.api.sync.RedisStreamCommands;
@@ -18,14 +17,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public class StreamItemReader<K, V> extends AbstractCountingItemReader<StreamMessage<K, V>>
-        implements PollableItemReader<StreamMessage<K, V>> {
+public class StreamItemReader<K, V> extends AbstractCountingPollableItemReader<StreamMessage<K, V>> {
 
     public enum AckPolicy {
         AUTO, MANUAL
     }
-
-    public static final Duration DEFAULT_POLL_TIMEOUT = Duration.ofMillis(Long.MAX_VALUE);
 
     public static final String DEFAULT_OFFSET = "0-0";
 
@@ -48,8 +44,6 @@ public class StreamItemReader<K, V> extends AbstractCountingItemReader<StreamMes
     private long count = DEFAULT_COUNT;
 
     private AckPolicy ackPolicy = DEFAULT_ACK_POLICY;
-
-    private Duration pollTimeout = DEFAULT_POLL_TIMEOUT;
 
     private StatefulRedisModulesConnection<K, V> connection;
 
@@ -123,12 +117,7 @@ public class StreamItemReader<K, V> extends AbstractCountingItemReader<StreamMes
     }
 
     @Override
-    protected StreamMessage<K, V> doRead() throws Exception {
-        return poll(pollTimeout.toMillis(), TimeUnit.MILLISECONDS);
-    }
-
-    @Override
-    public synchronized StreamMessage<K, V> poll(long timeout, TimeUnit unit) {
+    protected synchronized StreamMessage<K, V> doPoll(long timeout, TimeUnit unit) {
         if (!iterator.hasNext()) {
             long remaining = unit.toMillis(timeout);
             List<StreamMessage<K, V>> messages;
@@ -355,14 +344,6 @@ public class StreamItemReader<K, V> extends AbstractCountingItemReader<StreamMes
 
     public void setConsumer(Consumer<K> consumer) {
         this.consumer = consumer;
-    }
-
-    public Duration getPollTimeout() {
-        return pollTimeout;
-    }
-
-    public void setPollTimeout(Duration timeout) {
-        this.pollTimeout = timeout;
     }
 
     public void setOffset(K key, String offset) {

@@ -11,7 +11,6 @@ import com.redis.riot.core.CompareMode;
 import com.redis.riot.core.ReplicationMode;
 import com.redis.riot.replicate.Replicate;
 import com.redis.riot.replicate.ReplicateWriteLogger;
-import com.redis.batch.KeyValue;
 import com.redis.batch.Range;
 import com.redis.spring.batch.item.redis.GeneratorItemReader;
 import io.lettuce.core.LettuceFutures;

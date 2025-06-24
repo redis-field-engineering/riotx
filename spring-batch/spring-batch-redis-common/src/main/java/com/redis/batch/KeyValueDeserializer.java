@@ -1,82 +1,59 @@
 package com.redis.batch;
 
-import java.io.IOException;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.DoubleNode;
 import com.fasterxml.jackson.databind.node.LongNode;
 import com.redis.lettucemod.timeseries.Sample;
-
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.StreamMessage;
 
+import java.io.IOException;
+import java.time.Instant;
+import java.util.*;
+
+import static com.redis.batch.KeyValueSerializer.*;
+
 @SuppressWarnings("rawtypes")
-public class KeyValueDeserializer extends StdDeserializer<KeyValue> {
-
-    public static final String KEY = "key";
-
-    public static final String TYPE = "type";
-
-    public static final String VALUE = "value";
-
-    public static final String SCORE = "score";
-
-    public static final String TTL = "ttl";
-
-    public static final String MEMORY_USAGE = "memoryUsage";
-
-    public static final String STREAM = "stream";
-
-    public static final String ID = "id";
-
-    public static final String BODY = "body";
-
-    public static final String TIMESTAMP = "timestamp";
+public class KeyValueDeserializer extends StdDeserializer<KeyValueEvent> {
 
     public KeyValueDeserializer() {
         this(null);
     }
 
-    public KeyValueDeserializer(Class<KeyValue<String>> t) {
+    public KeyValueDeserializer(Class<KeyValueEvent<String>> t) {
         super(t);
     }
 
     @Override
-    public KeyValue<String> deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+    public KeyValueEvent<String> deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         JsonNode node = p.getCodec().readTree(p);
-        if (!node.has(KEY)) {
-            throw new InvalidFormatException(p, "No key field found", node, _valueClass);
+        KeyValueEvent<String> keyValueEvent = new KeyValueEvent<>();
+        if (node.has(KEY)) {
+            keyValueEvent.setKey(node.get(KEY).asText());
         }
-        KeyValue<String> keyValue = new KeyValue<>();
-        keyValue.setKey(node.get(KEY).asText());
-        JsonNode typeNode = node.get(TYPE);
-        if (typeNode != null) {
-            keyValue.setType(typeNode.asText());
+        if (node.has(TIMESTAMP)) {
+            keyValueEvent.setTimestamp(Instant.parse(node.get(TIMESTAMP).asText()));
         }
-        JsonNode ttlNode = node.get(TTL);
-        if (ttlNode != null) {
-            keyValue.setTtl(Instant.parse(ttlNode.asText()));
+        if (node.has(EVENT)) {
+            keyValueEvent.setEvent(node.get(EVENT).asText());
         }
-        LongNode memUsageNode = (LongNode) node.get(MEMORY_USAGE);
-        if (memUsageNode != null) {
-            keyValue.setMemoryUsage(memUsageNode.asLong());
+        if (node.has(TYPE)) {
+            keyValueEvent.setType(node.get(TYPE).asText());
         }
-        JsonNode valueNode = node.get(VALUE);
-        if (valueNode != null) {
-            keyValue.setValue(value(keyValue.getType(), valueNode, ctxt));
+        if (node.has(OPERATION)) {
+            keyValueEvent.setOperation(KeyOperation.valueOf(node.get(OPERATION).asText().toUpperCase()));
         }
-        return keyValue;
+        if (node.has(TTL)) {
+            keyValueEvent.setTtl(Instant.parse(node.get(TTL).asText()));
+        }
+        if (node.has(VALUE)) {
+            keyValueEvent.setValue(value(keyValueEvent.getType(), node.get(VALUE), ctxt));
+        }
+        return keyValueEvent;
     }
 
     private Object value(String typeString, JsonNode node, DeserializationContext ctxt) throws IOException {

@@ -1,12 +1,12 @@
 package com.redis.riot;
 
 import com.redis.batch.KeyType;
+import com.redis.batch.KeyValueEvent;
 import com.redis.batch.gen.Generator;
 import com.redis.lettucemod.search.CreateOptions;
 import com.redis.lettucemod.search.Field;
 import com.redis.riot.core.PrefixedNumber;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.batch.KeyValue;
 import com.redis.spring.batch.item.redis.GeneratorItemReader;
 import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
@@ -41,7 +41,7 @@ public class Generate extends AbstractRedisCommand {
         if (StringUtils.hasLength(generateArgs.getIndex())) {
             commands().ftCreate(generateArgs.getIndex(), indexCreateOptions(), indexFields());
         }
-        RiotStep<KeyValue<String>, KeyValue<String>> step = step(STEP_NAME, reader(), writer());
+        RiotStep<KeyValueEvent<String>, KeyValueEvent<String>> step = step(STEP_NAME, reader(), writer());
         return job(step);
     }
 
@@ -50,8 +50,8 @@ public class Generate extends AbstractRedisCommand {
         return TASK_NAME;
     }
 
-    private RedisItemWriter<String, String, KeyValue<String>> writer() {
-        RedisItemWriter<String, String, KeyValue<String>> writer = RedisItemWriter.struct();
+    private RedisItemWriter<String, String, KeyValueEvent<String>> writer() {
+        RedisItemWriter<String, String, KeyValueEvent<String>> writer = RedisItemWriter.struct();
         configure(writer);
         log.info("Configuring Redis writer with {}", redisWriterArgs);
         redisWriterArgs.configure(writer);

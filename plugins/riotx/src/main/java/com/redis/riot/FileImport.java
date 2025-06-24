@@ -3,8 +3,8 @@ package com.redis.riot;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.redis.batch.KeyValue;
 import com.redis.batch.KeyValueDeserializer;
+import com.redis.batch.KeyValueEvent;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.MapToFieldFunction;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
@@ -163,7 +163,7 @@ public class FileImport extends AbstractRedisImport {
 
     private void configure(ObjectMapper mapper) {
         SimpleModule module = new SimpleModule();
-        module.addDeserializer(KeyValue.class, new KeyValueDeserializer());
+        module.addDeserializer(KeyValueEvent.class, new KeyValueDeserializer());
         mapper.registerModule(module);
         mapper.registerModule(new JavaTimeModule());
     }
@@ -172,7 +172,7 @@ public class FileImport extends AbstractRedisImport {
         if (hasOperations()) {
             return Map.class;
         }
-        return KeyValue.class;
+        return KeyValueEvent.class;
     }
 
     private ItemProcessor<Map<String, Object>, Map<String, Object>> regexProcessor() {

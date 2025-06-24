@@ -8,6 +8,8 @@ import lombok.ToString;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
+import java.util.function.Predicate;
+
 @ToString
 public class RedisReaderArgs {
 
@@ -35,13 +37,14 @@ public class RedisReaderArgs {
     @ArgGroup(exclusive = false)
     private KeyFilterArgs keyFilterArgs = new KeyFilterArgs();
 
-    public <K, V> void configure(RedisItemReader<K, V> reader) {
+    public <K, V> void configure(RedisItemReader<K, V, ?> reader) {
         reader.setBatchSize(batchSize);
-        reader.setKeyFilter(keyFilterArgs.predicate(reader.getCodec()));
+        Predicate<K> keyPredicate = keyFilterArgs.predicate(reader.getCodec());
+        reader.setKeyEventFilter(e -> keyPredicate.test(e.getKey()));
         reader.setKeyPattern(keyPattern);
         reader.setKeyType(keyType);
         if (reader instanceof RedisLiveItemReader) {
-            ((RedisLiveItemReader<K, V>) reader).setQueueCapacity(eventQueueCapacity);
+            ((RedisLiveItemReader<K, V, ?>) reader).setQueueCapacity(eventQueueCapacity);
         }
     }
 

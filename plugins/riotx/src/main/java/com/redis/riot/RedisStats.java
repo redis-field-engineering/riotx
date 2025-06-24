@@ -1,22 +1,22 @@
 package com.redis.riot;
 
+import com.redis.batch.KeyStatEvent;
+import com.redis.riot.core.Throughput;
+import com.redis.batch.KeyEvent;
+import com.tdunning.math.stats.TDigest;
+import org.springframework.util.unit.DataSize;
+
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import com.redis.riot.core.Throughput;
-import org.springframework.util.unit.DataSize;
-
-import com.redis.batch.KeyValue;
-import com.tdunning.math.stats.TDigest;
 
 public class RedisStats {
 
@@ -24,32 +24,32 @@ public class RedisStats {
 
     private final Map<String, InternalKeyspace> keyspaces = new LinkedHashMap<>();
 
-    private Function<KeyValue<String>, String> keyspaceFunction = keyspaceFunction(DEFAULT_KEYSPACE_REGEX);
+    private UnaryOperator<String> keyspaceFunction = keyspaceFunction(DEFAULT_KEYSPACE_REGEX);
 
-    private Predicate<KeyValue<String>> bigKeyPredicate = kv -> true;
+    private Predicate<KeyStatEvent<String>> bigKeyPredicate = kv -> true;
 
-    private InternalKeyspace keyspace(KeyValue<String> key) {
+    private InternalKeyspace keyspace(String key) {
         return keyspaces.computeIfAbsent(keyspaceFunction.apply(key), InternalKeyspace::new);
     }
 
-    public void onKeyEvent(KeyValue<String> keyEvent) {
-        InternalKeyspace keyspace = keyspace(keyEvent);
+    public void onKeyEvent(KeyEvent<String> keyEvent) {
+        InternalKeyspace keyspace = keyspace(keyEvent.getKey());
         InternalBigKey bigKey = keyspace.getBigKeys().get(keyEvent.getKey());
         if (bigKey != null) {
             bigKey.incrementWrites();
         }
     }
 
-    public synchronized void keyValue(KeyValue<String> kv) {
-        InternalKeyspace keyspace = keyspace(kv);
-        keyspace.addKeyValue(kv);
+    public synchronized void onStatEvent(KeyStatEvent<String> kv) {
+        InternalKeyspace keyspace = keyspace(kv.getKey());
+        keyspace.addStatEvent(kv);
         if (bigKeyPredicate.test(kv)) {
             keyspace.addBigKey(bigKey(kv));
         }
 
     }
 
-    private InternalBigKey bigKey(KeyValue<String> kv) {
+    private InternalBigKey bigKey(KeyStatEvent<String> kv) {
         InternalBigKey bigKey = new InternalBigKey();
         bigKey.setKey(kv.getKey());
         bigKey.setMemoryUsage(DataSize.ofBytes(kv.getMemoryUsage()));
@@ -65,11 +65,11 @@ public class RedisStats {
         setKeyspaceFunction(keyspaceFunction(pattern));
     }
 
-    public void setKeyspaceFunction(Function<KeyValue<String>, String> function) {
+    public void setKeyspaceFunction(UnaryOperator<String> function) {
         this.keyspaceFunction = function;
     }
 
-    public void setBigKeyPredicate(Predicate<KeyValue<String>> predicate) {
+    public void setBigKeyPredicate(Predicate<KeyStatEvent<String>> predicate) {
         this.bigKeyPredicate = predicate;
     }
 
@@ -101,15 +101,15 @@ public class RedisStats {
         return key;
     }
 
-    public static Function<KeyValue<String>, String> keyspaceFunction(String regex) {
+    public static UnaryOperator<String> keyspaceFunction(String regex) {
         return new KeyspaceFunction(regex);
     }
 
-    public static Function<KeyValue<String>, String> keyspaceFunction(Pattern pattern) {
+    public static UnaryOperator<String> keyspaceFunction(Pattern pattern) {
         return new KeyspaceFunction(pattern);
     }
 
-    public static class KeyspaceFunction implements Function<KeyValue<String>, String> {
+    public static class KeyspaceFunction implements UnaryOperator<String> {
 
         private final Pattern pattern;
 
@@ -122,12 +122,12 @@ public class RedisStats {
         }
 
         @Override
-        public String apply(KeyValue<String> t) {
-            Matcher matcher = pattern.matcher(t.getKey());
+        public String apply(String key) {
+            Matcher matcher = pattern.matcher(key);
             if (matcher.find()) {
                 return matcher.group(1);
             }
-            return t.getKey();
+            return key;
         }
 
     }
@@ -193,7 +193,7 @@ public class RedisStats {
             this.prefix = prefix;
         }
 
-        public void addKeyValue(KeyValue<String> item) {
+        public void addStatEvent(KeyStatEvent<String> item) {
             types.computeIfAbsent(item.getType(), t -> new AtomicInteger()).incrementAndGet();
             if (item.getMemoryUsage() > 0) {
                 memoryUsage.add(item.getMemoryUsage());

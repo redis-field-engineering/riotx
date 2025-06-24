@@ -37,7 +37,7 @@ public abstract class AbstractRedisCommand extends AbstractJobCommand {
         return redisContext.getConnection().sync();
     }
 
-    protected void configure(RedisScanItemReader<?, ?> reader) {
+    protected void configure(RedisScanItemReader<?, ?, ?> reader) {
         redisContext.configure(reader);
     }
 

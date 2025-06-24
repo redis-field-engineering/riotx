@@ -2,8 +2,9 @@ package com.redis.batch.gen;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.redis.batch.KeyOperation;
 import com.redis.batch.KeyType;
-import com.redis.batch.KeyValue;
+import com.redis.batch.KeyValueEvent;
 import com.redis.batch.Range;
 import com.redis.lettucemod.timeseries.Sample;
 import io.lettuce.core.ScoredValue;
@@ -18,6 +19,8 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class Generator {
+
+    public static final String EVENT = "datagen";
 
     public static final String DEFAULT_KEYSPACE = "gen";
 
@@ -66,10 +69,6 @@ public class Generator {
 
     private final AtomicLong currentIndex = new AtomicLong();
 
-    public void reset() {
-        currentIndex.set(0);
-    }
-
     private String key() {
         return key(index(keyRange));
     }
@@ -83,6 +82,9 @@ public class Generator {
     }
 
     private Object value(String key, KeyType type) throws JsonProcessingException {
+        if (type == null) {
+            return null;
+        }
         switch (type) {
             case HASH:
                 return hash();
@@ -196,16 +198,19 @@ public class Generator {
         return ThreadLocalRandom.current().nextDouble(range.getMin(), range.getMax());
     }
 
-    public KeyValue<String> next() throws JsonProcessingException {
+    public KeyValueEvent<String> next() throws JsonProcessingException {
         String key = key();
+        KeyValueEvent<String> keyValueEvent = new KeyValueEvent<>();
+        keyValueEvent.setKey(key);
+        keyValueEvent.setEvent(EVENT);
+        keyValueEvent.setOperation(KeyOperation.CREATE);
+        keyValueEvent.setTimestamp(Instant.now());
         KeyType type = type();
-        KeyValue<String> keyValue = new KeyValue<>();
-        keyValue.setKey(key);
-        keyValue.setType(type.getString());
-        keyValue.setTtl(ttl());
-        keyValue.setValue(value(key, type));
+        keyValueEvent.setType(type == null ? null : type.getString());
+        keyValueEvent.setTtl(ttl());
+        keyValueEvent.setValue(value(key, type));
         currentIndex.incrementAndGet();
-        return keyValue;
+        return keyValueEvent;
     }
 
     private KeyType type() {
@@ -325,6 +330,10 @@ public class Generator {
 
     public void setTypes(KeyType... types) {
         setTypes(Arrays.asList(types));
+    }
+
+    public void setCurrentIndex(long index) {
+        this.currentIndex.set(index);
     }
 
 }

@@ -4,8 +4,9 @@ import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Future;
 
-import com.redis.batch.RedisOperation;
+import com.redis.batch.RedisBatchOperation;
 
 import io.lettuce.core.RedisCommandExecutionException;
 import io.lettuce.core.RedisFuture;
@@ -18,7 +19,7 @@ public class ReplicaWait<K, V, T> extends AbstractCompositeOperation<K, V, T, Ob
 
     private final long timeout;
 
-    public ReplicaWait(RedisOperation<K, V, T, Object> delegate, int replicas, Duration timeout) {
+    public ReplicaWait(RedisBatchOperation<K, V, T, Object> delegate, int replicas, Duration timeout) {
         super(delegate);
         this.replicas = replicas;
         this.timeout = timeout.toMillis();
@@ -26,8 +27,8 @@ public class ReplicaWait<K, V, T> extends AbstractCompositeOperation<K, V, T, Ob
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
-    public List<RedisFuture<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
-        List<RedisFuture<Object>> futures = new ArrayList<>();
+    public List<Future<Object>> execute(RedisAsyncCommands<K, V> commands, List<? extends T> items) {
+        List<Future<Object>> futures = new ArrayList<>();
         futures.addAll(delegate.execute(commands, items));
         RedisFuture<Long> waitFuture = commands.waitForReplication(replicas, timeout);
         futures.add((RedisFuture) new PipelinedRedisFuture<>(waitFuture.thenAccept(this::checkReplicas)));

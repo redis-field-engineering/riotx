@@ -1,30 +1,31 @@
 package com.redis.spring.batch.common;
 
+import com.redis.spring.batch.item.AbstractCountingPollableItemReader;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import org.springframework.batch.item.NonTransientResourceException;
-import org.springframework.batch.item.ParseException;
-import org.springframework.batch.item.UnexpectedInputException;
+public class QueueItemReader<T> extends AbstractCountingPollableItemReader<T> {
 
-import com.redis.spring.batch.item.PollableItemReader;
+    private final BlockingQueue<T> queue;
 
-public class QueueItemReader<T> implements PollableItemReader<T> {
+    public QueueItemReader(BlockingQueue<T> queue) {
+        this.queue = queue;
+    }
 
-	private final BlockingQueue<T> queue;
+    @Override
+    protected void doOpen() throws Exception {
+        // do nothing
+    }
 
-	public QueueItemReader(BlockingQueue<T> queue) {
-		this.queue = queue;
-	}
+    @Override
+    protected void doClose() throws Exception {
+        // do close
+    }
 
-	@Override
-	public T poll(long timeout, TimeUnit unit) throws InterruptedException {
-		return queue.poll(timeout, unit);
-	}
-
-	@Override
-	public T read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException {
-		throw new UnsupportedOperationException("read not supported");
-	}
+    @Override
+    protected T doPoll(long timeout, TimeUnit unit) throws InterruptedException {
+        return queue.poll(timeout, unit);
+    }
 
 }

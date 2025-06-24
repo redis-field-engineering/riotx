@@ -2,9 +2,9 @@ package com.redis.batch.operation;
 
 import java.util.function.Function;
 
-import com.redis.batch.RedisOperation;
+import com.redis.batch.RedisBatchOperation;
 
-public abstract class AbstractWriteOperation<K, V, T> implements RedisOperation<K, V, T, Object> {
+public abstract class AbstractWriteOperation<K, V, T> implements RedisBatchOperation<K, V, T, Object> {
 
     protected final Function<T, K> keyFunction;
 

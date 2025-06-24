@@ -1,26 +1,31 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-
-import com.redis.batch.operation.KeyValueRead;
+import com.redis.batch.KeyEvent;
+import com.redis.batch.KeyValueEvent;
+import com.redis.batch.RedisBatchOperation;
+import com.redis.batch.operation.KeyValueReadOperation;
+import com.redis.spring.batch.item.PollableItemReader;
+import com.redis.spring.batch.item.redis.RedisItemReader;
 import io.lettuce.core.codec.ByteArrayCodec;
-import io.lettuce.core.codec.StringCodec;
+import io.lettuce.core.codec.RedisCodec;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import lombok.ToString;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 
-import com.redis.spring.batch.item.PollableItemReader;
-import com.redis.spring.batch.item.redis.RedisItemReader;
-import com.redis.batch.KeyValue;
-import com.redis.batch.RedisOperation;
-
-import io.lettuce.core.codec.RedisCodec;
-import lombok.ToString;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 @ToString
-public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements PollableItemReader<KeyValue<K>> {
+public class RedisLiveItemReader<K, V, T> extends RedisItemReader<K, V, T> implements PollableItemReader<T> {
 
     public static final int DEFAULT_QUEUE_CAPACITY = KeyEventItemReader.DEFAULT_QUEUE_CAPACITY;
+
+    private final Log log = LogFactory.getLog(getClass());
 
     private int queueCapacity = DEFAULT_QUEUE_CAPACITY;
 
@@ -28,11 +33,13 @@ public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements 
 
     private KeyEventItemReader<K, V> keyEventReader;
 
-    private Iterator<KeyValue<K>> iterator = Collections.emptyIterator();
+    private Iterator<T> itemIterator = Collections.emptyIterator();
 
-    ;
+    protected MeterRegistry meterRegistry = Metrics.globalRegistry;
 
-    public RedisLiveItemReader(RedisCodec<K, V> codec, RedisOperation<K, V, K, KeyValue<K>> operation) {
+    private final AtomicLong counter = new AtomicLong();
+
+    public RedisLiveItemReader(RedisCodec<K, V> codec, RedisBatchOperation<K, V, KeyEvent<K>, T> operation) {
         super(codec, operation);
     }
 
@@ -41,24 +48,23 @@ public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements 
     }
 
     @Override
-    public synchronized void open(ExecutionContext executionContext) throws ItemStreamException {
+    public synchronized void open(ExecutionContext context) throws ItemStreamException {
         if (keyEventReader == null) {
             keyEventReader = new KeyEventItemReader<>(client, codec);
             keyEventReader.setDatabase(database);
             keyEventReader.setKeyPattern(keyPattern);
-            keyEventReader.setFilter(e -> acceptKey(e.getKey()) && acceptKeyType(e.getType()));
             keyEventReader.setMeterRegistry(meterRegistry);
             keyEventReader.setName(getName() + "-key-event-reader");
             keyEventReader.setQueueCapacity(queueCapacity);
-            keyEventReader.open(executionContext);
+            keyEventReader.open(context);
         }
-        super.open(executionContext);
+        super.open(context);
     }
 
     @Override
-    public void update(ExecutionContext executionContext) throws ItemStreamException {
-        keyEventReader.update(executionContext);
-        super.update(executionContext);
+    public void update(ExecutionContext context) throws ItemStreamException {
+        keyEventReader.update(context);
+        super.update(context);
     }
 
     @Override
@@ -71,46 +77,58 @@ public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements 
     }
 
     @Override
-    public synchronized KeyValue<K> poll(long timeout, TimeUnit unit) throws Exception {
-        if (iterator.hasNext()) {
-            return iterator.next();
+    public synchronized T poll(long timeout, TimeUnit unit) throws Exception {
+        if (itemIterator.hasNext()) {
+            try {
+                return itemIterator.next();
+            } finally {
+                counter.incrementAndGet();
+            }
         }
-        HashSet<KeyValue<K>> keyEvents = new LinkedHashSet<>();
-        KeyValue<K> keyEvent;
+        Set<KeyEvent<K>> keyEvents = new LinkedHashSet<>();
+        KeyEvent<K> keyEvent;
         while (keyEvents.size() < batchSize && (keyEvent = keyEventReader.poll(timeout, unit)) != null) {
-            keyEvents.add(keyEvent);
+            if (accept(keyEvent)) {
+                keyEvents.add(keyEvent);
+            }
         }
-        List<KeyValue<K>> keyValues = read(new ArrayList<>(keyEvents));
-        iterator = keyValues.iterator();
-        if (iterator.hasNext()) {
-            return iterator.next();
+        List<T> items = read(new ArrayList<>(keyEvents));
+        itemIterator = items.iterator();
+        if (itemIterator.hasNext()) {
+            try {
+                return itemIterator.next();
+            } finally {
+                counter.incrementAndGet();
+            }
         }
         return null;
     }
 
+    private boolean accept(KeyEvent<K> keyEvent) {
+        if (keyType == null) {
+            return true;
+        }
+        if (keyEvent.getType() == null) {
+            return false;
+        }
+        return keyType.equalsIgnoreCase(keyEvent.getType());
+    }
+
     @Override
-    protected synchronized KeyValue<K> doRead() {
+    protected synchronized T doRead() {
         throw new UnsupportedOperationException();
     }
 
-    public static RedisLiveItemReader<byte[], byte[]> dump() {
-        return new RedisLiveItemReader<>(ByteArrayCodec.INSTANCE, KeyValueRead.dump(ByteArrayCodec.INSTANCE));
+    public static RedisLiveItemReader<byte[], byte[], KeyValueEvent<byte[]>> dump() {
+        return new RedisLiveItemReader<>(ByteArrayCodec.INSTANCE, KeyValueReadOperation.dump());
     }
 
-    public static RedisLiveItemReader<String, String> struct() {
-        return struct(StringCodec.UTF8);
+    public static <K, V> RedisLiveItemReader<K, V, KeyValueEvent<K>> none(RedisCodec<K, V> codec) {
+        return new RedisLiveItemReader<>(codec, KeyValueReadOperation.none(codec));
     }
 
-    public static <K, V> RedisLiveItemReader<K, V> struct(RedisCodec<K, V> codec) {
-        return new RedisLiveItemReader<>(codec, KeyValueRead.struct(codec));
-    }
-
-    public static RedisLiveItemReader<String, String> type() {
-        return type(StringCodec.UTF8);
-    }
-
-    public static <K, V> RedisLiveItemReader<K, V> type(RedisCodec<K, V> codec) {
-        return new RedisLiveItemReader<>(codec, KeyValueRead.type(codec));
+    public static <K, V> RedisLiveItemReader<K, V, KeyValueEvent<K>> struct(RedisCodec<K, V> codec) {
+        return new RedisLiveItemReader<>(codec, KeyValueReadOperation.struct(codec));
     }
 
     public int getQueueCapacity() {
@@ -127,6 +145,14 @@ public class RedisLiveItemReader<K, V> extends RedisItemReader<K, V> implements 
 
     public void setDatabase(int database) {
         this.database = database;
+    }
+
+    public MeterRegistry getMeterRegistry() {
+        return meterRegistry;
+    }
+
+    public void setMeterRegistry(MeterRegistry registry) {
+        this.meterRegistry = registry;
     }
 
 }

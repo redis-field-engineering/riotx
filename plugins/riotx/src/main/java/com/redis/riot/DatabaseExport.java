@@ -1,9 +1,10 @@
 package com.redis.riot;
 
-import com.redis.batch.KeyValue;
+import com.redis.batch.KeyValueEvent;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
+import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
@@ -36,13 +37,14 @@ public class DatabaseExport extends AbstractRedisExport {
 
     @Override
     protected Job job() throws Exception {
-        RiotStep<KeyValue<String>, Map<String, Object>> step = step(STEP_NAME, reader(), writer());
-        step.setItemProcessor(RiotUtils.processor(keyValueFilter(), mapProcessor()));
+        RiotStep<KeyValueEvent<String>, Map<String, Object>> step = step(STEP_NAME, reader(), writer());
+        step.setItemProcessor(mapProcessor());
         return job(step);
     }
 
-    private ItemReader<KeyValue<String>> reader() {
-        RedisScanItemReader<String, String> reader = RedisScanItemReader.struct();
+    private ItemReader<KeyValueEvent<String>> reader() {
+        RedisScanItemReader<String, String, KeyValueEvent<String>> reader = RedisScanItemReader.struct(
+                StringCodec.UTF8);
         configureSource(reader);
         return reader;
     }

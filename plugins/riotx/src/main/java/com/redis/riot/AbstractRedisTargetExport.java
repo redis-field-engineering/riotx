@@ -58,7 +58,7 @@ public abstract class AbstractRedisTargetExport extends AbstractExport {
         context.setVariable(VAR_TARGET, targetRedisContext.getConnection().sync());
     }
 
-    protected void configureTarget(RedisItemReader<?, ?> reader) {
+    protected void configureTarget(RedisItemReader<?, ?, ?> reader) {
         targetRedisContext.configure(reader);
     }
 
