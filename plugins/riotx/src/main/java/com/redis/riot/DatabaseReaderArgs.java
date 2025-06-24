@@ -9,16 +9,16 @@ import java.time.Duration;
 @ToString
 public class DatabaseReaderArgs {
 
-    @Option(names = "--max", description = "Max number of rows to import.", paramLabel = "<count>")
+    @Option(names = "--max", defaultValue = "${RIOT_MAX}", description = "Max number of rows to import.", paramLabel = "<count>")
     private int maxItemCount;
 
-    @Option(names = "--fetch", description = "Number of rows to return with each fetch.", paramLabel = "<size>")
+    @Option(names = "--fetch", defaultValue = "${RIOT_FETCH}", description = "Number of rows to return with each fetch.", paramLabel = "<size>")
     private int fetchSize = JdbcReaderOptions.DEFAULT_FETCH_SIZE;
 
-    @Option(names = "--rows", description = "Max number of rows the ResultSet can contain.", paramLabel = "<count>")
+    @Option(names = "--rows", defaultValue = "${RIOT_ROWS}", description = "Max number of rows the ResultSet can contain.", paramLabel = "<count>")
     private int maxRows = JdbcReaderOptions.DEFAULT_MAX_RESULT_SET_ROWS;
 
-    @Option(names = "--query-timeout", description = "The duration for the query to timeout.", paramLabel = "<dur>")
+    @Option(names = "--query-timeout", defaultValue = "${RIOT_QUERY_TIMEOUT}", description = "The duration for the query to timeout.", paramLabel = "<dur>")
     private Duration queryTimeout;
 
     @Option(names = "--shared-connection", description = "Use same connection for cursor and other processing.", hidden = true)
