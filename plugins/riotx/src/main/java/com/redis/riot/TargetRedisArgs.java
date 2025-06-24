@@ -17,7 +17,7 @@ public class TargetRedisArgs implements RedisArgs {
     @Option(names = "--target-user", defaultValue = "${RIOT_TARGET_USER}", description = "Target ACL style 'AUTH username pass'. Needs password.", paramLabel = "<name>")
     private String username;
 
-    @Option(names = "--target-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_TARGET_PASSWORDS}", description = "Password to use when connecting to the target server.", paramLabel = "<pwd>")
+    @Option(names = "--target-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_TARGET_PASSWORD}", description = "Password to use when connecting to the target server.", paramLabel = "<pwd>")
     private char[] password;
 
     @Option(names = "--target-timeout", defaultValue = "${RIOT_TARGET_TIMEOUT:-60s}", description = "Target Redis command timeout, e.g. 30s or 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
