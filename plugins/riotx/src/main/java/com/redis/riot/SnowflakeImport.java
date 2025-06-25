@@ -57,7 +57,7 @@ public class SnowflakeImport extends AbstractRedisImport {
     @ArgGroup(exclusive = false)
     private DatabaseReaderArgs readerArgs = new DatabaseReaderArgs();
 
-    @Parameters(arity = "1", description = "Fully qualified Snowflake Table or Materialized View, eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
+    @Parameters(arity = "1", defaultValue = "${RIOT_TABLE}", description = "Fully qualified Snowflake Table or Materialized View, eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
     private DatabaseObject table;
 
     @ArgGroup(exclusive = false)
