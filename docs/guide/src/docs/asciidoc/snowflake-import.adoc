@@ -203,3 +203,134 @@ JDBC URL:: When using key authentication you need to modify the JDBC URL to:
 +
 `jdbc:snowflake://<account>.snowflakecomputing.com?private_key_file=<path_to_key>/rsa_key.p8`
 
+== Kubernetes Deployment
+
+RIOT-X can be deployed on Kubernetes for production workloads using the provided deployment configuration.
+
+=== Prerequisites
+
+Before deploying, ensure you have:
+
+* A Kubernetes cluster with access to create deployments and secrets
+* Redis instance accessible from the cluster
+* Snowflake credentials and proper role permissions (see above)
+* Docker image `riotx/riotx:latest` available in your cluster
+
+=== Configuration
+
+The Kubernetes deployment configuration uses environment variables following the `RIOT_REDIS_*` and `RIOT_*` naming conventions.
+
+Download the deployment configuration:
+[source,console,subs="verbatim,attributes"]
+----
+curl -O {site-url}/snowflake-import-deployment.yaml
+----
+
+Or use the local file: link:{site-url}/snowflake-import-deployment.yaml[snowflake-import-deployment.yaml]
+
+=== Secrets Setup
+
+Before deploying the deployment, create the required secrets with your actual credentials:
+
+[source,console]
+----
+# Create Redis credentials secret
+kubectl create secret generic redis-credentials \
+  --from-literal=username='redis_user' \
+  --from-literal=password='redis_password'
+
+# Create Snowflake credentials secret  
+kubectl create secret generic snowflake-credentials \
+  --from-literal=jdbc-url='jdbc:snowflake://company.snowflakecomputing.com' \
+  --from-literal=username='snowflake_user' \
+  --from-literal=password='snowflake_password'
+----
+
+For key-based authentication, include the private key file path in the JDBC URL:
+[source,console]
+----
+kubectl create secret generic snowflake-credentials \
+  --from-literal=jdbc-url='jdbc:snowflake://company.snowflakecomputing.com?private_key_file=/path/to/key.p8' \
+  --from-literal=username='snowflake_user' \
+  --from-literal=password=''
+----
+
+=== Customization
+
+Edit the deployment YAML to customize for your environment:
+
+[source,yaml]
+----
+# Update Redis connection
+- name: RIOT_REDIS_URI
+  value: "rediss://your-redis-host:12000"  # <1>
+
+# Update Snowflake table and settings
+- name: RIOT_TABLE
+  value: "YOUR_DB.YOUR_SCHEMA.YOUR_TABLE"  # <2>
+- name: RIOT_ROLE
+  value: "your_snowflake_role"  # <3>
+- name: RIOT_WAREHOUSE
+  value: "your_warehouse"  # <4>
+- name: RIOT_CDC_SCHEMA
+  value: "your_cdc_schema"  # <5>
+
+# Adjust performance settings
+- name: RIOT_STREAM_LIMIT
+  value: "20000"  # <6>
+----
+<1> Your Redis server URI (TLS enabled)
+<2> Fully qualified Snowflake table name
+<3> Snowflake role with CDC permissions
+<4> Snowflake warehouse to use
+<5> CDC schema for stream creation
+<6> Stream processing limit
+
+=== Deployment
+
+Deploy the application:
+[source,console]
+----
+kubectl apply -f snowflake-import-deployment.yaml
+----
+
+Monitor the deployment:
+[source,console]
+----
+# Check deployment status
+kubectl get deployments -l app=riotx
+
+# Check pod status
+kubectl get pods -l app=riotx
+
+# View logs
+kubectl logs -f deployment/riotx-snowflake-import
+
+# Check metrics (if enabled)
+kubectl port-forward deployment/riotx-snowflake-import 8080:8080
+curl http://localhost:8080/metrics
+----
+
+=== Production Considerations
+
+For production deployments, consider:
+
+* **Resource Limits**: Adjust CPU and memory based on your workload
+* **Persistent Storage**: Mount volumes for key files if using key-based auth
+* **Monitoring**: Enable metrics and configure alerting
+* **Security**: Use proper RBAC and network policies
+* **High Availability**: The deployment ensures pods are restarted if they fail
+* **Auto-scaling**: Configure HPA based on metrics if needed
+* **Replica Management**: Keep replicas=1 for CDC consistency to avoid duplicate processing
+
+.Deployment Features
+The `snowflake-import-deployment.yaml` includes:
+
+* **Deployment**: Ensures reliable pod management and restart policies
+* **Service**: Exposes metrics endpoint for monitoring
+* **ServiceMonitor**: Prometheus integration for metrics collection
+* **Secrets**: Secure credential management
+* **ConfigMap**: Non-sensitive configuration management
+* **Health Checks**: Liveness and readiness probes
+* **Init Containers**: Dependency checks before startup
+
