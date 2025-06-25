@@ -12,7 +12,7 @@ public class DebeziumStreamArgs {
     @CommandLine.Option(names = "--stream-prefix", defaultValue = "${RIOT_STREAM_PREFIX:-data:}", description = "Key prefix for stream containing change events (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
     private String streamPrefix = DEFAULT_STREAM_PREFIX;
 
-    @CommandLine.Option(names = "--stream-limit", defaultValue = "${RIOT_STREAM_LIMIT}", description = "Max length of RDI stream (default: ${DEFAULT-VALUE}). Use 0 for no limit.", paramLabel = "<int>")
+    @CommandLine.Option(names = "--stream-limit", defaultValue = "${RIOT_STREAM_LIMIT:-10000}", description = "Max length of RDI stream (default: ${DEFAULT-VALUE}). Use 0 for no limit.", paramLabel = "<int>")
     private long streamLimit = DEFAULT_STREAM_LIMIT;
 
     public String getStreamPrefix() {
