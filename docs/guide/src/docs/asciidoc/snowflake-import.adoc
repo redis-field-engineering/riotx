@@ -203,3 +203,137 @@ JDBC URL:: When using key authentication you need to modify the JDBC URL to:
 +
 `jdbc:snowflake://<account>.snowflakecomputing.com?private_key_file=<path_to_key>/rsa_key.p8`
 
+== Kubernetes Deployment
+
+RIOT-X can be deployed on Kubernetes for production workloads using the provided pod configuration.
+
+=== Prerequisites
+
+Before deploying, ensure you have:
+
+* A Kubernetes cluster with access to create pods and secrets
+* Redis instance accessible from the cluster
+* Snowflake credentials and proper role permissions (see above)
+* Docker image `riotx/riotx:latest` available in your cluster
+
+=== Configuration
+
+The Kubernetes pod configuration uses environment variables following the `RIOT_REDIS_*` and `RIOT_*` naming conventions.
+
+Download the pod configuration:
+[source,console,subs="verbatim,attributes"]
+----
+curl -O {site-url}/snowflake-import-pod.yaml
+----
+
+Or use the local file: link:{site-url}/snowflake-import-pod.yaml[snowflake-import-pod.yaml]
+
+=== Secrets Setup
+
+Before deploying the pod, create the required secrets with your actual credentials:
+
+[source,console]
+----
+# Create Redis credentials secret
+kubectl create secret generic redis-credentials \
+  --from-literal=username='redis_user' \
+  --from-literal=password='redis_password'
+
+# Create Snowflake credentials secret  
+kubectl create secret generic snowflake-credentials \
+  --from-literal=jdbc-url='jdbc:snowflake://company.snowflakecomputing.com' \
+  --from-literal=username='snowflake_user' \
+  --from-literal=password='snowflake_password'
+----
+
+For key-based authentication, include the private key file path in the JDBC URL:
+[source,console]
+----
+kubectl create secret generic snowflake-credentials \
+  --from-literal=jdbc-url='jdbc:snowflake://company.snowflakecomputing.com?private_key_file=/path/to/key.p8' \
+  --from-literal=username='snowflake_user' \
+  --from-literal=password=''
+----
+
+=== Customization
+
+Edit the pod YAML to customize for your environment:
+
+[source,yaml]
+----
+# Update Redis connection
+- name: RIOT_REDIS_URI
+  value: "your-redis-uri"  # <1>
+
+# Update Snowflake table and settings
+- name: RIOT_TABLE
+  value: "YOUR_DB.YOUR_SCHEMA.YOUR_TABLE"  # <2>
+- name: RIOT_ROLE
+  value: "your_snowflake_role"  # <3>
+- name: RIOT_WAREHOUSE
+  value: "your_warehouse"  # <4>
+
+# Adjust performance settings
+- name: RIOT_THREADS
+  value: "8"  # <5>
+- name: RIOT_BATCH
+  value: "500"  # <6>
+----
+<1> Your Redis server URI
+<2> Fully qualified Snowflake table name
+<3> Snowflake role with CDC permissions
+<4> Snowflake warehouse to use
+<5> Number of concurrent threads
+<6> Batch size for processing
+
+=== Deployment
+
+Deploy the pod:
+[source,console]
+----
+kubectl apply -f snowflake-import-pod.yaml
+----
+
+Monitor the deployment:
+[source,console]
+----
+# Check pod status
+kubectl get pods -l app=riotx
+
+# View logs
+kubectl logs -f riotx-snowflake-import
+
+# Check metrics (if enabled)
+kubectl port-forward riotx-snowflake-import 8080:8080
+curl http://localhost:8080/metrics
+----
+
+=== Production Considerations
+
+For production deployments, consider:
+
+* **Resource Limits**: Adjust CPU and memory based on your workload
+* **Persistent Storage**: Mount volumes for key files if using key-based auth
+* **Monitoring**: Enable metrics and configure alerting
+* **Security**: Use proper RBAC and network policies
+* **High Availability**: Use Deployments or Jobs instead of bare pods
+* **Auto-scaling**: Configure HPA based on metrics
+
+.Example Deployment for Production
+[source,yaml]
+----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: riotx-snowflake-import
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # Ensure only one instance runs
+  selector:
+    matchLabels:
+      app: riotx
+  template:
+    # ... pod spec from snowflake-import-pod.yaml
+----
+

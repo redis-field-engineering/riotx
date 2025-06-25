@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: riotx-snowflake-import
+  labels:
+    app: riotx
+    component: snowflake-import
+spec:
+  restartPolicy: Never
+  containers:
+  - name: riotx
+    image: riotx/riotx:latest
+    args: ["snowflake-import"]
+    env:
+    # Redis Connection
+    - name: RIOT_REDIS_URI
+      value: "rediss://redis-server:12000"
+    - name: RIOT_REDIS_USER
+      valueFrom:
+        secretKeyRef:
+          name: redis-credentials
+          key: username
+          optional: true
+    - name: RIOT_REDIS_PASS
+      valueFrom:
+        secretKeyRef:
+          name: redis-credentials
+          key: password
+          optional: true
+    
+    # Snowflake Database Configuration
+    - name: RIOT_JDBC_URL
+      valueFrom:
+        secretKeyRef:
+          name: snowflake-credentials
+          key: jdbc-url
+    - name: RIOT_JDBC_USER
+      valueFrom:
+        secretKeyRef:
+          name: snowflake-credentials
+          key: username
+    - name: RIOT_JDBC_PASS
+      valueFrom:
+        secretKeyRef:
+          name: snowflake-credentials
+          key: password
+    - name: RIOT_TABLE
+      value: "db.schema.table"
+    - name: RIOT_WAREHOUSE
+      value: "compute_wh"
+    - name: RIOT_ROLE
+      value: "cdc_role"
+    - name: RIOT_CDC_DATABASE
+      value: "cdc_database"
+    - name: RIOT_CDC_SCHEMA
+      value: "cdc_schema"
+
+    
+    # Job Configuration
+    - name: RIOT_STREAM_LIMIT
+      value: "10000"
+    
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+    
+    ports:
+    - containerPort: 8080
+      name: metrics
+      protocol: TCP
+      
+  # Optional: Add init container to wait for Redis
+  initContainers:
+  - name: wait-for-redis
+    image: redis:alpine
+    command: ['sh', '-c', 'until redis-cli -u $RIOT_REDIS_URI ping; do echo waiting for redis; sleep 2; done;']
+    env:
+    - name: RIOT_REDIS_URI
+      value: "rediss://redis-server:12000"
+---
+# Secret for Redis credentials (create separately)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-credentials
+type: Opaque
+data:
+  # Base64 encoded values - replace with actual values
+  username: cmVkaXNfdXNlcg==  # redis_user
+  password: cmVkaXNfcGFzcw==  # redis_pass
+---
+# Secret for Snowflake credentials (create separately)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: snowflake-credentials
+type: Opaque
+data:
+  # Base64 encoded values - replace with actual values
+  jdbc-url: amRiYzpzbm93Zmxha2U6Ly9jb21wYW55LnNub3dmbGFrZWNvbXB1dGluZy5jb20=
+  username: c25vd2ZsYWtlX3VzZXI=  # snowflake_user
+  password: c25vd2ZsYWtlX3Bhc3M=  # snowflake_pass
