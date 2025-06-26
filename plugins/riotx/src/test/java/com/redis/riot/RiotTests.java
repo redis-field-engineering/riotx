@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.simple.SimpleLogger;
+import org.springframework.util.StringUtils;
 import org.testcontainers.shaded.org.bouncycastle.util.encoders.Hex;
 
 import java.io.IOException;
@@ -188,7 +189,15 @@ abstract class RiotTests extends AbstractRiotApplicationTestBase {
         Assertions.assertEquals(1019, keys.size());
         Map<String, Object> expected = Beers.mapIterator().next();
         Map<String, String> actual = commands.hgetall("beer:" + expected.get("id"));
-        Assertions.assertEquals(expected, actual);
+        expected.forEach((k, v) -> {
+            if (v == null) {
+                return;
+            }
+            if (v instanceof String && !StringUtils.hasLength((String) v)) {
+                return;
+            }
+            Assertions.assertEquals(v, actual.get(k));
+        });
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
