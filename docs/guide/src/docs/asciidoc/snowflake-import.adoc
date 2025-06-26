@@ -274,8 +274,6 @@ Edit the deployment YAML to customize for your environment:
   value: "your_warehouse"  # <4>
 - name: RIOT_CDC_SCHEMA
   value: "your_cdc_schema"  # <5>
-
-# Adjust performance settings
 - name: RIOT_STREAM_LIMIT
   value: "20000"  # <6>
 ----
