@@ -1,0 +1,184 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: riotx-snowflake-import
+  labels:
+    app: riotx
+    component: snowflake-import
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # Ensure only one instance runs for CDC consistency
+  selector:
+    matchLabels:
+      app: riotx
+      component: snowflake-import
+  template:
+    metadata:
+      labels:
+        app: riotx
+        component: snowflake-import
+    spec:
+      restartPolicy: Always
+      containers:
+      - name: riotx
+        image: riotx/riotx:latest
+        args: ["snowflake-import"]
+        env:
+        # Redis Connection
+        - name: RIOT_REDIS_URI
+          value: "rediss://redis-server:12000"
+        - name: RIOT_REDIS_USER
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: username
+              optional: true
+        - name: RIOT_REDIS_PASS
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: password
+              optional: true
+        
+        # Snowflake Database Configuration
+        - name: RIOT_JDBC_URL
+          valueFrom:
+            secretKeyRef:
+              name: snowflake-credentials
+              key: jdbc-url
+        - name: RIOT_JDBC_USER
+          valueFrom:
+            secretKeyRef:
+              name: snowflake-credentials
+              key: username
+        - name: RIOT_JDBC_PASS
+          valueFrom:
+            secretKeyRef:
+              name: snowflake-credentials
+              key: password
+        - name: RIOT_TABLE
+          value: "db.schema.table"
+        - name: RIOT_WAREHOUSE
+          value: "compute_wh"
+        - name: RIOT_ROLE
+          value: "cdc_role"
+        - name: RIOT_CDC_DATABASE
+          value: "cdc_database"
+        - name: RIOT_CDC_SCHEMA
+          value: "cdc_schema"
+
+        # Job Configuration
+        - name: RIOT_STREAM_LIMIT
+          value: "10000"
+        
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        
+        ports:
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          
+      # Optional: Add init container to wait for Redis
+      initContainers:
+      - name: wait-for-redis
+        image: redis:alpine
+        command: ['sh', '-c', 'until redis-cli -u $RIOT_REDIS_URI ping; do echo waiting for redis; sleep 2; done;']
+        env:
+        - name: RIOT_REDIS_URI
+          value: "rediss://redis-server:12000"
+---
+# Service for metrics exposure
+apiVersion: v1
+kind: Service
+metadata:
+  name: riotx-snowflake-import-metrics
+  labels:
+    app: riotx
+    component: snowflake-import
+spec:
+  selector:
+    app: riotx
+    component: snowflake-import
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP
+---
+# ServiceMonitor for Prometheus (if using Prometheus Operator)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: riotx-snowflake-import
+  labels:
+    app: riotx
+    component: snowflake-import
+spec:
+  selector:
+    matchLabels:
+      app: riotx
+      component: snowflake-import
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+---
+# Secret for Redis credentials (update with your values)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-credentials
+type: Opaque
+data:
+  # Base64 encoded values - replace with actual values
+  username: cmVkaXNfdXNlcg==  # redis_user
+  password: cmVkaXNfcGFzcw==  # redis_pass
+---
+# Secret for Snowflake credentials (update with your values)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: snowflake-credentials
+type: Opaque
+data:
+  # Base64 encoded values - replace with actual values
+  jdbc-url: amRiYzpzbm93Zmxha2U6Ly9jb21wYW55LnNub3dmbGFrZWNvbXB1dGluZy5jb20=
+  username: c25vd2ZsYWtlX3VzZXI=  # snowflake_user
+  password: c25vd2ZsYWtlX3Bhc3M=  # snowflake_pass
+---
+# ConfigMap for additional configuration (optional)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: riotx-snowflake-config
+data:
+  # Configuration values - replace with actual values
+  table-name: "db.schema.table"
+  role: "cdc_role"
+  warehouse: "compute_wh"
+  cdc-schema: "cdc_schema"
+  stream-limit: "10000"

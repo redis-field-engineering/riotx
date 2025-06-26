@@ -57,43 +57,43 @@ public class SnowflakeImport extends AbstractRedisImport {
     @ArgGroup(exclusive = false)
     private DatabaseReaderArgs readerArgs = new DatabaseReaderArgs();
 
-    @Parameters(arity = "1", description = "Fully qualified Snowflake Table or Materialized View, eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
+    @Parameters(arity = "1", defaultValue = "${RIOT_TABLE}", description = "Fully qualified Snowflake Table or Materialized View, eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
     private DatabaseObject table;
 
     @ArgGroup(exclusive = false)
     private DebeziumStreamArgs debeziumStreamArgs = new DebeziumStreamArgs();
 
-    @CommandLine.Option(names = "--offset-prefix", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
+    @CommandLine.Option(names = "--offset-prefix", defaultValue = "${RIOT_OFFSET_PREFIX:-riotx:offset:}", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
     private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
 
-    @CommandLine.Option(names = "--offset-key", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
+    @CommandLine.Option(names = "--offset-key", defaultValue = "${RIOT_OFFSET_KEY:-offset}", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
     private String offsetKey = DEFAULT_OFFSET_KEY;
 
-    @Option(names = "--snapshot", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
+    @Option(names = "--snapshot", defaultValue = "${RIOT_SNAPSHOT:-INITIAL}", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SnowflakeStreamItemReader.SnapshotMode snapshotMode = DEFAULT_SNAPSHOT_MODE;
 
-    @Option(arity = "0..*", names = "--key-column", description = "Table column name(s) to use as the key for the CDC event", paramLabel = "<name>")
+    @Option(arity = "0..*", names = "--key-column", defaultValue = "${RIOT_KEY_COLUMN}", description = "Table column name(s) to use as the key for the CDC event", paramLabel = "<name>")
     private Set<String> keyColumns;
 
-    @Option(arity = "0..*", names = "--gen", description = "Columns to simulate CDC activity for instead of connecting to database.", paramLabel = "<name>")
+    @Option(arity = "0..*", names = "--gen", defaultValue = "${RIOT_GEN}", description = "Columns to simulate CDC activity for instead of connecting to database.", paramLabel = "<name>")
     private Set<String> genColumns;
 
-    @Option(names = "--count", description = "Max rows to read (default: no limit).", paramLabel = "<num>")
+    @Option(names = "--count", defaultValue = "${RIOT_COUNT}", description = "Max rows to read (default: no limit).", paramLabel = "<num>")
     private int count;
 
-    @Option(names = "--role", description = "Snowflake role to use", paramLabel = "<str>")
+    @Option(names = "--role", defaultValue = "${RIOT_ROLE}", description = "Snowflake role to use", paramLabel = "<str>")
     private String role;
 
-    @Option(names = "--warehouse", description = "Snowflake warehouse to use", paramLabel = "<str>")
+    @Option(names = "--warehouse", defaultValue = "${RIOT_WAREHOUSE}", description = "Snowflake warehouse to use", paramLabel = "<str>")
     private String warehouse;
 
-    @Option(names = "--cdc-database", description = "Snowflake CDC database to use for stream and temp table", paramLabel = "<str>")
+    @Option(names = "--cdc-database", defaultValue = "${RIOT_CDC_DATABASE}", description = "Snowflake CDC database to use for stream and temp table", paramLabel = "<str>")
     private String cdcDatabase;
 
-    @Option(names = "--cdc-schema", description = "Snowflake CDC schema to use for stream and temp table", paramLabel = "<str>")
+    @Option(names = "--cdc-schema", defaultValue = "${RIOT_CDC_SCHEMA}", description = "Snowflake CDC schema to use for stream and temp table", paramLabel = "<str>")
     private String cdcSchema;
 
-    @Option(names = "--poll", description = "Snowflake stream polling interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
+    @Option(names = "--poll", defaultValue = "${RIOT_POLL}", description = "Snowflake stream polling interval (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration pollInterval = SnowflakeStreamItemReader.DEFAULT_POLL_INTERVAL;
 
     @ArgGroup(exclusive = false)
@@ -403,6 +403,14 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     public void setFlushingStepArgs(FlushingStepArgs flushingStepArgs) {
         this.flushingStepArgs = flushingStepArgs;
+    }
+
+    public void setKeyColumns(Set<String> keyColumns) {
+        this.keyColumns = keyColumns;
+    }
+
+    public Set<String> getKeyColumns() {
+        return keyColumns;
     }
 
 }

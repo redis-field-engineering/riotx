@@ -14,79 +14,79 @@ import picocli.CommandLine.Option;
 @ToString
 public class SingleRedisArgs implements RedisArgs {
 
-    @Option(names = { "-u", "--uri" }, description = "Redis server URI.", paramLabel = "<uri>")
+    @Option(names = { "-u", "--uri" }, defaultValue = "${RIOT_REDIS_URI}", description = "Redis server URI.", paramLabel = "<uri>")
     private RedisURI uri;
 
     @Option(names = { "-h",
-            "--host" }, description = "Redis server hostname (default: ${DEFAULT-VALUE}).", paramLabel = "<host>")
+            "--host" }, defaultValue = "${RIOT_REDIS_HOST:-localhost}", description = "Redis server hostname (default: ${DEFAULT-VALUE}).", paramLabel = "<host>")
     private String host = DEFAULT_HOST;
 
-    @Option(names = { "-p", "--port" }, description = "Redis server port (default: ${DEFAULT-VALUE}).", paramLabel = "<port>")
+    @Option(names = { "-p", "--port" }, defaultValue = "${RIOT_REDIS_PORT:-6379}", description = "Redis server port (default: ${DEFAULT-VALUE}).", paramLabel = "<port>")
     private int port = DEFAULT_PORT;
 
     @Option(names = { "-s",
-            "--socket" }, description = "Redis server socket (overrides hostname and port).", paramLabel = "<socket>")
+            "--socket" }, defaultValue = "${RIOT_REDIS_SOCKET}", description = "Redis server socket (overrides hostname and port).", paramLabel = "<socket>")
     private String socket;
 
-    @Option(names = "--user", description = "ACL style 'AUTH username pass'. Needs password.", paramLabel = "<name>")
+    @Option(names = "--user", defaultValue = "${RIOT_REDIS_USER}", description = "ACL style 'AUTH username pass'. Needs password.", paramLabel = "<name>")
     private String username;
 
     @Option(names = { "-a",
-            "--pass" }, arity = "0..1", interactive = true, description = "Password to use when connecting to the Redis server.", paramLabel = "<password>")
+            "--pass" }, arity = "0..1", interactive = true, defaultValue = "${RIOT_REDIS_PASS}", description = "Password to use when connecting to the Redis server.", paramLabel = "<password>")
     private char[] password;
 
-    @Option(names = "--timeout", description = "Redis command timeout, e.g. 30s or 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
+    @Option(names = "--timeout", defaultValue = "${RIOT_REDIS_TIMEOUT:-60s}", description = "Redis command timeout, e.g. 30s or 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
     private Duration timeout = DEFAULT_TIMEOUT;
 
-    @Option(names = { "-n", "--db" }, description = "Redis database number.", paramLabel = "<db>")
+    @Option(names = { "-n", "--db" }, defaultValue = "${RIOT_REDIS_DB:-0}", description = "Redis database number (default: ${DEFAULT-VALUE}).", paramLabel = "<db>")
     private int database = DEFAULT_DATABASE;
 
-    @Option(names = "--tls", description = "Establish a secure TLS connection.")
+    @Option(names = "--tls", defaultValue = "${RIOT_REDIS_TLS}", description = "Establish a secure TLS connection.")
     private boolean tls;
 
-    @Option(names = "--insecure", description = "Allow insecure TLS connection by skipping cert validation.")
+    @Option(names = "--insecure", defaultValue = "${RIOT_REDIS_INSECURE}", description = "Allow insecure TLS connection by skipping cert validation.")
     private boolean insecure;
 
-    @Option(names = "--verify", description = "TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
+    @Option(names = "--verify", defaultValue = "${RIOT_REDIS_TLS_VERIFY:-FULL}", description = "TLS verify mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SslVerifyMode sslVerifyMode = DEFAULT_SSL_VERIFY_MODE;
 
-    @Option(names = "--client", description = "Client name used to connect to Redis.", paramLabel = "<name>")
+    @Option(names = "--client", defaultValue = "${RIOT_REDIS_CLIENT}", description = "Client name used to connect to Redis.", paramLabel = "<name>")
     private String clientName;
 
-    @Option(names = { "-c", "--cluster" }, description = "Enable Redis cluster mode.")
+    @Option(names = { "-c", "--cluster" }, defaultValue = "${RIOT_REDIS_CLUSTER}", description = "Enable Redis cluster mode.")
     private boolean cluster;
 
-    @Option(names = "--resp", description = "Redis protocol version used to connect to Redis: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<ver>")
+    @Option(names = "--resp", defaultValue = "${RIOT_REDIS_RESP:-RESP2}", description = "Redis protocol version used to connect to Redis: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<ver>")
     private ProtocolVersion protocolVersion = DEFAULT_PROTOCOL_VERSION;
 
-    @Option(names = "--pool", description = "Max number of Redis connections (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
+    @Option(names = "--pool", defaultValue = "${RIOT_REDIS_POOL:-8}", description = "Max number of Redis connections (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
     private int poolSize = DEFAULT_POOL_SIZE;
 
-    @Option(names = "--read-from", description = "Which Redis cluster nodes to read from: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<name>")
+    @Option(names = "--read-from", defaultValue = "${RIOT_REDIS_READ_FROM:-UPSTREAM}", description = "Which Redis cluster nodes to read from: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<name>")
     private ReadFrom readFrom = DEFAULT_READ_FROM;
 
-    @Option(names = "--keystore", description = "Path to keystore.", paramLabel = "<file>", hidden = true)
+    @Option(names = "--keystore", defaultValue = "${RIOT_REDIS_KEYSTORE}", description = "Path to keystore.", paramLabel = "<file>", hidden = true)
     private File keystore;
 
-    @Option(names = "--keystore-pass", arity = "0..1", interactive = true, description = "Keystore password.", paramLabel = "<password>", hidden = true)
+    @Option(names = "--keystore-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_REDIS_KEYSTORE_PASS}", description = "Keystore password.", paramLabel = "<password>", hidden = true)
     private char[] keystorePassword;
 
-    @Option(names = "--trust", description = "Path to truststore.", paramLabel = "<file>", hidden = true)
+    @Option(names = "--trust", defaultValue = "${RIOT_REDIS_TRUST}", description = "Path to truststore.", paramLabel = "<file>", hidden = true)
     private File truststore;
 
-    @Option(names = "--trust-pass", arity = "0..1", interactive = true, description = "Truststore password.", paramLabel = "<password>", hidden = true)
+    @Option(names = "--trust-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_REDIS_TRUST_PASS}", description = "Truststore password.", paramLabel = "<password>", hidden = true)
     private char[] truststorePassword;
 
-    @Option(names = "--cert", description = "Client certificate to authenticate with (X.509 PEM).", paramLabel = "<file>")
+    @Option(names = "--cert", defaultValue = "${RIOT_REDIS_CERT}", description = "Client certificate to authenticate with (X.509 PEM).", paramLabel = "<file>")
     private File keyCert;
 
-    @Option(names = "--key", description = "Private key file to authenticate with (PKCS#8 PEM).", paramLabel = "<file>")
+    @Option(names = "--key", defaultValue = "${RIOT_REDIS_KEY}", description = "Private key file to authenticate with (PKCS#8 PEM).", paramLabel = "<file>")
     private File key;
 
-    @Option(names = "--key-pass", arity = "0..1", interactive = true, description = "Private key password.", paramLabel = "<pwd>")
+    @Option(names = "--key-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_REDIS_KEY_PASS}", description = "Private key password.", paramLabel = "<pwd>")
     private char[] keyPassword;
 
-    @Option(names = "--cacert", description = "CA Certificate file to verify with (X.509).", paramLabel = "<file>")
+    @Option(names = "--cacert", defaultValue = "${RIOT_REDIS_CACERT}", description = "CA Certificate file to verify with (X.509).", paramLabel = "<file>")
     private File trustedCerts;
 
     public RedisContext redisContext() {

@@ -24,6 +24,8 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
 
     private static final String OFFSET_SQL = "SELECT SYSTEM$STREAM_GET_TABLE_TIMESTAMP(?)";
 
+    private static final String STREAM_HAS_DATA_SQL = "SELECT SYSTEM$STREAM_HAS_DATA(?)";
+
     private static final String CREATE_STREAM_SQL = "CREATE OR REPLACE STREAM %s ON TABLE %s";
 
     private static final String CREATE_TEMP_TABLE_SQL = "CREATE OR REPLACE TABLE %s AS SELECT * FROM %s WHERE METADATA$ACTION <> 'DELETE'";
@@ -188,6 +190,24 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
         }
     }
 
+    private boolean streamHasData(Connection connection) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(STREAM_HAS_DATA_SQL)) {
+            statement.setString(1, streamObject.fullName());
+            ResultSet results = statement.executeQuery();
+            if (results.next()) {
+                return results.getBoolean(1);
+            }
+            return false;
+        } catch (SQLException ex) {
+            if (StringUtils.hasLength(ex.getMessage()) && ex.getMessage().toLowerCase()
+                    .contains("must be a valid stream name")) {
+                // the stream doesn't exist yet, assume no data
+                return false;
+            }
+            throw ex;
+        }
+    }
+
     private String sanitize(String value) {
         return value.replaceAll("[^a-zA-Z0-9]", "_");
     }
@@ -217,6 +237,15 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
                 }
                 log.debug("Initialized Snowflake stream with offset {}: '{}'", offset, offsetSQL);
             }
+            
+            // Check if stream has data before creating expensive temporary table
+            if (!streamHasData(connection)) {
+                log.debug("Stream '{}' has no data, skipping temporary table creation", streamObject.fullName());
+                nextOffset = currentStreamOffset(connection);
+                lastFetchTime = System.currentTimeMillis();
+                return;
+            }
+            
             String tempTableSQL = String.format(CREATE_TEMP_TABLE_SQL, tempTable(), streamObject.fullName());
             try (Statement statement = connection.createStatement()) {
                 statement.execute(tempTableSQL);

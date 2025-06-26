@@ -12,28 +12,28 @@ import java.util.Map;
 @ToString
 public class DataSourceArgs {
 
-    @Option(names = "--jdbc-driver", description = "Fully qualified name of the JDBC driver (e.g. oracle.jdbc.OracleDriver).", paramLabel = "<class>")
+    @Option(names = "--jdbc-driver", defaultValue = "${RIOT_JDBC_DRIVER}", description = "Fully qualified name of the JDBC driver (e.g. oracle.jdbc.OracleDriver).", paramLabel = "<class>")
     private Class<?> driver;
 
-    @Option(names = "--jdbc-url", description = "JDBC URL to connect to the database.", paramLabel = "<url>")
+    @Option(names = "--jdbc-url", defaultValue = "${RIOT_JDBC_URL}", description = "JDBC URL to connect to the database.", paramLabel = "<url>")
     private String url;
 
-    @Option(names = "--jdbc-user", description = "Login username of the database.", paramLabel = "<user>")
+    @Option(names = "--jdbc-user", defaultValue = "${RIOT_JDBC_USER}", description = "Login username of the database.", paramLabel = "<user>")
     private String username;
 
-    @Option(names = "--jdbc-pass", arity = "0..1", interactive = true, description = "Login password of the database.", paramLabel = "<pwd>")
+    @Option(names = "--jdbc-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_JDBC_PASS}", description = "Login password of the database.", paramLabel = "<pwd>")
     private String password;
 
     @Option(names = "--jdbc-property", description = "Additional JDBC property (key=value).", paramLabel = "<prop>")
     private Map<String, String> properties = new HashMap<>();
 
-    @Option(names = "--jdbc-pool", description = "Maximum number of connections in the pool.", paramLabel = "<size >")
+    @Option(names = "--jdbc-pool", defaultValue = "${RIOT_JDBC_POOL}", description = "Maximum number of connections in the pool.", paramLabel = "<size >")
     private Integer maxPoolSize;
 
     @Option(names = "--jdbc-min-idle", description = "Minimum number of idle connections in the pool.", hidden = true)
     private Integer minIdle;
 
-    @Option(names = "--jdbc-timeout", description = "Maximum time to wait for a connection from the pool.", paramLabel = "<dur>")
+    @Option(names = "--jdbc-timeout", defaultValue = "${RIOT_JDBC_TIMEOUT}", description = "Maximum time to wait for a connection from the pool.", paramLabel = "<dur>")
     private Duration connectionTimeout;
 
     @Option(names = "--jdbc-idle-timeout", description = "Maximum idle time for a connection in the pool.", hidden = true)
