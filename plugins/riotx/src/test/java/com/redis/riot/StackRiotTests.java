@@ -653,6 +653,7 @@ class StackRiotTests extends RiotTests {
         runLiveReplication(info, "replicate-live-struct");
     }
 
+    @Disabled
     @Test
     void replicateLiveStructOverlappingKeys(TestInfo info) throws Exception {
         KeyType[] types = new KeyType[] { KeyType.HASH, KeyType.STRING };

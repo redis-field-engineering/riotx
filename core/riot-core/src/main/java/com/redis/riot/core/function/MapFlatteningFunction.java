@@ -18,6 +18,10 @@ import java.util.stream.StreamSupport;
  */
 public class MapFlatteningFunction implements Function<Map<String, Object>, Map<String, byte[]>> {
 
+    private boolean keepNullValues;
+
+    private boolean keepEmptyValues;
+
     @Override
     public Map<String, byte[]> apply(Map<String, Object> source) {
         Map<String, byte[]> resultMap = new LinkedHashMap<>();
@@ -41,8 +45,15 @@ public class MapFlatteningFunction implements Function<Map<String, Object>, Map<
         if (value instanceof Map) {
             flatten(key, ((Map<String, Object>) value).entrySet().iterator(), map);
         } else {
-            map.put(key, elementBytes(value));
+            byte[] bytes = elementBytes(value);
+            if (acceptBytes(bytes)) {
+                map.put(key, bytes);
+            }
         }
+    }
+
+    private boolean acceptBytes(byte[] bytes) {
+        return (bytes == null && keepNullValues) || (bytes != null && (bytes.length > 0 || keepEmptyValues));
     }
 
     private byte[] elementBytes(Object value) {
@@ -69,6 +80,22 @@ public class MapFlatteningFunction implements Function<Map<String, Object>, Map<
         }
         // byte arrays should not be processed but passed to Redis as-is
         return BatchUtils.STRING_KEY_TO_BYTES.apply(String.valueOf(value));
+    }
+
+    public boolean isKeepNullValues() {
+        return keepNullValues;
+    }
+
+    public void setKeepNullValues(boolean keepNullValues) {
+        this.keepNullValues = keepNullValues;
+    }
+
+    public boolean isKeepEmptyValues() {
+        return keepEmptyValues;
+    }
+
+    public void setKeepEmptyValues(boolean keepEmptyValues) {
+        this.keepEmptyValues = keepEmptyValues;
     }
 
 }

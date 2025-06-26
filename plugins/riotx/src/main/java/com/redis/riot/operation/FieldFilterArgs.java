@@ -21,10 +21,18 @@ public class FieldFilterArgs {
     @Option(arity = "1..*", names = "--exclude", description = "Fields to exclude.", paramLabel = "<field>")
     private List<String> excludeFields;
 
+    @Option(names = "--keep-null", description = "Keep fields with null values.")
+    private boolean keepNull;
+
+    @Option(names = "--keep-empty", description = "Keep fields with empty values.")
+    private boolean keepEmpty;
+
     public Function<Map<String, Object>, Map<byte[], byte[]>> mapFunction() {
-        Function<Map<String, Object>, Map<String, byte[]>> mapFlattener = new MapFlatteningFunction();
+        MapFlatteningFunction flatten = new MapFlatteningFunction();
+        flatten.setKeepNullValues(keepNull);
+        flatten.setKeepEmptyValues(keepEmpty);
         if (ObjectUtils.isEmpty(includeFields) && ObjectUtils.isEmpty(excludeFields)) {
-            return mapFlattener.andThen(this::toByteArrayMap);
+            return flatten.andThen(this::toByteArrayMap);
         }
         MapFilteringFunction<byte[]> filtering = new MapFilteringFunction<>();
         if (!ObjectUtils.isEmpty(includeFields)) {
@@ -33,7 +41,7 @@ public class FieldFilterArgs {
         if (!ObjectUtils.isEmpty(excludeFields)) {
             filtering.excludes(excludeFields);
         }
-        return mapFlattener.andThen(filtering).andThen(this::toByteArrayMap);
+        return flatten.andThen(filtering).andThen(this::toByteArrayMap);
     }
 
     private Map<byte[], byte[]> toByteArrayMap(Map<String, byte[]> map) {
@@ -56,6 +64,22 @@ public class FieldFilterArgs {
 
     public void setIncludeFields(List<String> includes) {
         this.includeFields = includes;
+    }
+
+    public boolean isKeepNull() {
+        return keepNull;
+    }
+
+    public void setKeepNull(boolean keepNull) {
+        this.keepNull = keepNull;
+    }
+
+    public boolean isKeepEmpty() {
+        return keepEmpty;
+    }
+
+    public void setKeepEmpty(boolean keepEmpty) {
+        this.keepEmpty = keepEmpty;
     }
 
 }
