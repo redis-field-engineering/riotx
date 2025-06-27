@@ -11,6 +11,7 @@ import io.lettuce.core.cluster.models.partitions.RedisClusterNode;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
+import io.micrometer.common.util.StringUtils;
 import io.micrometer.core.instrument.*;
 import io.micrometer.core.instrument.Timer;
 import reactor.core.publisher.Flux;
@@ -51,13 +52,12 @@ public abstract class BatchUtils {
     private BatchUtils() {
     }
 
-    public static <T extends BlockingQueue<?>> T gaugeQueue(MeterRegistry meterRegistry, String name, T queue, Tag... tags) {
+    public static <T extends BlockingQueue<?>> void gaugeQueue(MeterRegistry meterRegistry, String name, T queue, Tag... tags) {
         Gauge.builder(METRICS_PREFIX + name + SIZE_SUFFIX, queue, BlockingQueue::size).tags(Arrays.asList(tags))
                 .description("Gauge reflecting the size (depth) of the queue").register(meterRegistry);
         Gauge.builder(METRICS_PREFIX + name + CAPACITY_SUFFIX, queue, BlockingQueue::remainingCapacity)
                 .tags(Arrays.asList(tags)).description("Gauge reflecting the remaining capacity of the queue")
                 .register(meterRegistry);
-        return queue;
     }
 
     /**
@@ -88,7 +88,14 @@ public abstract class BatchUtils {
     }
 
     public static Tags tags(String event, String type, boolean success) {
-        return Tags.of("event", event, "type", type, "status", success ? BatchUtils.STATUS_SUCCESS : BatchUtils.STATUS_FAILURE);
+        Tags tags = Tags.of("status", success ? BatchUtils.STATUS_SUCCESS : BatchUtils.STATUS_FAILURE);
+        if (StringUtils.isNotEmpty(event)) {
+            tags = tags.and("event", event);
+        }
+        if (StringUtils.isNotEmpty(type)) {
+            tags = tags.and("type", type);
+        }
+        return tags;
     }
 
     public static Counter createCounter(MeterRegistry meterRegistry, String name, String description, Iterable<Tag> tags) {
@@ -245,6 +252,29 @@ public abstract class BatchUtils {
             return Arrays.hashCode((byte[]) key);
         }
         return key.hashCode();
+    }
+
+    public static <T> Iterator<List<T>> batchIterator(Iterator<T> source, int batchSize) {
+        return new Iterator<>() {
+
+            @Override
+            public boolean hasNext() {
+                return source.hasNext();
+            }
+
+            @Override
+            public List<T> next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+
+                List<T> batch = new ArrayList<>(batchSize);
+                for (int i = 0; i < batchSize && source.hasNext(); i++) {
+                    batch.add(source.next());
+                }
+                return batch;
+            }
+        };
     }
 
 }
