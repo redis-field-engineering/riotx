@@ -8,7 +8,7 @@ on:
         required: true
       build-tasks:
         description: 'Build tasks'
-        default: 'build publish'
+        default: 'build aggregateTestReports publish'
         required: false
         type: string
 
