@@ -536,7 +536,8 @@ abstract class BatchTests extends AbstractTargetTestBase {
         body.put("field2", "value2");
         redisCommands.xadd(key, body);
         redisCommands.xadd(key, body);
-        RedisScanItemReader<byte[], byte[], KeyValueEvent<byte[]>> reader = client(RedisScanItemReader.struct(ByteArrayCodec.INSTANCE));
+        RedisScanItemReader<byte[], byte[], KeyValueEvent<byte[]>> reader = client(
+                RedisScanItemReader.struct(ByteArrayCodec.INSTANCE));
         reader.open(new ExecutionContext());
         KeyValueEvent<byte[]> ds = reader.read();
         Assertions.assertArrayEquals(toByteArray(key), ds.getKey());
@@ -598,16 +599,16 @@ abstract class BatchTests extends AbstractTargetTestBase {
     }
 
     private Collection<GeoValue<String>> geoValue(Geo geo) {
-        return Arrays.asList(GeoValue.just(geo.getLongitude(), geo.getLatitude(), geo.getMember()));
+        return Collections.singletonList(GeoValue.just(geo.getLongitude(), geo.getLatitude(), geo.getMember()));
     }
 
     private static class Geo {
 
-        private String member;
+        private final String member;
 
-        private double longitude;
+        private final double longitude;
 
-        private double latitude;
+        private final double latitude;
 
         public Geo(String member, double longitude, double latitude) {
             this.member = member;
@@ -639,7 +640,8 @@ abstract class BatchTests extends AbstractTargetTestBase {
             return keyEvent;
         }).collect(Collectors.toList());
         ListItemReader<KeyValueEvent<String>> reader = new ListItemReader<>(items);
-        Hset<String, String, KeyValueEvent<String>> hset = new Hset<>(e -> e.getKey(), v -> (Map<String, String>) v.getValue());
+        Hset<String, String, KeyValueEvent<String>> hset = new Hset<>(KeyValueEvent::getKey,
+                v -> (Map<String, String>) v.getValue());
         RedisItemWriter<String, String, KeyValueEvent<String>> writer = writer(hset);
         writer.setWait(Wait.of(1, Duration.ofMillis(300)));
         try {
@@ -660,7 +662,8 @@ abstract class BatchTests extends AbstractTargetTestBase {
             redisCommands.zadd(key, 1, "member1");
             redisCommands.zadd(key, 2, "member2");
             redisCommands.zadd(key, 3, "member3");
-            awaitUntil(() -> keyReader.getQueue().size() == 1);
+            awaitUntil(() -> !keyReader.getQueue().isEmpty());
+            Assertions.assertEquals(1, keyReader.getQueue().size());
             Assertions.assertEquals(key, keyReader.getQueue().take().getKey());
         } finally {
             keyReader.close();
