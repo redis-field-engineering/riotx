@@ -5,10 +5,10 @@ import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
 @EnabledOnOs(OS.LINUX)
-class StackREContainer extends RiotTests {
+class REStackTests extends RiotTests {
 
-	private static final RedisServer source = RedisContainerFactory.redis();
-	private static final RedisServer target = RedisContainerFactory.enterprise();
+	private static final RedisServer source = RedisContainerFactory.enterprise();
+	private static final RedisServer target = RedisContainerFactory.redis();
 
 	@Override
 	protected RedisServer getRedisServer() {

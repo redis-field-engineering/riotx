@@ -5,7 +5,7 @@ import com.redis.testcontainers.RedisServer;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 @EnabledIfEnvironmentVariable(named = RedisEnterpriseServer.ENV_HOST, matches = ".*")
-public class StackREServer extends RiotTests {
+public class StackREServerTests extends RiotTests {
 
 	private static final RedisServer source = RedisContainerFactory.redis();
 	private static final RedisServer target = RedisContainerFactory.enterpriseServer();
