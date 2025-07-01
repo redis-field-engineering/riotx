@@ -10,9 +10,9 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public abstract class AbstractMemberWriteOperation<K, V, T> extends AbstractValueWriteOperation<K, V, Collection<V>, T> {
+public abstract class AbstractMemberWrite<K, V, T> extends AbstractValueWrite<K, V, Collection<V>, T> {
 
-    protected AbstractMemberWriteOperation(Function<T, K> keyFunction, Function<T, Collection<V>> valueFunction) {
+    protected AbstractMemberWrite(Function<T, K> keyFunction, Function<T, Collection<V>> valueFunction) {
         super(keyFunction, valueFunction);
     }
 

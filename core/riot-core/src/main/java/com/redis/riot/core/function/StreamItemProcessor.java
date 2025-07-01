@@ -1,34 +1,33 @@
 package com.redis.riot.core.function;
 
-import java.util.Collection;
-import java.util.stream.Collectors;
-
+import com.redis.batch.KeyStructEvent;
 import com.redis.batch.KeyType;
-import com.redis.batch.KeyValueEvent;
+import io.lettuce.core.StreamMessage;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.util.CollectionUtils;
 
-import io.lettuce.core.StreamMessage;
+import java.util.Collection;
+import java.util.stream.Collectors;
 
-public class StreamItemProcessor implements ItemProcessor<KeyValueEvent<String>, KeyValueEvent<String>> {
+public class StreamItemProcessor implements ItemProcessor<KeyStructEvent<String, String>, KeyStructEvent<String, String>> {
 
     private boolean prune;
 
     private boolean dropMessageIds;
 
-    @SuppressWarnings("unchecked")
     @Override
-    public KeyValueEvent<String> process(KeyValueEvent<String> t) {
-        if (t.getValue() != null && KeyType.STREAM.getString().equalsIgnoreCase(t.getType())) {
-            Collection<StreamMessage<?, ?>> messages = (Collection<StreamMessage<?, ?>>) t.getValue();
-            if (CollectionUtils.isEmpty(messages)) {
-                if (prune) {
-                    return null;
-                }
-            } else {
-                if (dropMessageIds) {
-                    t.setValue(messages.stream().map(this::message).collect(Collectors.toList()));
-                }
+    public KeyStructEvent<String, String> process(KeyStructEvent<String, String> t) {
+        if (t.getValue() == null || t.getType() != KeyType.stream) {
+            return t;
+        }
+        Collection<StreamMessage<String, String>> messages = t.asStream();
+        if (CollectionUtils.isEmpty(messages)) {
+            if (prune) {
+                return null;
+            }
+        } else {
+            if (dropMessageIds) {
+                t.setValue(messages.stream().map(this::message).collect(Collectors.toList()));
             }
         }
         return t;

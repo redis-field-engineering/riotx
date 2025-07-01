@@ -10,7 +10,7 @@ import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-public class Sugadd<K, V, T> extends AbstractValueWriteOperation<K, V, Suggestion<V>, T> {
+public class Sugadd<K, V, T> extends AbstractValueWrite<K, V, Suggestion<V>, T> {
 
     private Predicate<T> incrPredicate = t -> false;
 

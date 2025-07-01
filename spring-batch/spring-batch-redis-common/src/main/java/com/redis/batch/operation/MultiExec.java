@@ -9,7 +9,7 @@ import com.redis.batch.RedisBatchOperation;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 
-public class MultiExec<K, V, T> extends AbstractCompositeOperation<K, V, T, Object> {
+public class MultiExec<K, V, T> extends AbstractCompositeWrite<K, V, T> {
 
     public MultiExec(RedisBatchOperation<K, V, T, Object> delegate) {
         super(delegate);

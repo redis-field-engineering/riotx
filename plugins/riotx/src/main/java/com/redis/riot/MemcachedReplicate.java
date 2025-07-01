@@ -1,9 +1,9 @@
 package com.redis.riot;
 
 import com.redis.batch.KeyOperation;
+import com.redis.batch.KeyStructEvent;
 import com.redis.batch.KeyType;
-import com.redis.batch.KeyValueEvent;
-import com.redis.batch.operation.KeyValueWrite;
+import com.redis.batch.operation.KeyStructWrite;
 import com.redis.riot.core.InetSocketAddressList;
 import com.redis.riot.core.MemcachedContext;
 import com.redis.riot.core.RedisMemcachedContext;
@@ -108,19 +108,19 @@ public class MemcachedReplicate extends AbstractJobCommand {
             MemcachedItemWriter writer = new MemcachedItemWriter(targetContext.getMemcachedContext()::safeMemcachedClient);
             return step(STEP_NAME, reader, writer);
         }
-        RedisItemWriter<String, byte[], KeyValueEvent<String>> writer = new RedisItemWriter<>(
-                RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE), new KeyValueWrite<>());
-        RiotStep<MemcachedEntry, KeyValueEvent<String>> step = step(STEP_NAME, reader, writer);
-        step.setItemProcessor(this::keyValueEvent);
+        RedisItemWriter<String, byte[], KeyStructEvent<String, byte[]>> writer = new RedisItemWriter<>(
+                RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE), new KeyStructWrite<>());
+        RiotStep<MemcachedEntry, KeyStructEvent<String, byte[]>> step = step(STEP_NAME, reader, writer);
+        step.setItemProcessor(this::keyStructEvent);
         return step;
     }
 
-    private KeyValueEvent<String> keyValueEvent(MemcachedEntry entry) {
-        KeyValueEvent<String> kv = new KeyValueEvent<>();
+    private KeyStructEvent<String, byte[]> keyStructEvent(MemcachedEntry entry) {
+        KeyStructEvent<String, byte[]> kv = new KeyStructEvent<>();
         kv.setTimestamp(entry.getTimestamp());
         kv.setKey(entry.getKey());
         kv.setOperation(KeyOperation.READ);
-        kv.setType(KeyType.STRING.getString());
+        kv.setType(KeyType.string);
         kv.setValue(entry.getValue());
         kv.setTtl(entry.getExpiration());
         return kv;

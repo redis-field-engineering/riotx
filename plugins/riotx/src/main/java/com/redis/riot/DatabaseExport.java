@@ -1,7 +1,6 @@
 package com.redis.riot;
 
-import com.redis.batch.KeyValueEvent;
-import com.redis.riot.core.RiotUtils;
+import com.redis.batch.KeyStructEvent;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import io.lettuce.core.codec.StringCodec;
@@ -37,13 +36,13 @@ public class DatabaseExport extends AbstractRedisExport {
 
     @Override
     protected Job job() throws Exception {
-        RiotStep<KeyValueEvent<String>, Map<String, Object>> step = step(STEP_NAME, reader(), writer());
+        RiotStep<KeyStructEvent<String, String>, Map<String, Object>> step = step(STEP_NAME, reader(), writer());
         step.setItemProcessor(mapProcessor());
         return job(step);
     }
 
-    private ItemReader<KeyValueEvent<String>> reader() {
-        RedisScanItemReader<String, String, KeyValueEvent<String>> reader = RedisScanItemReader.struct(
+    private ItemReader<KeyStructEvent<String, String>> reader() {
+        RedisScanItemReader<String, String, KeyStructEvent<String, String>> reader = RedisScanItemReader.struct(
                 StringCodec.UTF8);
         configureSource(reader);
         return reader;

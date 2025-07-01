@@ -1,6 +1,6 @@
 package com.redis.riot;
 
-import com.redis.batch.KeyValueEvent;
+import com.redis.batch.KeyTtlTypeEvent;
 import com.redis.riot.core.Expression;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.TemplateExpression;
@@ -24,9 +24,6 @@ public class KeyValueProcessorArgs {
     @Option(names = "--key-proc", description = "SpEL template expression to transform key names, e.g. \"prefix:#{key}\" for 'abc' returns 'prefix:abc'.", paramLabel = "<exp>")
     private TemplateExpression keyExpression;
 
-    @Option(names = "--type-proc", description = "SpEL expression to transform key types.", paramLabel = "<exp>")
-    private Expression typeExpression;
-
     @Option(names = "--ttl-proc", description = "SpEL expression to transform key expiration times.", paramLabel = "<exp>")
     private Expression ttlExpression;
 
@@ -40,8 +37,8 @@ public class KeyValueProcessorArgs {
     private boolean prune;
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    public <T> ItemProcessor<KeyValueEvent<String>, KeyValueEvent<String>> processor(EvaluationContext context) {
-        List<ItemProcessor<KeyValueEvent<String>, KeyValueEvent<String>>> processors = new ArrayList<>();
+    public <T extends KeyTtlTypeEvent<String>> ItemProcessor<T, T> processor(EvaluationContext context) {
+        List<ItemProcessor<T, T>> processors = new ArrayList<>();
         if (keyExpression != null) {
             processors.add(processor(e -> e.setKey(keyExpression.getValue(context, e))));
         }
@@ -50,9 +47,6 @@ public class KeyValueProcessorArgs {
         }
         if (ttlExpression != null) {
             processors.add(processor(e -> e.setTtl(Instant.ofEpochMilli(ttlExpression.getLong(context, e)))));
-        }
-        if (typeExpression != null) {
-            processors.add(processor(e -> e.setType(typeExpression.getString(context, e))));
         }
         if (!streamMessageIds || prune) {
             StreamItemProcessor streamProcessor = new StreamItemProcessor();
@@ -63,16 +57,11 @@ public class KeyValueProcessorArgs {
         return RiotUtils.processor(processors);
     }
 
-    private <T> ItemProcessor<KeyValueEvent<String>, KeyValueEvent<String>> processor(
-            Consumer<KeyValueEvent<String>> consumer) {
+    private <T extends KeyTtlTypeEvent<String>> ItemProcessor<T, T> processor(Consumer<KeyTtlTypeEvent<String>> consumer) {
         return new FunctionItemProcessor<>(e -> {
             consumer.accept(e);
             return e;
         });
-    }
-
-    private void setKey(KeyValueEvent<String> event) {
-
     }
 
     public TemplateExpression getKeyExpression() {
@@ -81,14 +70,6 @@ public class KeyValueProcessorArgs {
 
     public void setKeyExpression(TemplateExpression expression) {
         this.keyExpression = expression;
-    }
-
-    public Expression getTypeExpression() {
-        return typeExpression;
-    }
-
-    public void setTypeExpression(Expression expression) {
-        this.typeExpression = expression;
     }
 
     public Expression getTtlExpression() {

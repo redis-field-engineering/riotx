@@ -27,7 +27,8 @@ public class StatsPrinter {
 
     private static final Object CURSOR_DOWN = "\033[K";
 
-    private static final Comparator<? super RedisStats.BigKey> DESC_BANDWIDTH = Comparator.comparing(RedisStats.BigKey::writeBandwidth).reversed();
+    private static final Comparator<? super RedisStats.BigKey> DESC_BANDWIDTH = Comparator.comparing(
+            RedisStats.BigKey::writeBandwidth).reversed();
 
     private static final String NEWLINE = System.lineSeparator();
 
@@ -116,14 +117,14 @@ public class StatsPrinter {
     private List<ColumnData<RedisStats.Keyspace>> statsColumns() {
         List<ColumnData<RedisStats.Keyspace>> columns = new ArrayList<>();
         columns.add(string("keyspace", RedisStats.Keyspace::getPrefix));
-        columns.add(number("hash", typeCount(KeyType.HASH)));
-        columns.add(number("json", typeCount(KeyType.JSON)));
-        columns.add(number("list", typeCount(KeyType.LIST)));
-        columns.add(number("set", typeCount(KeyType.SET)));
-        columns.add(number("stream", typeCount(KeyType.STREAM)));
-        columns.add(number("string", typeCount(KeyType.STRING)));
-        columns.add(number("ts", typeCount(KeyType.TIMESERIES)));
-        columns.add(number("zset", typeCount(KeyType.ZSET)));
+        columns.add(number("hash", typeCount(KeyType.hash)));
+        columns.add(number("json", typeCount(KeyType.json)));
+        columns.add(number("list", typeCount(KeyType.list)));
+        columns.add(number("set", typeCount(KeyType.set)));
+        columns.add(number("stream", typeCount(KeyType.stream)));
+        columns.add(number("string", typeCount(KeyType.string)));
+        columns.add(number("ts", typeCount(KeyType.timeseries)));
+        columns.add(number("zset", typeCount(KeyType.zset)));
         columns.add(number("big", row -> format(row.getBigKeys())));
         for (short quantile : quantiles) {
             columns.add(quantileColumn(quantile));
@@ -132,7 +133,7 @@ public class StatsPrinter {
     }
 
     private Function<RedisStats.Keyspace, String> typeCount(KeyType type) {
-        return row -> format(row.getTypeCounts().getOrDefault(type.getString(), 0));
+        return row -> format(row.getTypeCounts().getOrDefault(type, 0));
     }
 
     private ColumnData<RedisStats.Keyspace> quantileColumn(short quantile) {
@@ -143,7 +144,7 @@ public class StatsPrinter {
     private List<ColumnData<RedisStats.BigKey>> problemKeyColumns() {
         List<ColumnData<RedisStats.BigKey>> columns = new ArrayList<>();
         columns.add(string("Problem Key", RedisStats.BigKey::getKey));
-        columns.add(string("Type", r -> type(r.getType())));
+        columns.add(string("Type", r -> r.getType().name()));
         columns.add(number("Size", k -> toString(k.getMemoryUsage())));
         columns.add(number("Ops/s", k -> format(k.getWriteThroughput())));
         columns.add(number("Rate", k -> toString(k.writeBandwidth())));
@@ -166,13 +167,6 @@ public class StatsPrinter {
 
     private String format(long number) {
         return longFormat.format(number);
-    }
-
-    private String type(String type) {
-        if (KeyType.JSON.getString().equalsIgnoreCase(type)) {
-            return "json";
-        }
-        return type;
     }
 
     private <T> ColumnData<T> string(String header, Function<T, String> getter) {

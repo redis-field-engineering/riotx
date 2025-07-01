@@ -13,7 +13,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class TsAdd<K, V, T> extends AbstractValueWriteOperation<K, V, Collection<Sample>, T> {
+public class TsAdd<K, V, T> extends AbstractValueWrite<K, V, Collection<Sample>, T> {
 
     private Function<T, AddOptions<K, V>> optionsFunction = t -> null;
 

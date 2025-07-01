@@ -1,9 +1,9 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import com.redis.batch.KeyEvent;
-import com.redis.batch.KeyValueEvent;
-import com.redis.batch.RedisBatchOperation;
-import com.redis.batch.operation.KeyValueReadOperation;
+import com.redis.batch.*;
+import com.redis.batch.operation.KeyDumpRead;
+import com.redis.batch.operation.KeyNoneRead;
+import com.redis.batch.operation.KeyStructRead;
 import com.redis.spring.batch.item.PollableItemReader;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import io.lettuce.core.codec.ByteArrayCodec;
@@ -108,10 +108,7 @@ public class RedisLiveItemReader<K, V, T> extends RedisItemReader<K, V, T> imple
         if (keyType == null) {
             return true;
         }
-        if (keyEvent.getType() == null) {
-            return false;
-        }
-        return keyType.equalsIgnoreCase(keyEvent.getType());
+        return keyType.equalsIgnoreCase(KeyEvent.type(keyEvent.getEvent()).getName());
     }
 
     @Override
@@ -119,16 +116,16 @@ public class RedisLiveItemReader<K, V, T> extends RedisItemReader<K, V, T> imple
         throw new UnsupportedOperationException();
     }
 
-    public static RedisLiveItemReader<byte[], byte[], KeyValueEvent<byte[]>> dump() {
-        return new RedisLiveItemReader<>(ByteArrayCodec.INSTANCE, KeyValueReadOperation.dump());
+    public static RedisLiveItemReader<byte[], byte[], KeyDumpEvent<byte[]>> dump() {
+        return new RedisLiveItemReader<>(ByteArrayCodec.INSTANCE, new KeyDumpRead());
     }
 
-    public static <K, V> RedisLiveItemReader<K, V, KeyValueEvent<K>> none(RedisCodec<K, V> codec) {
-        return new RedisLiveItemReader<>(codec, KeyValueReadOperation.none(codec));
+    public static <K, V> RedisLiveItemReader<K, V, KeyStructEvent<K, V>> none(RedisCodec<K, V> codec) {
+        return new RedisLiveItemReader<>(codec, new KeyNoneRead<>(codec));
     }
 
-    public static <K, V> RedisLiveItemReader<K, V, KeyValueEvent<K>> struct(RedisCodec<K, V> codec) {
-        return new RedisLiveItemReader<>(codec, KeyValueReadOperation.struct(codec));
+    public static <K, V> RedisLiveItemReader<K, V, KeyStructEvent<K, V>> struct(RedisCodec<K, V> codec) {
+        return new RedisLiveItemReader<>(codec, new KeyStructRead<>(codec));
     }
 
     public int getQueueCapacity() {

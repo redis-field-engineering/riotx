@@ -3,7 +3,6 @@ package com.redis.spring.batch.item.redis.reader;
 import com.redis.batch.BatchUtils;
 import com.redis.batch.KeyEvent;
 import com.redis.batch.KeyOperation;
-import com.redis.batch.KeyType;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.spring.batch.item.redis.reader.pubsub.PubSubListenerContainer;
@@ -34,8 +33,6 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
     public static final String NOTIFY_CONFIG = "notify-keyspace-events";
 
     public static final String NOTIFY_CONFIG_VALUE = "KEA";
-
-    public static final String EVENT_DEL = "del";
 
     private static final String SEPARATOR = ":";
 
@@ -138,14 +135,12 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
         keyEvent.setTimestamp(Instant.now());
         keyEvent.setKey(key);
         keyEvent.setEvent(event);
-        KeyType keyType = keyType(event);
-        keyEvent.setType(keyType == null ? null : keyType.getString());
         keyEvent.setOperation(operation(event));
         return keyEvent;
     }
 
     private KeyOperation operation(String event) {
-        if (KeyEventListenerContainer.EVENT_DEL.equals(event)) {
+        if (KeyEvent.EVENT_DEL.equals(event)) {
             return KeyOperation.DELETE;
         }
         return KeyOperation.UPDATE;
@@ -171,64 +166,6 @@ public class KeyEventListenerContainer<K, V> implements SmartLifecycle {
 
     private static Set<Character> characterSet(String string) {
         return string.codePoints().mapToObj(c -> (char) c).collect(Collectors.toSet());
-    }
-
-    private static KeyType keyType(String event) {
-        if (event.startsWith("xgroup-")) {
-            return KeyType.STREAM;
-        }
-        if (event.startsWith("ts.")) {
-            return KeyType.TIMESERIES;
-        }
-        if (event.startsWith("json.")) {
-            return KeyType.JSON;
-        }
-        switch (event) {
-            case "set":
-            case "setrange":
-            case "incrby":
-            case "incrbyfloat":
-            case "append":
-                return KeyType.STRING;
-            case "lpush":
-            case "rpush":
-            case "rpop":
-            case "lpop":
-            case "linsert":
-            case "lset":
-            case "lrem":
-            case "ltrim":
-                return KeyType.LIST;
-            case "hset":
-            case "hincrby":
-            case "hincrbyfloat":
-            case "hdel":
-                return KeyType.HASH;
-            case "sadd":
-            case "spop":
-            case "sinterstore":
-            case "sunionstore":
-            case "sdiffstore":
-                return KeyType.SET;
-            case "zincr":
-            case "zadd":
-            case "zrem":
-            case "zrembyscore":
-            case "zrembyrank":
-            case "zdiffstore":
-            case "zinterstore":
-            case "zunionstore":
-                return KeyType.ZSET;
-            case "xadd":
-            case "xtrim":
-            case "xdel":
-            case "xsetid":
-                return KeyType.STREAM;
-            case EVENT_DEL:
-                return KeyType.NONE;
-            default:
-                return null;
-        }
     }
 
 }

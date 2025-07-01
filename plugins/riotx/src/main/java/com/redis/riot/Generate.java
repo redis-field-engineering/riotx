@@ -1,14 +1,14 @@
 package com.redis.riot;
 
+import com.redis.batch.KeyStructEvent;
 import com.redis.batch.KeyType;
-import com.redis.batch.KeyValueEvent;
 import com.redis.batch.gen.Generator;
 import com.redis.lettucemod.search.CreateOptions;
 import com.redis.lettucemod.search.Field;
 import com.redis.riot.core.PrefixedNumber;
-import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.spring.batch.item.redis.GeneratorItemReader;
 import com.redis.riot.core.job.RiotStep;
+import com.redis.spring.batch.item.redis.GeneratorItemReader;
+import com.redis.spring.batch.item.redis.RedisItemWriter;
 import org.springframework.batch.core.Job;
 import org.springframework.util.StringUtils;
 import picocli.CommandLine;
@@ -41,7 +41,7 @@ public class Generate extends AbstractRedisCommand {
         if (StringUtils.hasLength(generateArgs.getIndex())) {
             commands().ftCreate(generateArgs.getIndex(), indexCreateOptions(), indexFields());
         }
-        RiotStep<KeyValueEvent<String>, KeyValueEvent<String>> step = step(STEP_NAME, reader(), writer());
+        RiotStep<KeyStructEvent<String, String>, KeyStructEvent<String, String>> step = step(STEP_NAME, reader(), writer());
         return job(step);
     }
 
@@ -50,8 +50,8 @@ public class Generate extends AbstractRedisCommand {
         return TASK_NAME;
     }
 
-    private RedisItemWriter<String, String, KeyValueEvent<String>> writer() {
-        RedisItemWriter<String, String, KeyValueEvent<String>> writer = RedisItemWriter.struct();
+    private RedisItemWriter<String, String, KeyStructEvent<String, String>> writer() {
+        RedisItemWriter<String, String, KeyStructEvent<String, String>> writer = RedisItemWriter.struct();
         configure(writer);
         log.info("Configuring Redis writer with {}", redisWriterArgs);
         redisWriterArgs.configure(writer);
@@ -73,7 +73,7 @@ public class Generate extends AbstractRedisCommand {
     }
 
     private boolean isJson() {
-        return generateArgs.getTypes().contains(KeyType.JSON);
+        return generateArgs.getTypes().contains(KeyType.json);
     }
 
     @SuppressWarnings("unchecked")

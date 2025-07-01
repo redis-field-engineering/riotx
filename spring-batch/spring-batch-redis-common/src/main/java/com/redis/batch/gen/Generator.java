@@ -2,10 +2,7 @@ package com.redis.batch.gen;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.redis.batch.KeyOperation;
-import com.redis.batch.KeyType;
-import com.redis.batch.KeyValueEvent;
-import com.redis.batch.Range;
+import com.redis.batch.*;
 import com.redis.lettucemod.timeseries.Sample;
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.StreamMessage;
@@ -37,8 +34,8 @@ public class Generator {
     private final ObjectMapper mapper = new ObjectMapper();
 
     public static List<KeyType> defaultTypes() {
-        return Arrays.asList(KeyType.HASH, KeyType.JSON, KeyType.LIST, KeyType.SET, KeyType.STREAM, KeyType.STRING,
-                KeyType.ZSET);
+        return Arrays.asList(KeyType.hash, KeyType.json, KeyType.list, KeyType.set, KeyType.stream, KeyType.string,
+                KeyType.zset);
     }
 
     private String keySeparator = DEFAULT_KEY_SEPARATOR;
@@ -82,25 +79,22 @@ public class Generator {
     }
 
     private Object value(String key, KeyType type) throws JsonProcessingException {
-        if (type == null) {
-            return null;
-        }
         switch (type) {
-            case HASH:
+            case hash:
                 return hash();
-            case LIST:
+            case list:
                 return list();
-            case SET:
+            case set:
                 return set();
-            case STREAM:
+            case stream:
                 return streamMessages(key);
-            case STRING:
+            case string:
                 return string();
-            case ZSET:
+            case zset:
                 return zset();
-            case JSON:
+            case json:
                 return json();
-            case TIMESERIES:
+            case timeseries:
                 return samples();
             default:
                 return null;
@@ -198,17 +192,16 @@ public class Generator {
         return ThreadLocalRandom.current().nextDouble(range.getMin(), range.getMax());
     }
 
-    public KeyValueEvent<String> next() throws JsonProcessingException {
+    public KeyStructEvent<String, String> next() throws JsonProcessingException {
         String key = key();
-        KeyValueEvent<String> keyValueEvent = new KeyValueEvent<>();
+        KeyStructEvent<String, String> keyValueEvent = new KeyStructEvent<>();
         keyValueEvent.setKey(key);
         keyValueEvent.setEvent(EVENT);
         keyValueEvent.setOperation(KeyOperation.CREATE);
         keyValueEvent.setTimestamp(Instant.now());
-        KeyType type = type();
-        keyValueEvent.setType(type == null ? null : type.getString());
+        keyValueEvent.setType(type());
         keyValueEvent.setTtl(ttl());
-        keyValueEvent.setValue(value(key, type));
+        keyValueEvent.setValue(value(key, keyValueEvent.getType()));
         currentIndex.incrementAndGet();
         return keyValueEvent;
     }

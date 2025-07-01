@@ -13,10 +13,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class KeyValueReadOperation<K, V> implements InitializingOperation<K, V, KeyEvent<K>, KeyValueEvent<K>> {
+public abstract class AbstractKeyValueRead<K, V, T extends KeyTtlTypeEvent<K>>
+        implements InitializingOperation<K, V, KeyEvent<K>, T> {
 
     protected enum Mode {
-        STRUCT, DUMP, NONE
+        struct, dump, none
     }
 
     private static final String SCRIPT_FILENAME = "key-value-read.lua";
@@ -41,11 +42,7 @@ public class KeyValueReadOperation<K, V> implements InitializingOperation<K, V, 
 
     private V[] args;
 
-    private KeyValueReadOperation(RedisCodec<K, V> codec) {
-        this(codec, Mode.NONE);
-    }
-
-    protected KeyValueReadOperation(RedisCodec<K, V> codec, Mode mode) {
+    protected AbstractKeyValueRead(RedisCodec<K, V> codec, Mode mode) {
         this.toStringValueFunction = BatchUtils.toStringValueFunction(codec);
         this.stringValueFunction = BatchUtils.stringValueFunction(codec);
         this.mode = mode;
@@ -56,7 +53,7 @@ public class KeyValueReadOperation<K, V> implements InitializingOperation<K, V, 
     public void initialize(RedisAsyncCommands<K, V> commands) throws Exception {
         String lua = BatchUtils.readFile(SCRIPT_FILENAME);
         this.digest = commands.scriptLoad(lua).get(timeout(commands).toNanos(), TimeUnit.NANOSECONDS);
-        this.args = (V[]) new Object[] { stringValue(mode.name().toLowerCase()), stringValue(limit), stringValue(samples) };
+        this.args = (V[]) new Object[] { stringValue(mode.name()), stringValue(limit), stringValue(samples) };
     }
 
     private V stringValue(Object object) {
@@ -64,37 +61,37 @@ public class KeyValueReadOperation<K, V> implements InitializingOperation<K, V, 
     }
 
     @Override
-    public List<RedisFuture<KeyValueEvent<K>>> execute(RedisAsyncCommands<K, V> commands, List<? extends KeyEvent<K>> items) {
+    public List<RedisFuture<T>> execute(RedisAsyncCommands<K, V> commands, List<? extends KeyEvent<K>> items) {
         return items.stream().map(e -> execute(commands, e)).collect(Collectors.toList());
     }
 
     @SuppressWarnings("unchecked")
-    private RedisFuture<KeyValueEvent<K>> execute(RedisAsyncCommands<K, V> commands, KeyEvent<K> keyEvent) {
+    private RedisFuture<T> execute(RedisAsyncCommands<K, V> commands, KeyEvent<K> keyEvent) {
         K[] keys = (K[]) new Object[] { keyEvent.getKey() };
         RedisFuture<List<Object>> evalFuture = commands.evalsha(digest, ScriptOutputType.MULTI, keys, args);
-        return new MappingRedisFuture<>(evalFuture, l -> keyValueEvent(keyEvent, l));
+        return new MappingRedisFuture<>(evalFuture, l -> keyValueEvent(keyEvent, result(l)));
     }
 
-    private KeyValueEvent<K> keyValueEvent(KeyEvent<K> keyEvent, List<Object> list) {
-        ReadResult<V> result = result(list);
-        KeyValueEvent<K> keyValue = new KeyValueEvent<>();
+    protected T keyValueEvent(KeyEvent<K> keyEvent, ReadResult<V> result) {
+        T keyValue = keyValueEvent();
         keyValue.setEvent(keyEvent.getEvent());
         keyValue.setKey(keyEvent.getKey());
-        keyValue.setOperation(keyEvent.getOperation());
         keyValue.setTimestamp(keyEvent.getTimestamp());
-        keyValue.setType(toString(result.getType()));
+        String type = toString(result.getType());
+        keyValue.setType(KeyType.of(type));
+        keyValue.setTypeString(type);
         if (result.getTtl() != null && result.getTtl() >= 0) {
             keyValue.setTtl(Instant.now().plusMillis(result.getTtl()));
         }
         if (result.getValue() != null) {
-            keyValue.setValue(value(result));
+            setValue(keyValue, result.getValue());
         }
         return keyValue;
     }
 
-    protected Object value(ReadResult<V> result) {
-        return null;
-    }
+    protected abstract void setValue(T keyValue, Object value);
+
+    protected abstract T keyValueEvent();
 
     @SuppressWarnings("unchecked")
     protected ReadResult<V> result(List<Object> list) {
@@ -144,18 +141,6 @@ public class KeyValueReadOperation<K, V> implements InitializingOperation<K, V, 
 
     public void setSamples(int samples) {
         this.samples = samples;
-    }
-
-    public static KeyDumpReadOperation dump() {
-        return new KeyDumpReadOperation();
-    }
-
-    public static <K, V> KeyStructReadOperation<K, V> struct(RedisCodec<K, V> codec) {
-        return new KeyStructReadOperation<>(codec);
-    }
-
-    public static <K, V> KeyValueReadOperation<K, V> none(RedisCodec<K, V> codec) {
-        return new KeyValueReadOperation<>(codec);
     }
 
 }

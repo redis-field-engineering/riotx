@@ -1,11 +1,14 @@
 package com.redis.riot;
 
-import com.redis.batch.KeyValueEvent;
-import com.redis.batch.operation.KeyValueReadOperation;
+import com.redis.batch.KeyStructEvent;
+import com.redis.batch.KeyTtlTypeEvent;
+import com.redis.batch.operation.AbstractKeyValueRead;
+import com.redis.batch.operation.KeyNoneRead;
+import com.redis.batch.operation.KeyStructRead;
 import com.redis.riot.core.CompareStepListener;
 import com.redis.riot.core.RiotUtils;
-import com.redis.riot.core.function.StringKeyValueEvent;
-import com.redis.riot.core.function.ToStringKeyValueEvent;
+import com.redis.riot.core.function.StringKeyEvent;
+import com.redis.riot.core.function.ToStringKeyEvent;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.reader.*;
 import io.lettuce.core.codec.ByteArrayCodec;
@@ -27,11 +30,9 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
 
     protected static final String COMPARE_STEP_NAME = "compare";
 
-    public static final Duration DEFAULT_TTL_TOLERANCE = DefaultKeyComparator.DEFAULT_TTL_TOLERANCE;
+    public static final Duration DEFAULT_TTL_TOLERANCE = KeyStructComparator.DEFAULT_TTL_TOLERANCE;
 
     public static final boolean DEFAULT_COMPARE_STREAM_MESSAGE_ID = true;
-
-    protected static final RedisCodec<byte[], byte[]> CODEC = ByteArrayCodec.INSTANCE;
 
     private static final String COMPARE_TASK_NAME = "Comparing";
 
@@ -65,18 +66,18 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
 
     protected abstract boolean isStruct();
 
-    protected <T> ItemProcessor<KeyValueEvent<byte[]>, KeyValueEvent<byte[]>> processor() {
+    protected <K, V, T extends KeyTtlTypeEvent<K>> ItemProcessor<T, T> processor(RedisCodec<K, V> codec) {
         if (!isStreamMessageIds()) {
             Assert.isTrue(isStruct(), "Dropping stream message ID is only possible in STRUCT mode");
         }
         StandardEvaluationContext evaluationContext = evaluationContext();
         log.info("Creating processor with {}", processorArgs);
-        ItemProcessor<KeyValueEvent<String>, KeyValueEvent<String>> processor = processorArgs.processor(evaluationContext);
+        ItemProcessor<KeyTtlTypeEvent<String>, KeyTtlTypeEvent<String>> processor = processorArgs.processor(evaluationContext);
         if (processor == null) {
             return null;
         }
-        ToStringKeyValueEvent<byte[]> code = new ToStringKeyValueEvent<>(CODEC);
-        StringKeyValueEvent<byte[]> decode = new StringKeyValueEvent<>(CODEC);
+        ToStringKeyEvent<K> code = new ToStringKeyEvent<>(codec);
+        StringKeyEvent<K> decode = new StringKeyEvent<>(codec);
         return RiotUtils.processor(new FunctionItemProcessor<>(code), processor, new FunctionItemProcessor<>(decode));
     }
 
@@ -98,42 +99,42 @@ public abstract class AbstractCompareCommand extends AbstractRedisTargetExport {
     }
 
     protected RiotStep<KeyComparison<byte[]>, KeyComparison<byte[]>> compareStep() {
-        RedisScanItemReader<byte[], byte[], KeyValueEvent<byte[]>> sourceReader = compareReader();
+        RedisScanItemReader<byte[], byte[], KeyStructEvent<byte[], byte[]>> sourceReader = compareReader();
         configureSource(sourceReader);
-        RedisScanItemReader<byte[], byte[], KeyValueEvent<byte[]>> targetReader = compareReader();
+        RedisScanItemReader<byte[], byte[], KeyStructEvent<byte[], byte[]>> targetReader = compareReader();
         configureTarget(targetReader);
-        KeyComparisonItemReader<byte[], byte[], Object> reader = new KeyComparisonItemReader<>(sourceReader, targetReader);
+        KeyComparisonItemReader<byte[], byte[]> reader = new KeyComparisonItemReader<>(sourceReader, targetReader);
         reader.setBatchSize(getStepArgs().getChunkSize());
         reader.setComparator(keyComparator());
-        reader.setProcessor(processor());
+        reader.setProcessor(processor(ByteArrayCodec.INSTANCE));
         KeyComparisonStatsWriter<byte[]> writer = new KeyComparisonStatsWriter<>();
         RiotStep<KeyComparison<byte[]>, KeyComparison<byte[]>> step = step(COMPARE_STEP_NAME, reader, writer);
         if (showDiffs) {
             log.info("Adding key diff logger");
-            step.addListener(new CompareLoggingWriteListener<>(CODEC));
+            step.addListener(new CompareLoggingWriteListener<>(ByteArrayCodec.INSTANCE));
         }
         step.addListener(new CompareStepListener(writer));
         return step;
     }
 
-    private RedisScanItemReader<byte[], byte[], KeyValueEvent<byte[]>> compareReader() {
-        return new RedisScanItemReader<>(CODEC, compareReadOperation());
+    private RedisScanItemReader<byte[], byte[], KeyStructEvent<byte[], byte[]>> compareReader() {
+        return new RedisScanItemReader<>(ByteArrayCodec.INSTANCE, compareReadOperation());
     }
 
-    private KeyValueReadOperation<byte[], byte[]> compareReadOperation() {
+    private AbstractKeyValueRead<byte[], byte[], KeyStructEvent<byte[], byte[]>> compareReadOperation() {
         if (isQuickCompare()) {
             log.info("Creating Redis quick compare reader");
-            return KeyValueReadOperation.none(CODEC);
+            return new KeyNoneRead<>(ByteArrayCodec.INSTANCE);
         }
         log.info("Creating Redis full compare reader");
-        return KeyValueReadOperation.struct(CODEC);
+        return new KeyStructRead<>(ByteArrayCodec.INSTANCE);
     }
 
     protected abstract boolean isQuickCompare();
 
-    private KeyComparator<byte[]> keyComparator() {
+    private KeyComparator<byte[], KeyStructEvent<byte[], byte[]>> keyComparator() {
         log.info("Creating KeyComparator with ttlTolerance={} streamMessageIds={}", ttlTolerance, isStreamMessageIds());
-        DefaultKeyComparator<byte[], byte[]> comparator = new DefaultKeyComparator<>(CODEC);
+        KeyStructComparator<byte[], byte[]> comparator = new KeyStructComparator<>(ByteArrayCodec.INSTANCE);
         comparator.getValueComparator().setIgnoreStreamMessageIds(!processorArgs.isStreamMessageIds());
         comparator.setTtlTolerance(ttlTolerance);
         return comparator;

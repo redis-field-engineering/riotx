@@ -1,7 +1,8 @@
 package com.redis.spring.batch.item.redis;
 
-import com.redis.batch.KeyValueEvent;
-import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
+import com.redis.batch.KeyStructEvent;
+import com.redis.batch.KeyType;
+import com.redis.spring.batch.item.redis.reader.KeyStructComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.codec.StringCodec;
@@ -16,16 +17,16 @@ class KeyTests {
 
     @Test
     void compareStreamMessageId() {
-        DefaultKeyComparator<String, String> comparator = new DefaultKeyComparator<>(StringCodec.UTF8);
+        KeyStructComparator<String, String> comparator = new KeyStructComparator<>(StringCodec.UTF8);
         String key = "key:1";
-        String type = "stream";
+        KeyType type = KeyType.stream;
         String messageId = "12345";
         Map<String, String> body = new HashMap<>();
-        KeyValueEvent<String> kv1 = new KeyValueEvent<>();
+        KeyStructEvent<String, String> kv1 = new KeyStructEvent<>();
         kv1.setKey(key);
         kv1.setType(type);
         kv1.setValue(Collections.singletonList(new StreamMessage<>(key, messageId, body)));
-        KeyValueEvent<String> kv2 = new KeyValueEvent<>();
+        KeyStructEvent<String, String> kv2 = new KeyStructEvent<>();
         kv2.setKey(key);
         kv2.setType(type);
         StreamMessage<String, String> message2 = new StreamMessage<>(key, messageId + "1", body);

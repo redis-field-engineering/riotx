@@ -6,7 +6,7 @@ import java.util.function.Function;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 
-public class Sadd<K, V, T> extends AbstractMemberWriteOperation<K, V, T> {
+public class Sadd<K, V, T> extends AbstractMemberWrite<K, V, T> {
 
 	public Sadd(Function<T, K> keyFunction, Function<T, Collection<V>> valueFunction) {
 		super(keyFunction, valueFunction);

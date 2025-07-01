@@ -65,7 +65,7 @@ public class KeyEventItemReader<K, V> extends AbstractCountingPollableItemReader
             String stringKey = BatchUtils.keyToString(keyEvent.getKey());
             log.debug(String.format("%s key=%s event=%s", added ? "Added" : "Could not add", stringKey, keyEvent.getEvent()));
         }
-        Tags tags = BatchUtils.tags(keyEvent.getEvent(), keyEvent.getType(), added);
+        Tags tags = BatchUtils.tags(keyEvent.getEvent(), keyEvent.type(), added);
         BatchUtils.createCounter(meterRegistry, METRIC_NAME, COUNTER_DESCRIPTION, tags).increment();
     }
 

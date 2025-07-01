@@ -102,7 +102,7 @@ public abstract class AbstractTestBase {
 
     protected TaskExecutorJobLauncher jobLauncher;
 
-    protected RedisScanItemReader<byte[], byte[], KeyValueEvent<byte[]>> scanDumpReader() {
+    protected RedisScanItemReader<byte[], byte[], KeyDumpEvent<byte[]>> scanDumpReader() {
         return client(RedisScanItemReader.dump());
     }
 
@@ -116,11 +116,11 @@ public abstract class AbstractTestBase {
         return writer;
     }
 
-    protected RedisScanItemReader<String, String, KeyValueEvent<String>> scanStructReader() {
+    protected RedisScanItemReader<String, String, KeyStructEvent<String, String>> scanStructReader() {
         return client(RedisScanItemReader.struct(StringCodec.UTF8));
     }
 
-    protected <K, V> RedisScanItemReader<K, V, KeyValueEvent<K>> scanStructReader(RedisCodec<K, V> codec) {
+    protected <K, V> RedisScanItemReader<K, V, KeyStructEvent<K, V>> scanStructReader(RedisCodec<K, V> codec) {
         return client(RedisScanItemReader.struct(codec));
     }
 
@@ -180,7 +180,7 @@ public abstract class AbstractTestBase {
         return new SimpleTestInfo(info, suffixes);
     }
 
-    public <T> List<? extends T> readAll(TestInfo info, ItemReader<T> reader) throws JobExecutionException {
+    public <T> List<T> readAll(TestInfo info, ItemReader<T> reader) throws JobExecutionException {
         ListItemWriter<T> writer = new ListItemWriter<>();
         run(testInfo(info, UUID.randomUUID().toString()), reader, writer);
         return writer.getWrittenItems();
@@ -319,13 +319,8 @@ public abstract class AbstractTestBase {
     }
 
     protected JobExecution generate(TestInfo info, GeneratorItemReader reader) throws JobExecutionException {
-        return generate(info, redisClient, reader);
-    }
-
-    protected JobExecution generate(TestInfo info, AbstractRedisClient client, GeneratorItemReader reader)
-            throws JobExecutionException {
         TestInfo testInfo = testInfo(info, "generate");
-        RedisItemWriter<String, String, KeyValueEvent<String>> writer = client(RedisItemWriter.struct());
+        RedisItemWriter<String, String, KeyStructEvent<String, String>> writer = client(RedisItemWriter.struct());
         return run(testInfo, reader, writer);
     }
 
@@ -363,7 +358,7 @@ public abstract class AbstractTestBase {
     }
 
     protected void generateStreams(TestInfo info, int streamCount, int messageCount) throws JobExecutionException {
-        GeneratorItemReader gen = generator(streamCount, KeyType.STREAM);
+        GeneratorItemReader gen = generator(streamCount, KeyType.stream);
         StreamOptions streamOptions = new StreamOptions();
         streamOptions.setMessageCount(new Range(messageCount, messageCount));
         gen.getGenerator().setStreamOptions(streamOptions);

@@ -1,6 +1,6 @@
 package com.redis.spring.batch.item.redis.reader;
 
-import com.redis.batch.KeyValueEvent;
+import com.redis.batch.KeyTtlTypeEvent;
 
 public class KeyComparison<K> {
 
@@ -12,25 +12,25 @@ public class KeyComparison<K> {
         VALUE // Value mismatch
     }
 
-    private KeyValueEvent<K> source;
+    private KeyTtlTypeEvent<K> source;
 
-    private KeyValueEvent<K> target;
+    private KeyTtlTypeEvent<K> target;
 
     private Status status;
 
-    public KeyValueEvent<K> getSource() {
+    public KeyTtlTypeEvent<K> getSource() {
         return source;
     }
 
-    public void setSource(KeyValueEvent<K> source) {
+    public void setSource(KeyTtlTypeEvent<K> source) {
         this.source = source;
     }
 
-    public KeyValueEvent<K> getTarget() {
+    public KeyTtlTypeEvent<K> getTarget() {
         return target;
     }
 
-    public void setTarget(KeyValueEvent<K> target) {
+    public void setTarget(KeyTtlTypeEvent<K> target) {
         this.target = target;
     }
 

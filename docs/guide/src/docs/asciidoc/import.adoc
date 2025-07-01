@@ -34,14 +34,21 @@ This mechanism constructs keys using a keyspace string passed with `--keyspace` 
 == Processing
 
 Processors allow you to create/update/delete fields using the Spring Expression Language ({link_spel}).
+The SPEL processor system provides powerful data transformation capabilities with built-in type safety and extensive context support.
 
-.Examples
+=== Field Processing Examples
+
 `--proc field1="'foo'"`:: Generate a field named `field1` containing the string `foo`
-`--proc temp="(temp-32)*5/9"`:: Convert from Fahrenheit to Celsius
+`--proc temp="(temp-32)*5/9"`:: Convert from Fahrenheit to Celsius  
 `--proc name='remove("first").concat(remove("last"))'`:: Concatenate `first` and `last` fields and delete them
 `--proc field2=null`:: Delete `field2`
+`--proc index="T(java.lang.Integer).parseInt(id)"`:: Convert string field to integer
+`--proc fullName="firstName + ' ' + lastName"`:: Concatenate multiple fields
+`--proc upperName="name?.toUpperCase()"`:: Safe navigation with null checking
 
 Input fields are accessed by name (e.g. `field3=field1+field2`).
+
+=== Context Variables and Functions
 
 Processors have access to the following context variables and functions:
 
@@ -61,14 +68,58 @@ The `replicate` command exposes 2 command objects named `source` and `target`.
 +
 For example if the field `vector` is an array of floats: `--proc embedding="#floatsToBytes(vector)"`
 
+=== Advanced Processing Patterns
+
+**Conditional Processing:**
+[source,console,subs="verbatim,attributes"]
+----
+# Only process if field exists
+--proc processedValue="value == null ? 0 : value * 2"
+
+# Complex conditions
+--proc category="price > 100 ? 'premium' : (price > 50 ? 'standard' : 'budget')"
+----
+
+**Mathematical Operations:**
+[source,console,subs="verbatim,attributes"]
+----
+# Statistical calculations
+--proc average="(field1 + field2 + field3) / 3"
+--proc percentage="(score / maxScore) * 100"
+--proc rounded="T(java.lang.Math).round(value * 100.0) / 100.0"
+----
+
+**String Processing:**
+[source,console,subs="verbatim,attributes"]
+----
+# Text transformations
+--proc slug="name.toLowerCase().replaceAll('[^a-z0-9]+', '-')"
+--proc initials="firstName.substring(0,1) + lastName.substring(0,1)"
+--proc masked="'***-**-' + ssn.substring(ssn.length()-4)"
+----
+
+**Date and Time Processing:**
+[source,console,subs="verbatim,attributes"]
+----
+# Date parsing and formatting
+--proc timestamp="#date.parse(dateString, 'yyyy-MM-dd').getTime()"
+--proc formatted="#date.format(new java.util.Date(epoch), 'MM/dd/yyyy')"
+--proc age="T(java.time.Period).between(T(java.time.LocalDate).parse(birthDate), T(java.time.LocalDate).now()).getYears()"
+----
+
 `geo`:: Convenience function for RediSearch geo-location strings in the form `longitude,latitude`.
 +
 For example with longitude and latitude fields `lon` and `lat`:  `--proc location="#geo(lon,lat)"`
 
-.Processor example
+.Comprehensive processor example
 [source,console,subs="verbatim,attributes"]
 ----
-{app} file-import --proc epoch="#date.parse(mydate).getTime()" location="#geo(lon,lat)" name="#redis.hget('person1','lastName')" ...
+{app} file-import beers.json hset beer:#{id} \
+  --proc epoch="#date.parse(mydate).getTime()" \
+  --proc location="#geo(lon,lat)" \
+  --proc fullName="#redis.hget('person1','lastName')" \
+  --proc category="abv > 7.0 ? 'strong' : 'regular'" \
+  --proc description="name + ' - ' + style + ' (' + abv + '% ABV)'"
 ----
 
 .Faker processor example

@@ -1,8 +1,6 @@
 package com.redis.spring.batch.test;
 
-import com.redis.batch.KeyType;
-import com.redis.batch.KeyValueEvent;
-import com.redis.batch.Range;
+import com.redis.batch.*;
 import com.redis.batch.gen.StreamOptions;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.sync.RedisModulesCommands;
@@ -93,7 +91,7 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
         this.ttlTolerance = tolerance;
     }
 
-    protected <K, V, T, R extends RedisItemReader<K, V, KeyValueEvent<K>>> R targetClient(R reader) {
+    protected <K, V, R extends RedisItemReader<K, V, ?>> R targetClient(R reader) {
         reader.setClient(targetRedisClient);
         return reader;
     }
@@ -103,21 +101,22 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
         return writer;
     }
 
-    protected RedisItemWriter<String, String, KeyValueEvent<String>> structWriter() {
+    protected RedisItemWriter<String, String, KeyStructEvent<String, String>> structWriter() {
         return structWriter(StringCodec.UTF8);
     }
 
-    protected <K, V> RedisItemWriter<K, V, KeyValueEvent<K>> structWriter(RedisCodec<K, V> codec) {
+    protected <K, V> RedisItemWriter<K, V, KeyStructEvent<K, V>> structWriter(RedisCodec<K, V> codec) {
         return structWriter(targetRedisClient, codec);
     }
 
-    protected <K, V> RedisItemWriter<K, V, KeyValueEvent<K>> structWriter(AbstractRedisClient client, RedisCodec<K, V> codec) {
-        RedisItemWriter<K, V, KeyValueEvent<K>> writer = RedisItemWriter.struct(codec);
+    protected <K, V> RedisItemWriter<K, V, KeyStructEvent<K, V>> structWriter(AbstractRedisClient client,
+            RedisCodec<K, V> codec) {
+        RedisItemWriter<K, V, KeyStructEvent<K, V>> writer = RedisItemWriter.struct(codec);
         writer.setClient(client);
         return writer;
     }
 
-    protected RedisItemWriter<byte[], byte[], KeyValueEvent<byte[]>> dumpWriter() {
+    protected RedisItemWriter<byte[], byte[], KeyDumpEvent<byte[]>> dumpWriter() {
         return targetClient(RedisItemWriter.dump());
     }
 
@@ -139,30 +138,30 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
         return compare(info, codec, comparator(codec));
     }
 
-    protected <K, V> DefaultKeyComparator<K, V> comparator(RedisCodec<K, V> codec) {
-        DefaultKeyComparator<K, V> comparator = new DefaultKeyComparator<>(codec);
+    protected <K, V> KeyStructComparator<K, V> comparator(RedisCodec<K, V> codec) {
+        KeyStructComparator<K, V> comparator = new KeyStructComparator<>(codec);
         comparator.setTtlTolerance(Duration.ofMillis(100));
         return comparator;
     }
 
-    protected <K, V> List<KeyComparison<K>> compare(TestInfo info, RedisCodec<K, V> codec, KeyComparator<K> comparator)
-            throws JobExecutionException {
+    protected <K, V> List<KeyComparison<K>> compare(TestInfo info, RedisCodec<K, V> codec,
+            KeyComparator<K, KeyStructEvent<K, V>> comparator) throws JobExecutionException {
         assertDbNotEmpty(redisCommands);
-        RedisScanItemReader<K, V, KeyValueEvent<K>> sourceReader = client(RedisScanItemReader.struct(codec));
-        RedisScanItemReader<K, V, KeyValueEvent<K>> targetReader = targetClient(RedisScanItemReader.struct(codec));
-        KeyComparisonItemReader<K, V, Object> reader = new KeyComparisonItemReader<>(sourceReader, targetReader);
+        RedisScanItemReader<K, V, KeyStructEvent<K, V>> sourceReader = client(RedisScanItemReader.struct(codec));
+        RedisScanItemReader<K, V, KeyStructEvent<K, V>> targetReader = targetClient(RedisScanItemReader.struct(codec));
+        KeyComparisonItemReader<K, V> reader = new KeyComparisonItemReader<>(sourceReader, targetReader);
         reader.setComparator(comparator);
         ListItemWriter<KeyComparison<K>> writer = new ListItemWriter<>();
         run(testInfo(info, "compare"), reader, writer);
         return writer.getWrittenItems();
     }
 
-    protected <K, V, T> List<KeyComparison<String>> replicate(TestInfo info, RedisItemReader<K, V, KeyValueEvent<K>> reader,
-            RedisItemWriter<K, V, KeyValueEvent<K>> writer) throws Exception {
+    protected <K, V, T extends KeyTtlTypeEvent<K>> List<KeyComparison<String>> replicate(TestInfo info,
+            RedisItemReader<K, V, T> reader, RedisItemWriter<K, V, T> writer) throws Exception {
         if (reader instanceof RedisScanItemReader) {
             generate(info, generator(130));
         } else {
-            GeneratorItemReader generator = generator(1, KeyType.STREAM);
+            GeneratorItemReader generator = generator(1, KeyType.stream);
             StreamOptions streamOptions = generator.getGenerator().getStreamOptions();
             streamOptions.setMessageCount(Range.of(3));
             streamOptions.getBodyOptions().setFieldCount(Range.of(1));
@@ -171,8 +170,8 @@ public abstract class AbstractTargetTestBase extends AbstractTestBase {
         return runAndCompare(info, reader, writer);
     }
 
-    protected <K, V, T> List<KeyComparison<String>> runAndCompare(TestInfo info, RedisItemReader<K, V, KeyValueEvent<K>> reader,
-            RedisItemWriter<K, V, KeyValueEvent<K>> writer) throws Exception {
+    protected <K, V, T extends KeyTtlTypeEvent<K>> List<KeyComparison<String>> runAndCompare(TestInfo info,
+            RedisItemReader<K, V, T> reader, RedisItemWriter<K, V, T> writer) throws Exception {
         TestInfo replicateInfo = testInfo(info, "replicate");
         run(replicateInfo, reader, writer);
         List<KeyComparison<String>> comparisons = compare(replicateInfo);

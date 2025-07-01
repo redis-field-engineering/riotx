@@ -5,7 +5,6 @@ import com.redis.riot.core.job.JobExecutor;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.job.StepFlowFactoryBean;
 import com.redis.spring.batch.item.AbstractCountingItemReader;
-import com.redis.batch.BatchUtils;
 import com.redis.spring.batch.item.redis.reader.KeyComparisonItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanSizeEstimator;
@@ -18,7 +17,6 @@ import picocli.CommandLine.Command;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 @Command
@@ -102,8 +100,8 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         if (reader instanceof RedisScanItemReader) {
             return size((RedisScanItemReader<?, ?, ?>) reader);
         }
-        if (reader instanceof KeyComparisonItemReader<?, ?, ?>) {
-            return size(((KeyComparisonItemReader<?, ?, ?>) reader).getSourceReader());
+        if (reader instanceof KeyComparisonItemReader) {
+            return size(((KeyComparisonItemReader<?, ?>) reader).getSourceReader());
         }
         return -1;
     }

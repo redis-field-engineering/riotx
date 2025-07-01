@@ -10,7 +10,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class Xadd<K, V, T> extends AbstractValueWriteOperation<K, V, Collection<StreamMessage<K, V>>, T> {
+public class Xadd<K, V, T> extends AbstractValueWrite<K, V, Collection<StreamMessage<K, V>>, T> {
 
     private Function<StreamMessage<K, V>, XAddArgs> argsFunction = this::defaultArgs;
 

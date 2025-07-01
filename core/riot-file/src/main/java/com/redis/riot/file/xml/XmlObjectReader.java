@@ -2,8 +2,6 @@ package com.redis.riot.file.xml;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.redis.riot.file.xml.XmlObjectReader;
-
 import org.springframework.core.io.Resource;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -20,7 +18,7 @@ import java.io.InputStream;
  */
 public class XmlObjectReader<T> {
 
-	private Class<? extends T> itemType;
+	private final Class<? extends T> itemType;
 	private XMLStreamReader reader;
 	private XmlMapper mapper = new XmlMapper();
 	private InputStream inputStream;
