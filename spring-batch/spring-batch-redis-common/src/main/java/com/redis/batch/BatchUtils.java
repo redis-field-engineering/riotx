@@ -1,5 +1,8 @@
 package com.redis.batch;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hrakaroo.glob.GlobPattern;
 import io.lettuce.core.RedisCommandTimeoutException;
 import io.lettuce.core.ScanArgs;
@@ -11,7 +14,6 @@ import io.lettuce.core.cluster.models.partitions.RedisClusterNode;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
-import io.micrometer.common.util.StringUtils;
 import io.micrometer.core.instrument.*;
 import io.micrometer.core.instrument.Timer;
 import reactor.core.publisher.Flux;
@@ -87,15 +89,15 @@ public abstract class BatchUtils {
         return createCounter(meterRegistry, name, description, Arrays.asList(tags));
     }
 
-    public static Tags tags(String event, String type, boolean success) {
-        Tags tags = Tags.of("status", success ? BatchUtils.STATUS_SUCCESS : BatchUtils.STATUS_FAILURE);
-        if (StringUtils.isNotEmpty(event)) {
-            tags = tags.and("event", event);
+    public static Tags tags(String event, KeyType type, boolean success) {
+        return Tags.of("status", status(success), "event", event, "type", type.name());
+    }
+
+    public static String status(boolean success) {
+        if (success) {
+            return BatchUtils.STATUS_SUCCESS;
         }
-        if (StringUtils.isNotEmpty(type)) {
-            tags = tags.and("type", type);
-        }
-        return tags;
+        return BatchUtils.STATUS_FAILURE;
     }
 
     public static Counter createCounter(MeterRegistry meterRegistry, String name, String description, Iterable<Tag> tags) {
@@ -275,6 +277,14 @@ public abstract class BatchUtils {
                 return batch;
             }
         };
+    }
+
+    public static void configureObjectMapper(ObjectMapper objectMapper) {
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(KeyStructEvent.class, new KeyStructDeserializer());
+        module.addSerializer(KeyStructEvent.class, new KeyStructSerializer());
+        objectMapper.registerModule(module);
+        objectMapper.registerModule(new JavaTimeModule());
     }
 
 }

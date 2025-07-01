@@ -12,7 +12,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class Restore<K, V, T> extends AbstractValueWriteOperation<K, V, byte[], T> {
+public class Restore<K, V, T> extends AbstractValueWrite<K, V, byte[], T> {
 
     private final Predicate<T> deletePredicate = t -> false;
 

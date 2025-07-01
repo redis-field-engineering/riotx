@@ -1,13 +1,10 @@
 package com.redis.spring.batch.item.redis;
 
-import com.redis.batch.KeyValueEvent;
-import com.redis.batch.OperationExecutor;
-import com.redis.batch.RedisBatchOperation;
-import com.redis.batch.Wait;
+import com.redis.batch.*;
 import com.redis.spring.batch.item.redis.common.RedisSupportCheck;
 import com.redis.batch.operation.KeyDumpRestore;
-import com.redis.batch.operation.KeyValueWrite;
-import com.redis.batch.operation.KeyValueWrite.WriteMode;
+import com.redis.batch.operation.KeyStructWrite;
+import com.redis.batch.operation.KeyStructWrite.WriteMode;
 import com.redis.batch.operation.MultiExec;
 import com.redis.batch.operation.ReplicaWait;
 import io.lettuce.core.AbstractRedisClient;
@@ -53,8 +50,8 @@ public class RedisItemWriter<K, V, T> extends AbstractItemStreamItemWriter<T> {
 
     @SuppressWarnings("unchecked")
     public void setMode(WriteMode mode) {
-        if (operation instanceof KeyValueWrite) {
-            ((KeyValueWrite<K, V>) operation).setMode(mode);
+        if (operation instanceof KeyStructWrite) {
+            ((KeyStructWrite<K, V>) operation).setMode(mode);
         }
     }
 
@@ -113,16 +110,16 @@ public class RedisItemWriter<K, V, T> extends AbstractItemStreamItemWriter<T> {
         return new RedisItemWriter<>(StringCodec.UTF8, operation);
     }
 
-    public static RedisItemWriter<byte[], byte[], KeyValueEvent<byte[]>> dump() {
+    public static RedisItemWriter<byte[], byte[], KeyDumpEvent<byte[]>> dump() {
         return new RedisItemWriter<>(ByteArrayCodec.INSTANCE, new KeyDumpRestore<>());
     }
 
-    public static RedisItemWriter<String, String, KeyValueEvent<String>> struct() {
+    public static RedisItemWriter<String, String, KeyStructEvent<String, String>> struct() {
         return struct(StringCodec.UTF8);
     }
 
-    public static <K, V> RedisItemWriter<K, V, KeyValueEvent<K>> struct(RedisCodec<K, V> codec) {
-        return new RedisItemWriter<>(codec, new KeyValueWrite<>());
+    public static <K, V> RedisItemWriter<K, V, KeyStructEvent<K, V>> struct(RedisCodec<K, V> codec) {
+        return new RedisItemWriter<>(codec, new KeyStructWrite<>());
     }
 
     public RedisSupportCheck getRedisSupportCheck() {

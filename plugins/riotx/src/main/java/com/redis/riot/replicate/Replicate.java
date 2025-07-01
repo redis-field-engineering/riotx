@@ -1,6 +1,8 @@
 package com.redis.riot.replicate;
 
-import com.redis.batch.KeyValueEvent;
+import com.redis.batch.KeyEvent;
+import com.redis.batch.KeyTtlTypeEvent;
+import com.redis.batch.operation.*;
 import com.redis.riot.AbstractCompareCommand;
 import com.redis.riot.MetricsArgs;
 import com.redis.riot.RedisWriterArgs;
@@ -16,12 +18,9 @@ import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.batch.RedisInfo;
 import com.redis.batch.RedisBatchOperation;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
-import com.redis.batch.operation.KeyValueReadOperation;
 import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
-import com.redis.batch.operation.KeyDumpRestore;
-import com.redis.batch.operation.KeyValueWrite;
-import com.redis.batch.operation.Del;
+import io.lettuce.core.codec.ByteArrayCodec;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.support.CompositeItemWriter;
@@ -121,10 +120,10 @@ public class Replicate extends AbstractCompareCommand {
         writer.getRedisSupportCheck().getConsumers().add(this::unsupportedRedis);
     }
 
-    private RiotStep<KeyValueEvent<byte[]>, KeyValueEvent<byte[]>> replicateStep(String name,
-            RedisItemReader<byte[], byte[], KeyValueEvent<byte[]>> reader) {
+    private RiotStep<KeyTtlTypeEvent<byte[]>, KeyTtlTypeEvent<byte[]>> replicateStep(String name,
+            RedisItemReader<byte[], byte[], KeyTtlTypeEvent<byte[]>> reader) {
         configureSource(reader);
-        RiotStep<KeyValueEvent<byte[]>, KeyValueEvent<byte[]>> step = step(name, reader, targetWriter());
+        RiotStep<KeyTtlTypeEvent<byte[]>, KeyTtlTypeEvent<byte[]>> step = step(name, reader, targetWriter());
         step.addListener(new ReplicateMetricsReadListener<>());
         if (logKeys) {
             log.info("Adding key logger");
@@ -135,49 +134,52 @@ public class Replicate extends AbstractCompareCommand {
         return step;
     }
 
-    protected RiotStep<KeyValueEvent<byte[]>, KeyValueEvent<byte[]>> scanStep() {
-        return replicateStep(SCAN_STEP, new RedisScanItemReader<>(CODEC, readOperation()));
+    protected RiotStep<KeyTtlTypeEvent<byte[]>, KeyTtlTypeEvent<byte[]>> scanStep() {
+        return replicateStep(SCAN_STEP, new RedisScanItemReader<>(ByteArrayCodec.INSTANCE, readOperation()));
     }
 
-    protected RiotStep<KeyValueEvent<byte[]>, KeyValueEvent<byte[]>> liveStep() {
-        return replicateStep(LIVE_STEP, new RedisLiveItemReader<>(CODEC, readOperation()));
+    protected RiotStep<KeyTtlTypeEvent<byte[]>, KeyTtlTypeEvent<byte[]>> liveStep() {
+        return replicateStep(LIVE_STEP, new RedisLiveItemReader<>(ByteArrayCodec.INSTANCE, readOperation()));
     }
 
-    protected ItemWriter<KeyValueEvent<byte[]>> targetWriter() {
-        RedisItemWriter<byte[], byte[], KeyValueEvent<byte[]>> redisWriter = writer(writeOperation());
+    protected ItemWriter<KeyTtlTypeEvent<byte[]>> targetWriter() {
+        RedisItemWriter<byte[], byte[], KeyTtlTypeEvent<byte[]>> redisWriter = writer(writeOperation());
         configureTarget(redisWriter);
-        ItemWriter<KeyValueEvent<byte[]>> writer = RiotUtils.writer(processor(), redisWriter);
+        ItemWriter<KeyTtlTypeEvent<byte[]>> writer = RiotUtils.writer(processor(ByteArrayCodec.INSTANCE), redisWriter);
         if (removeSourceKeys) {
             log.info("Adding source delete writer to replicate writer");
-            RedisItemWriter<byte[], byte[], KeyValueEvent<byte[]>> sourceDelete = writer(new Del<>(KeyValueEvent::getKey));
+            RedisItemWriter<byte[], byte[], KeyTtlTypeEvent<byte[]>> sourceDelete = writer(new Del<>(KeyTtlTypeEvent::getKey));
             configureSource(sourceDelete);
             return new CompositeItemWriter<>(writer, sourceDelete);
         }
         return writer;
     }
 
-    private <T> RedisItemWriter<byte[], byte[], T> writer(RedisBatchOperation<byte[], byte[], T, Object> operation) {
-        return new RedisItemWriter<>(CODEC, operation);
+    private RedisItemWriter<byte[], byte[], KeyTtlTypeEvent<byte[]>> writer(
+            RedisBatchOperation<byte[], byte[], KeyTtlTypeEvent<byte[]>, Object> operation) {
+        return new RedisItemWriter<>(ByteArrayCodec.INSTANCE, operation);
     }
 
     private boolean shouldCompare() {
         return compareMode != CompareMode.NONE && !getJobArgs().isDryRun();
     }
 
-    protected KeyValueReadOperation<byte[], byte[]> readOperation() {
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected RedisBatchOperation<byte[], byte[], KeyEvent<byte[]>, KeyTtlTypeEvent<byte[]>> readOperation() {
         if (isStruct()) {
-            return KeyValueReadOperation.struct(CODEC);
+            return (RedisBatchOperation) new KeyStructRead<>(ByteArrayCodec.INSTANCE);
         }
-        return KeyValueReadOperation.dump();
+        return (RedisBatchOperation) new KeyDumpRead();
     }
 
-    private RedisBatchOperation<byte[], byte[], KeyValueEvent<byte[]>, Object> writeOperation() {
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private RedisBatchOperation<byte[], byte[], KeyTtlTypeEvent<byte[]>, Object> writeOperation() {
         if (isStruct()) {
             log.info("Creating Redis data-structure writer");
-            return new KeyValueWrite<>();
+            return (RedisBatchOperation) new KeyStructWrite<>();
         }
         log.info("Creating Redis dump writer");
-        return new KeyDumpRestore<>();
+        return (RedisBatchOperation) new KeyDumpRestore<>();
     }
 
     @Override

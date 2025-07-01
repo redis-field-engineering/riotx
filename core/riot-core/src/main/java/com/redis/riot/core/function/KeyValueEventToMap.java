@@ -1,7 +1,6 @@
 package com.redis.riot.core.function;
 
-import com.redis.batch.KeyType;
-import com.redis.batch.KeyValueEvent;
+import com.redis.batch.KeyStructEvent;
 import com.redis.lettucemod.timeseries.Sample;
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.StreamMessage;
@@ -9,7 +8,7 @@ import io.lettuce.core.StreamMessage;
 import java.util.*;
 import java.util.function.Function;
 
-public class KeyValueEventToMap implements Function<KeyValueEvent<String>, Map<String, Object>> {
+public class KeyValueEventToMap implements Function<KeyStructEvent<String, String>, Map<String, Object>> {
 
     private Function<String, Map<String, String>> key = t -> Collections.emptyMap();
 
@@ -32,40 +31,35 @@ public class KeyValueEventToMap implements Function<KeyValueEvent<String>, Map<S
     private Function<Object, Map<String, String>> defaultFunction = s -> Collections.emptyMap();
 
     @Override
-    public Map<String, Object> apply(KeyValueEvent<String> item) {
+    public Map<String, Object> apply(KeyStructEvent<String, String> item) {
         Map<String, Object> map = new LinkedHashMap<>(key.apply(item.getKey()));
         map.putAll(value(item));
         return map;
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, String> value(KeyValueEvent<String> item) {
+    private Map<String, String> value(KeyStructEvent<String, String> item) {
         if (item.getValue() == null) {
             return Collections.emptyMap();
         }
-        KeyType type = KeyType.of(item.getType());
-        if (type == null) {
-            return Collections.emptyMap();
-        }
-        switch (type) {
-            case NONE:
+        switch (item.getType()) {
+            case none:
                 return Collections.emptyMap();
-            case HASH:
-                return hash.apply((Map<String, String>) item.getValue());
-            case LIST:
-                return list.apply((Collection<String>) item.getValue());
-            case SET:
-                return set.apply((Set<String>) item.getValue());
-            case ZSET:
-                return zset.apply((Set<ScoredValue<String>>) item.getValue());
-            case STREAM:
-                return stream.apply((Collection<StreamMessage<String, String>>) item.getValue());
-            case JSON:
-                return json.apply((String) item.getValue());
-            case STRING:
-                return string.apply((String) item.getValue());
-            case TIMESERIES:
-                return timeseries.apply((Collection<Sample>) item.getValue());
+            case hash:
+                return hash.apply(item.asHash());
+            case list:
+                return list.apply(item.asList());
+            case set:
+                return set.apply(item.asSet());
+            case zset:
+                return zset.apply(item.asZSet());
+            case stream:
+                return stream.apply(item.asStream());
+            case json:
+                return json.apply(item.asJson());
+            case string:
+                return string.apply(item.asString());
+            case timeseries:
+                return timeseries.apply(item.asTimeseries());
             default:
                 return defaultFunction.apply(item.getValue());
         }

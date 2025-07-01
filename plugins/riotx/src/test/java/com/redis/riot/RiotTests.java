@@ -39,7 +39,7 @@ abstract class RiotTests extends AbstractRiotApplicationTestBase {
     }
 
     protected void runLiveReplication(TestInfo info, String filename) throws Exception {
-        KeyType[] types = new KeyType[] { KeyType.HASH, KeyType.STRING };
+        KeyType[] types = new KeyType[] { KeyType.hash, KeyType.string };
         enableKeyspaceNotifications();
         generate(info, generator(3000, types));
         GeneratorItemReader generator = generator(3500, types);
@@ -145,14 +145,14 @@ abstract class RiotTests extends AbstractRiotApplicationTestBase {
     @Test
     void redisImportJson(TestInfo info) throws Exception {
         int count = 1000;
-        GeneratorItemReader generator = generator(count, KeyType.HASH);
+        GeneratorItemReader generator = generator(count, KeyType.hash);
         generator.getGenerator().setKeyspace("hash");
         generate(info, generator);
         String filename = "redis-import-json";
         execute(info, filename);
         List<String> keys = targetRedisCommands.keys("doc:*");
         Assertions.assertEquals(count, keys.size());
-        Assertions.assertEquals(KeyType.JSON.getString(), targetRedisCommands.type(keys.get(0)));
+        Assertions.assertEquals(KeyType.json.getName(), targetRedisCommands.type(keys.get(0)));
         String json = targetRedisCommands.jsonGet(keys.get(1)).get(0).toString();
         ObjectMapper mapper = new ObjectMapper();
         JsonNode node = mapper.readTree(json);

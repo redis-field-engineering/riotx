@@ -1,8 +1,10 @@
 package com.redis.spring.batch.item.redis.reader;
 
 import com.redis.batch.*;
-import com.redis.batch.operation.KeyStatReadOperation;
-import com.redis.batch.operation.KeyValueReadOperation;
+import com.redis.batch.operation.AbstractKeyValueRead;
+import com.redis.batch.operation.KeyDumpRead;
+import com.redis.batch.operation.KeyStatRead;
+import com.redis.batch.operation.KeyStructRead;
 import com.redis.lettucemod.utils.ConnectionBuilder;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import io.lettuce.core.KeyScanArgs;
@@ -34,16 +36,16 @@ public class RedisScanItemReader<K, V, T> extends RedisItemReader<K, V, T> {
         super(codec, operation);
     }
 
-    public static RedisScanItemReader<byte[], byte[], KeyValueEvent<byte[]>> dump() {
-        return new RedisScanItemReader<>(ByteArrayCodec.INSTANCE, KeyValueReadOperation.dump());
+    public static RedisScanItemReader<byte[], byte[], KeyDumpEvent<byte[]>> dump() {
+        return new RedisScanItemReader<>(ByteArrayCodec.INSTANCE, new KeyDumpRead());
     }
 
     public static RedisScanItemReader<String, String, KeyStatEvent<String>> stats() {
-        return new RedisScanItemReader<>(StringCodec.UTF8, new KeyStatReadOperation<>());
+        return new RedisScanItemReader<>(StringCodec.UTF8, new KeyStatRead<>());
     }
 
-    public static <K, V> RedisScanItemReader<K, V, KeyValueEvent<K>> struct(RedisCodec<K, V> codec) {
-        return new RedisScanItemReader<>(codec, KeyValueReadOperation.struct(codec));
+    public static <K, V> RedisScanItemReader<K, V, KeyStructEvent<K, V>> struct(RedisCodec<K, V> codec) {
+        return new RedisScanItemReader<>(codec, new KeyStructRead<>(codec));
     }
 
     private KeyScanArgs keyScanArgs() {

@@ -1,6 +1,5 @@
 package com.redis.batch.operation;
 
-import com.redis.batch.BatchUtils;
 import io.lettuce.core.GeoAddArgs;
 import io.lettuce.core.GeoValue;
 import io.lettuce.core.RedisFuture;
@@ -11,7 +10,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 
-public class Geoadd<K, V, T> extends AbstractValueWriteOperation<K, V, Collection<GeoValue<V>>, T> {
+public class Geoadd<K, V, T> extends AbstractValueWrite<K, V, Collection<GeoValue<V>>, T> {
 
     private Function<T, GeoAddArgs> argsFunction = t -> null;
 

@@ -8,12 +8,9 @@ import io.lettuce.core.ScoredValue;
 import io.lettuce.core.StreamMessage;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
 
 @SuppressWarnings("rawtypes")
-public class KeyValueSerializer extends StdSerializer<KeyValueEvent> {
+public class KeyStructSerializer extends StdSerializer<KeyStructEvent> {
 
     public static final String KEY = "key";
 
@@ -37,16 +34,17 @@ public class KeyValueSerializer extends StdSerializer<KeyValueEvent> {
 
     public static final String TIMESTAMP = "timestamp";
 
-    public KeyValueSerializer() {
+    public KeyStructSerializer() {
         this(null);
     }
 
-    public KeyValueSerializer(Class<KeyValueEvent> t) {
+    public KeyStructSerializer(Class<KeyStructEvent> t) {
         super(t);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public void serialize(KeyValueEvent kv, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+    public void serialize(KeyStructEvent kv, JsonGenerator gen, SerializerProvider serializers) throws IOException {
         gen.writeStartObject();
 
         gen.writeStringField(KEY, (String) kv.getKey());
@@ -60,7 +58,7 @@ public class KeyValueSerializer extends StdSerializer<KeyValueEvent> {
         }
 
         if (kv.getType() != null) {
-            gen.writeStringField(TYPE, kv.getType());
+            gen.writeStringField(TYPE, kv.getType().name());
         }
 
         if (kv.getTtl() != null) {
@@ -74,19 +72,18 @@ public class KeyValueSerializer extends StdSerializer<KeyValueEvent> {
         Object value = kv.getValue();
         if (value != null) {
             gen.writeFieldName(VALUE);
-            serializeValue(gen, serializers, KeyType.of(kv.getType()), value);
+            serializeValue(gen, serializers, (KeyStructEvent<String, String>) kv);
         }
 
         gen.writeEndObject();
     }
 
-    @SuppressWarnings("unchecked")
-    private void serializeValue(JsonGenerator gen, SerializerProvider serializers, KeyType type, Object value)
+    private void serializeValue(JsonGenerator gen, SerializerProvider serializers, KeyStructEvent<String, String> event)
             throws IOException {
-        switch (type) {
-            case STREAM:
+        switch (event.getType()) {
+            case stream:
                 gen.writeStartArray();
-                for (StreamMessage<String, String> message : (Collection<StreamMessage<String, String>>) value) {
+                for (StreamMessage<String, String> message : event.asStream()) {
                     gen.writeStartObject();
                     gen.writeStringField(STREAM, message.getStream());
                     gen.writeStringField(ID, message.getId());
@@ -96,9 +93,9 @@ public class KeyValueSerializer extends StdSerializer<KeyValueEvent> {
                 gen.writeEndArray();
                 break;
 
-            case ZSET:
+            case zset:
                 gen.writeStartArray();
-                for (ScoredValue<String> sv : (Set<ScoredValue<String>>) value) {
+                for (ScoredValue<String> sv : event.asZSet()) {
                     gen.writeStartObject();
                     gen.writeNumberField(SCORE, sv.getScore());
                     gen.writeStringField(VALUE, sv.getValue());
@@ -107,9 +104,9 @@ public class KeyValueSerializer extends StdSerializer<KeyValueEvent> {
                 gen.writeEndArray();
                 break;
 
-            case TIMESERIES:
+            case timeseries:
                 gen.writeStartArray();
-                for (Sample sample : (Collection<Sample>) value) {
+                for (Sample sample : event.asTimeseries()) {
                     gen.writeStartObject();
                     gen.writeNumberField(TIMESTAMP, sample.getTimestamp());
                     gen.writeNumberField(VALUE, sample.getValue());
@@ -118,18 +115,22 @@ public class KeyValueSerializer extends StdSerializer<KeyValueEvent> {
                 gen.writeEndArray();
                 break;
 
-            case HASH:
-                serializers.defaultSerializeValue((Map<?, ?>) value, gen);
+            case hash:
+                serializers.defaultSerializeValue(event.asHash(), gen);
                 break;
 
-            case STRING:
-            case JSON:
-                gen.writeString((String) value);
+            case string:
+                gen.writeString(event.asString());
+                break;
+            case json:
+                gen.writeString(event.asJson());
                 break;
 
-            case LIST:
-            case SET:
-                serializers.defaultSerializeValue(value, gen);
+            case list:
+                serializers.defaultSerializeValue(event.asList(), gen);
+                break;
+            case set:
+                serializers.defaultSerializeValue(event.asSet(), gen);
                 break;
 
             default:

@@ -13,7 +13,7 @@ import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.cluster.PipelinedRedisFuture;
 
-public class ReplicaWait<K, V, T> extends AbstractCompositeOperation<K, V, T, Object> {
+public class ReplicaWait<K, V, T> extends AbstractCompositeWrite<K, V, T> {
 
     private final int replicas;
 

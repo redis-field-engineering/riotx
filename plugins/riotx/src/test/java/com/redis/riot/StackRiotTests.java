@@ -2,9 +2,10 @@ package com.redis.riot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.redis.batch.BatchUtils;
+import com.redis.batch.KeyStructEvent;
+import com.redis.batch.KeyTtlTypeEvent;
 import com.redis.batch.KeyType;
-import com.redis.batch.KeyValueEvent;
 import com.redis.batch.gen.Generator;
 import com.redis.batch.gen.MapOptions;
 import com.redis.lettucemod.search.Field;
@@ -22,9 +23,9 @@ import com.redis.riot.file.xml.XmlObjectReader;
 import com.redis.riot.rdi.ChangeEventToStreamMessage;
 import com.redis.riot.replicate.Replicate;
 import com.redis.spring.batch.item.redis.GeneratorItemReader;
-import com.redis.spring.batch.item.redis.reader.DefaultKeyComparator;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
+import com.redis.spring.batch.item.redis.reader.KeyStructComparator;
 import com.redis.testcontainers.RedisServer;
 import io.lettuce.core.GeoArgs;
 import io.lettuce.core.Range;
@@ -109,34 +110,34 @@ class StackRiotTests extends RiotTests {
     @SuppressWarnings("rawtypes")
     @Test
     void fileImportJsonDump(TestInfo info) throws Exception {
-        List<? extends KeyValueEvent> records = exportToJsonFile(info);
+        List<? extends KeyTtlTypeEvent> records = exportToJsonFile(info);
         redisCommands.flushall();
         execute(info, "file-import-json", this::executeFileDumpImport);
-        awaitUntil(() -> records.size() == Math.toIntExact(redisCommands.dbsize()));
+        Assertions.assertEquals(records.size(), redisCommands.dbsize());
     }
 
     @SuppressWarnings("rawtypes")
     @Test
     void fileExportJSON(TestInfo info) throws Exception {
-        List<? extends KeyValueEvent> records = exportToJsonFile(info);
+        List<? extends KeyTtlTypeEvent> records = exportToJsonFile(info);
         Assertions.assertEquals(redisCommands.dbsize(), records.size());
     }
 
     @SuppressWarnings("rawtypes")
-    private List<? extends KeyValueEvent> exportToJsonFile(TestInfo info) throws Exception {
+    private List<KeyStructEvent> exportToJsonFile(TestInfo info) throws Exception {
         String filename = "file-export-json";
         Path file = tempFile("redis.json");
         generate(info, generator(73));
         execute(info, filename, r -> executeFileDumpExport(r, info));
-        JsonItemReaderBuilder<KeyValueEvent> builder = new JsonItemReaderBuilder<>();
+        JsonItemReaderBuilder<KeyStructEvent> builder = new JsonItemReaderBuilder<>();
         builder.name("json-reader");
         builder.resource(new FileSystemResource(file));
         ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        JacksonJsonObjectReader<KeyValueEvent> objectReader = new JacksonJsonObjectReader<>(KeyValueEvent.class);
+        BatchUtils.configureObjectMapper(mapper);
+        JacksonJsonObjectReader<KeyStructEvent> objectReader = new JacksonJsonObjectReader<>(KeyStructEvent.class);
         objectReader.setMapper(mapper);
         builder.jsonObjectReader(objectReader);
-        JsonItemReader<KeyValueEvent> reader = builder.build();
+        JsonItemReader<KeyStructEvent> reader = builder.build();
         return readAll(info, reader);
     }
 
@@ -181,28 +182,24 @@ class StackRiotTests extends RiotTests {
         generate(info, generator(73));
         Path file = tempFile("redis.xml");
         execute(info, filename, r -> executeFileDumpExport(r, info));
-        XmlItemReaderBuilder<KeyValueEvent> builder = new XmlItemReaderBuilder<>();
+        XmlItemReaderBuilder<KeyStructEvent> builder = new XmlItemReaderBuilder<>();
         builder.name("xml-reader");
         builder.resource(new FileSystemResource(file));
         XmlMapper mapper = new XmlMapper();
-        mapper.registerModule(new JavaTimeModule());
-        XmlObjectReader<KeyValueEvent> xmlObjectReader = new XmlObjectReader<>(KeyValueEvent.class);
+        BatchUtils.configureObjectMapper(mapper);
+        XmlObjectReader<KeyStructEvent> xmlObjectReader = new XmlObjectReader<>(KeyStructEvent.class);
         xmlObjectReader.setMapper(mapper);
         builder.xmlObjectReader(xmlObjectReader);
-        XmlItemReader<KeyValueEvent<String>> reader = (XmlItemReader) builder.build();
-        List<? extends KeyValueEvent<String>> records = readAll(info, reader);
+        XmlItemReader<KeyStructEvent<String, String>> reader = (XmlItemReader) builder.build();
+        List<? extends KeyStructEvent<String, String>> records = readAll(info, reader);
         Assertions.assertEquals(redisCommands.dbsize(), records.size());
-        for (KeyValueEvent<String> record : records) {
-            KeyType type = KeyType.of(record.getType());
-            if (type == null) {
-                continue;
-            }
-            switch (type) {
-                case HASH:
-                    Assertions.assertEquals(record.getValue(), redisCommands.hgetall(record.getKey()));
+        for (KeyStructEvent<String, String> record : records) {
+            switch (record.getType()) {
+                case hash:
+                    Assertions.assertEquals(redisCommands.hgetall(record.getKey()), record.asHash());
                     break;
-                case STRING:
-                    Assertions.assertEquals(record.getValue(), redisCommands.get(record.getKey()));
+                case string:
+                    Assertions.assertEquals(redisCommands.get(record.getKey()), record.asString());
                     break;
                 default:
                     break;
@@ -522,10 +519,10 @@ class StackRiotTests extends RiotTests {
     void replicateKeyExclude(TestInfo info) throws Throwable {
         String filename = "replicate-key-exclude";
         int goodCount = 200;
-        GeneratorItemReader gen = generator(goodCount, KeyType.HASH);
+        GeneratorItemReader gen = generator(goodCount, KeyType.hash);
         generate(info, gen);
         int badCount = 100;
-        GeneratorItemReader generator2 = generator(badCount, KeyType.HASH);
+        GeneratorItemReader generator2 = generator(badCount, KeyType.hash);
         generator2.getGenerator().setKeyspace("bad");
         generate(testInfo(info, "2"), generator2);
         Assertions.assertEquals(badCount, keyCount("bad:*"));
@@ -539,8 +536,8 @@ class StackRiotTests extends RiotTests {
         int goodCount = 200;
         int badCount = 100;
         enableKeyspaceNotifications();
-        generateAsync(testInfo(info, "gen-1"), generator(goodCount, KeyType.HASH));
-        GeneratorItemReader generator2 = generator(badCount, KeyType.HASH);
+        generateAsync(testInfo(info, "gen-1"), generator(goodCount, KeyType.hash));
+        GeneratorItemReader generator2 = generator(badCount, KeyType.hash);
         generator2.getGenerator().setKeyspace("bad");
         generateAsync(testInfo(info, "gen-2"), generator2);
         execute(info, filename);
@@ -552,7 +549,7 @@ class StackRiotTests extends RiotTests {
 
     @Test
     void replicateLiveOnlyStruct(TestInfo info) throws Exception {
-        KeyType[] types = new KeyType[] { KeyType.HASH, KeyType.STRING };
+        KeyType[] types = new KeyType[] { KeyType.hash, KeyType.string };
         enableKeyspaceNotifications();
         GeneratorItemReader generator = generator(3500, types);
         generator.setCurrentItemCount(3001);
@@ -592,7 +589,7 @@ class StackRiotTests extends RiotTests {
         Assertions.assertTrue(redisCommands.dbsize() > 0);
         execute(info, filename);
         assertDbNotEmpty(redisCommands);
-        DefaultKeyComparator<String, String> comparator = comparator(StringCodec.UTF8);
+        KeyStructComparator<String, String> comparator = comparator(StringCodec.UTF8);
         comparator.getValueComparator().setIgnoreStreamMessageIds(true);
         List<KeyComparison<String>> comparisons = compare(info, StringCodec.UTF8, comparator);
         Assertions.assertFalse(comparisons.isEmpty());
@@ -609,7 +606,7 @@ class StackRiotTests extends RiotTests {
         Assertions.assertTrue(redisCommands.dbsize() > 0);
         execute(info, filename);
         assertDbNotEmpty(redisCommands);
-        DefaultKeyComparator<String, String> comparator = comparator(StringCodec.UTF8);
+        KeyStructComparator<String, String> comparator = comparator(StringCodec.UTF8);
         comparator.getValueComparator().setIgnoreStreamMessageIds(true);
         List<KeyComparison<String>> comparisons = compare(info, StringCodec.UTF8, comparator);
         Assertions.assertFalse(comparisons.isEmpty());
@@ -639,7 +636,7 @@ class StackRiotTests extends RiotTests {
     @Test
     void replicateKeyProcessor(TestInfo info) throws Throwable {
         String filename = "replicate-key-processor";
-        GeneratorItemReader gen = generator(1, KeyType.HASH);
+        GeneratorItemReader gen = generator(1, KeyType.hash);
         generate(info, gen);
         Long sourceSize = redisCommands.dbsize();
         Assertions.assertTrue(sourceSize > 0);
@@ -656,7 +653,7 @@ class StackRiotTests extends RiotTests {
     @Disabled
     @Test
     void replicateLiveStructOverlappingKeys(TestInfo info) throws Exception {
-        KeyType[] types = new KeyType[] { KeyType.HASH, KeyType.STRING };
+        KeyType[] types = new KeyType[] { KeyType.hash, KeyType.string };
         enableKeyspaceNotifications();
         generate(info, generator(3000, types));
         GeneratorItemReader generator = generator(3500, types);
@@ -702,7 +699,7 @@ class StackRiotTests extends RiotTests {
 
     @Test
     void compareKeyProcessor(TestInfo info) throws Throwable {
-        GeneratorItemReader gen = generator(1, KeyType.HASH);
+        GeneratorItemReader gen = generator(1, KeyType.hash);
         generate(info, gen);
         Long sourceSize = redisCommands.dbsize();
         Assertions.assertTrue(sourceSize > 0);

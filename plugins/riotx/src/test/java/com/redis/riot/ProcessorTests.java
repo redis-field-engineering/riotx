@@ -1,7 +1,7 @@
 package com.redis.riot;
 
+import com.redis.batch.KeyStructEvent;
 import com.redis.batch.KeyType;
-import com.redis.batch.KeyValueEvent;
 import com.redis.batch.Range;
 import com.redis.riot.core.function.KeyValueEventToMap;
 import com.redis.riot.core.function.StringToMapFunction;
@@ -72,16 +72,16 @@ class ProcessorTests {
     @Test
     void keyValueEventToMap() {
         KeyValueEventToMap processor = new KeyValueEventToMap();
-        KeyValueEvent<String> string = new KeyValueEvent<>();
+        KeyStructEvent<String, String> string = new KeyStructEvent<>();
         string.setKey("beer:1");
-        string.setType(KeyType.STRING.getString());
+        string.setType(KeyType.string);
         String value = "sdfsdf";
         string.setValue(value);
         Map<String, ?> stringMap = processor.apply(string);
         Assertions.assertEquals(value, stringMap.get(StringToMapFunction.DEFAULT_KEY));
-        KeyValueEvent<String> hash = new KeyValueEvent<>();
+        KeyStructEvent<String, String> hash = new KeyStructEvent<>();
         hash.setKey("beer:2");
-        hash.setType(KeyType.HASH.getString());
+        hash.setType(KeyType.hash);
         Map<String, String> map = new HashMap<>();
         map.put("field1", "value1");
         hash.setValue(map);

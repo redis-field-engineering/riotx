@@ -1,11 +1,11 @@
 package com.redis.spring.batch.item.redis;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.redis.batch.KeyValueEvent;
+import com.redis.batch.KeyStructEvent;
 import com.redis.batch.gen.Generator;
 import com.redis.spring.batch.item.AbstractCountingItemReader;
 
-public class GeneratorItemReader extends AbstractCountingItemReader<KeyValueEvent<String>> {
+public class GeneratorItemReader extends AbstractCountingItemReader<KeyStructEvent<String, String>> {
 
     private final Generator generator;
 
@@ -28,7 +28,7 @@ public class GeneratorItemReader extends AbstractCountingItemReader<KeyValueEven
     }
 
     @Override
-    protected KeyValueEvent<String> doRead() throws JsonProcessingException {
+    protected KeyStructEvent<String, String> doRead() throws JsonProcessingException {
         return generator.next();
     }
 

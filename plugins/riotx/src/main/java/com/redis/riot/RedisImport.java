@@ -1,11 +1,11 @@
 package com.redis.riot;
 
-import com.redis.batch.KeyValueEvent;
+import com.redis.batch.KeyStructEvent;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.KeyValueEventToMap;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
-import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import com.redis.riot.core.job.RiotStep;
+import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
 import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
@@ -40,20 +40,20 @@ public class RedisImport extends AbstractTargetRedisImport {
     @Override
     protected Job job() throws Exception {
         Assert.isTrue(hasOperations(), "No Redis command specified");
-        RiotStep<KeyValueEvent<String>, Map<String, Object>> step = step(STEP_NAME, reader(), operationWriter());
+        RiotStep<KeyStructEvent<String, String>, Map<String, Object>> step = step(STEP_NAME, reader(), operationWriter());
         step.setItemProcessor(RiotUtils.processor(keyValueEventProcessor(), operationProcessor()));
         return job(step);
     }
 
-    private RedisScanItemReader<String, String, KeyValueEvent<String>> reader() {
+    private RedisScanItemReader<String, String, KeyStructEvent<String, String>> reader() {
         log.info("Creating source Redis reader with {}", sourceRedisReaderArgs);
-        RedisScanItemReader<String, String, KeyValueEvent<String>> reader = RedisScanItemReader.struct(
+        RedisScanItemReader<String, String, KeyStructEvent<String, String>> reader = RedisScanItemReader.struct(
                 StringCodec.UTF8);
         configureSourceRedisReader(reader);
         return reader;
     }
 
-    protected ItemProcessor<KeyValueEvent<String>, Map<String, Object>> keyValueEventProcessor() {
+    protected ItemProcessor<KeyStructEvent<String, String>, Map<String, Object>> keyValueEventProcessor() {
         KeyValueEventToMap mapFunction = new KeyValueEventToMap();
         if (keyRegex != null) {
             mapFunction.setKey(new RegexNamedGroupFunction(keyRegex));

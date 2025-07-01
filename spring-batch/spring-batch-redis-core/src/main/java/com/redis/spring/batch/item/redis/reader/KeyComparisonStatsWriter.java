@@ -1,5 +1,6 @@
 package com.redis.spring.batch.item.redis.reader;
 
+import com.redis.batch.KeyType;
 import com.redis.spring.batch.item.redis.reader.KeyComparison.Status;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
@@ -12,7 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class KeyComparisonStatsWriter<K> implements ItemWriter<KeyComparison<K>> {
 
-    private final Map<Status, Map<String, AtomicLong>> counts = new HashMap<>();
+    private final Map<Status, Map<KeyType, AtomicLong>> counts = new HashMap<>();
 
     @Override
     public void write(Chunk<? extends KeyComparison<K>> chunk) {
@@ -20,7 +21,7 @@ public class KeyComparisonStatsWriter<K> implements ItemWriter<KeyComparison<K>>
     }
 
     public long add(KeyComparison<K> comparison) {
-        Map<String, AtomicLong> typeCounts = counts.computeIfAbsent(comparison.getStatus(), s -> new HashMap<>());
+        Map<KeyType, AtomicLong> typeCounts = counts.computeIfAbsent(comparison.getStatus(), s -> new HashMap<>());
         AtomicLong count = typeCounts.computeIfAbsent(comparison.getSource().getType(), t -> new AtomicLong());
         return count.incrementAndGet();
     }

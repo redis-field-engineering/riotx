@@ -1,6 +1,5 @@
 package com.redis.batch.operation;
 
-import com.redis.batch.BatchUtils;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.json.JsonParser;
@@ -12,7 +11,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 
-public class JsonSet<K, V, T> extends AbstractValueWriteOperation<K, V, V, T> {
+public class JsonSet<K, V, T> extends AbstractValueWrite<K, V, V, T> {
 
     private Function<T, JsonPath> pathFunction = t -> JsonPath.ROOT_PATH;
 

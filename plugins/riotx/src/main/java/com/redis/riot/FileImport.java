@@ -1,10 +1,8 @@
 package com.redis.riot;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.redis.batch.KeyValueDeserializer;
-import com.redis.batch.KeyValueEvent;
+import com.redis.batch.BatchUtils;
+import com.redis.batch.KeyStructEvent;
+import com.redis.batch.KeyTtlTypeEvent;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.MapToFieldFunction;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
@@ -157,22 +155,15 @@ public class FileImport extends AbstractRedisImport {
         ReadOptions options = fileReaderArgs.readOptions();
         options.setContentType(getFileType());
         options.setItemType(itemType());
-        options.addObjectMapperConfigurer(this::configure);
+        options.addObjectMapperConfigurer(BatchUtils::configureObjectMapper);
         return options;
-    }
-
-    private void configure(ObjectMapper mapper) {
-        SimpleModule module = new SimpleModule();
-        module.addDeserializer(KeyValueEvent.class, new KeyValueDeserializer());
-        mapper.registerModule(module);
-        mapper.registerModule(new JavaTimeModule());
     }
 
     private Class<?> itemType() {
         if (hasOperations()) {
             return Map.class;
         }
-        return KeyValueEvent.class;
+        return KeyStructEvent.class;
     }
 
     private ItemProcessor<Map<String, Object>, Map<String, Object>> regexProcessor() {

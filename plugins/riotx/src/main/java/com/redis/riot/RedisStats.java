@@ -1,6 +1,7 @@
 package com.redis.riot;
 
 import com.redis.batch.KeyStatEvent;
+import com.redis.batch.KeyType;
 import com.redis.riot.core.Throughput;
 import com.redis.batch.KeyEvent;
 import com.tdunning.math.stats.TDigest;
@@ -136,7 +137,7 @@ public class RedisStats {
 
         private String prefix;
 
-        private Map<String, Integer> typeCounts;
+        private Map<KeyType, Integer> typeCounts;
 
         private int bigKeys;
 
@@ -150,11 +151,11 @@ public class RedisStats {
             this.prefix = prefix;
         }
 
-        public Map<String, Integer> getTypeCounts() {
+        public Map<KeyType, Integer> getTypeCounts() {
             return typeCounts;
         }
 
-        public void setTypeCounts(Map<String, Integer> counts) {
+        public void setTypeCounts(Map<KeyType, Integer> counts) {
             this.typeCounts = counts;
         }
 
@@ -183,7 +184,7 @@ public class RedisStats {
 
         private final String prefix;
 
-        private final Map<String, AtomicInteger> types = new HashMap<>();
+        private final Map<KeyType, AtomicInteger> types = new HashMap<>();
 
         private final TDigest memoryUsage = TDigest.createDigest(100);
 
@@ -208,7 +209,7 @@ public class RedisStats {
             return prefix;
         }
 
-        public Map<String, AtomicInteger> getTypes() {
+        public Map<KeyType, AtomicInteger> getTypes() {
             return types;
         }
 
@@ -226,17 +227,17 @@ public class RedisStats {
 
         private String key;
 
-        private String type;
+        private KeyType type;
 
         private DataSize memoryUsage;
 
         private long writeThroughput;
 
-        public String getType() {
+        public KeyType getType() {
             return type;
         }
 
-        public void setType(String type) {
+        public void setType(KeyType type) {
             this.type = type;
         }
 
@@ -274,7 +275,7 @@ public class RedisStats {
 
         private String key;
 
-        private String type;
+        private KeyType type;
 
         private DataSize memoryUsage;
 
@@ -288,11 +289,11 @@ public class RedisStats {
             writeThroughput.add(1);
         }
 
-        public String getType() {
+        public KeyType getType() {
             return type;
         }
 
-        public void setType(String type) {
+        public void setType(KeyType type) {
             this.type = type;
         }
 

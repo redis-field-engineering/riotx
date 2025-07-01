@@ -4,7 +4,7 @@ import java.time.Duration;
 
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.batch.Wait;
-import com.redis.batch.operation.KeyValueWrite.WriteMode;
+import com.redis.batch.operation.KeyStructWrite.WriteMode;
 
 import lombok.ToString;
 import picocli.CommandLine.Option;

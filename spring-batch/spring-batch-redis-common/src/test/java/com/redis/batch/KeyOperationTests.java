@@ -1,8 +1,9 @@
 package com.redis.batch;
 
 import com.redis.batch.gen.Generator;
-import com.redis.batch.operation.KeyValueReadOperation;
-import com.redis.batch.operation.KeyValueWrite;
+import com.redis.batch.operation.AbstractKeyValueRead;
+import com.redis.batch.operation.KeyDumpRead;
+import com.redis.batch.operation.KeyStructWrite;
 import com.redis.lettucemod.RedisModulesClient;
 import com.redis.lettucemod.api.StatefulRedisModulesConnection;
 import com.redis.lettucemod.api.sync.RedisModulesCommands;
@@ -77,28 +78,28 @@ public class KeyOperationTests {
         byte[] key = "key".getBytes(StandardCharsets.UTF_8);
         try (StatefulRedisModulesConnection<byte[], byte[]> bytesConnection = ConnectionBuilder.client(redisClient)
                 .connection(ByteArrayCodec.INSTANCE);
-                OperationExecutor<byte[], byte[], KeyEvent<byte[]>, KeyValueEvent<byte[]>> executor = new OperationExecutor<>(
-                        ByteArrayCodec.INSTANCE, KeyValueReadOperation.dump())) {
+                OperationExecutor<byte[], byte[], KeyEvent<byte[]>, KeyDumpEvent<byte[]>> executor = new OperationExecutor<>(
+                        ByteArrayCodec.INSTANCE, new KeyDumpRead())) {
             executor.setClient(redisClient);
             executor.afterPropertiesSet();
             KeyEvent<byte[]> keyEvent = new KeyEvent<>();
             keyEvent.setTimestamp(Instant.now());
             keyEvent.setKey(key);
-            List<KeyValueEvent<byte[]>> values = executor.execute(Collections.singletonList(keyEvent));
+            List<KeyDumpEvent<byte[]>> values = executor.execute(Collections.singletonList(keyEvent));
             Assertions.assertEquals(1, values.size());
-            Assertions.assertArrayEquals(bytesConnection.sync().dump(key), (byte[]) values.get(0).getValue());
+            Assertions.assertArrayEquals(bytesConnection.sync().dump(key), values.get(0).getDump());
         }
     }
 
     @Test
     void testKeyValueReadDumps() throws Exception {
         Generator gen = new Generator();
-        List<KeyValueEvent<String>> items = new ArrayList<>();
+        List<KeyStructEvent<String, String>> items = new ArrayList<>();
         for (int i = 0; i < 123; i++) {
             items.add(gen.next());
         }
-        try (OperationExecutor<String, String, KeyValueEvent<String>, Object> executor = new OperationExecutor<>(
-                StringCodec.UTF8, new KeyValueWrite<>())) {
+        try (OperationExecutor<String, String, KeyStructEvent<String, String>, Object> executor = new OperationExecutor<>(
+                StringCodec.UTF8, new KeyStructWrite<>())) {
             executor.setClient(redisClient);
             executor.afterPropertiesSet();
             executor.execute(items);
@@ -106,8 +107,8 @@ public class KeyOperationTests {
         Assertions.assertEquals(items.size(), redisCommands.dbsize());
         try (StatefulRedisModulesConnection<byte[], byte[]> bytesConnection = ConnectionBuilder.client(redisClient)
                 .connection(ByteArrayCodec.INSTANCE);
-                OperationExecutor<byte[], byte[], KeyEvent<byte[]>, KeyValueEvent<byte[]>> executor = new OperationExecutor<>(
-                        ByteArrayCodec.INSTANCE, KeyValueReadOperation.dump())) {
+                OperationExecutor<byte[], byte[], KeyEvent<byte[]>, KeyDumpEvent<byte[]>> executor = new OperationExecutor<>(
+                        ByteArrayCodec.INSTANCE, new KeyDumpRead())) {
             executor.setClient(redisClient);
             executor.afterPropertiesSet();
             List<KeyEvent<byte[]>> keys = items.stream().map(e -> {
@@ -116,10 +117,10 @@ public class KeyOperationTests {
                 keyEvent.setKey(e.getKey().getBytes());
                 return keyEvent;
             }).collect(Collectors.toList());
-            List<KeyValueEvent<byte[]>> dumps = executor.execute(keys);
+            List<KeyDumpEvent<byte[]>> dumps = executor.execute(keys);
             Assertions.assertEquals(items.size(), dumps.size());
-            for (KeyValueEvent<byte[]> dump : dumps) {
-                Assertions.assertArrayEquals(bytesConnection.sync().dump(dump.getKey()), (byte[]) dump.getValue());
+            for (KeyDumpEvent<byte[]> dump : dumps) {
+                Assertions.assertArrayEquals(bytesConnection.sync().dump(dump.getKey()), dump.getDump());
             }
         }
     }

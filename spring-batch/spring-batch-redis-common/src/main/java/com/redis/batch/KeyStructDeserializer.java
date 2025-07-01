@@ -15,23 +15,23 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
 
-import static com.redis.batch.KeyValueSerializer.*;
+import static com.redis.batch.KeyStructSerializer.*;
 
 @SuppressWarnings("rawtypes")
-public class KeyValueDeserializer extends StdDeserializer<KeyValueEvent> {
+public class KeyStructDeserializer extends StdDeserializer<KeyStructEvent> {
 
-    public KeyValueDeserializer() {
+    public KeyStructDeserializer() {
         this(null);
     }
 
-    public KeyValueDeserializer(Class<KeyValueEvent<String>> t) {
+    public KeyStructDeserializer(Class<KeyTtlTypeEvent<String>> t) {
         super(t);
     }
 
     @Override
-    public KeyValueEvent<String> deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+    public KeyStructEvent<String, String> deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         JsonNode node = p.getCodec().readTree(p);
-        KeyValueEvent<String> keyValueEvent = new KeyValueEvent<>();
+        KeyStructEvent<String, String> keyValueEvent = new KeyStructEvent<>();
         if (node.has(KEY)) {
             keyValueEvent.setKey(node.get(KEY).asText());
         }
@@ -42,10 +42,10 @@ public class KeyValueDeserializer extends StdDeserializer<KeyValueEvent> {
             keyValueEvent.setEvent(node.get(EVENT).asText());
         }
         if (node.has(TYPE)) {
-            keyValueEvent.setType(node.get(TYPE).asText());
+            keyValueEvent.setType(KeyType.valueOf(node.get(TYPE).asText()));
         }
         if (node.has(OPERATION)) {
-            keyValueEvent.setOperation(KeyOperation.valueOf(node.get(OPERATION).asText().toUpperCase()));
+            keyValueEvent.setOperation(KeyOperation.valueOf(node.get(OPERATION).asText()));
         }
         if (node.has(TTL)) {
             keyValueEvent.setTtl(Instant.parse(node.get(TTL).asText()));
@@ -56,29 +56,22 @@ public class KeyValueDeserializer extends StdDeserializer<KeyValueEvent> {
         return keyValueEvent;
     }
 
-    private Object value(String typeString, JsonNode node, DeserializationContext ctxt) throws IOException {
-        if (typeString == null) {
-            return null;
-        }
-        KeyType type = KeyType.of(typeString);
-        if (type == null) {
-            return null;
-        }
-        switch (type) {
-            case STREAM:
+    private Object value(KeyType keyType, JsonNode node, DeserializationContext ctxt) throws IOException {
+        switch (keyType) {
+            case stream:
                 return streamMessages((ArrayNode) node, ctxt);
-            case ZSET:
+            case zset:
                 return scoredValues((ArrayNode) node);
-            case TIMESERIES:
+            case timeseries:
                 return samples((ArrayNode) node);
-            case HASH:
+            case hash:
                 return ctxt.readTreeAsValue(node, Map.class);
-            case STRING:
-            case JSON:
+            case string:
+            case json:
                 return node.asText();
-            case LIST:
+            case list:
                 return ctxt.readTreeAsValue(node, Collection.class);
-            case SET:
+            case set:
                 return ctxt.readTreeAsValue(node, Set.class);
             default:
                 return null;
@@ -118,7 +111,7 @@ public class KeyValueDeserializer extends StdDeserializer<KeyValueEvent> {
     private ScoredValue<String> scoredValue(JsonNode scoredValueNode) {
         JsonNode valueNode = scoredValueNode.get(VALUE);
         String value = valueNode == null || valueNode.isNull() ? null : valueNode.asText();
-        DoubleNode scoreNode = (DoubleNode) scoredValueNode.get(SCORE);
+        JsonNode scoreNode = scoredValueNode.get(SCORE);
         double score = scoreNode == null || scoreNode.isNull() ? 0 : scoreNode.asDouble();
         return ScoredValue.just(score, value);
     }

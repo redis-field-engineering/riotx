@@ -3,7 +3,7 @@ package com.redis.spring.batch.item.redis;
 import com.redis.batch.KeyEvent;
 import com.redis.batch.OperationExecutor;
 import com.redis.batch.RedisBatchOperation;
-import com.redis.batch.operation.KeyValueReadOperation;
+import com.redis.batch.operation.AbstractKeyValueRead;
 import com.redis.spring.batch.item.AbstractCountingItemReader;
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.ReadFrom;
@@ -112,14 +112,14 @@ public abstract class RedisItemReader<K, V, T> extends AbstractCountingItemReade
 
     public void setMemoryLimit(DataSize limit) {
         Assert.notNull(limit, "Limit must not be null");
-        if (operation instanceof KeyValueReadOperation) {
-            ((KeyValueReadOperation) operation).setLimit(limit.toBytes());
+        if (operation instanceof AbstractKeyValueRead) {
+            ((AbstractKeyValueRead) operation).setLimit(limit.toBytes());
         }
     }
 
     public void setMemoryUsageSamples(int samples) {
-        if (operation instanceof KeyValueReadOperation) {
-            ((KeyValueReadOperation) operation).setSamples(samples);
+        if (operation instanceof AbstractKeyValueRead) {
+            ((AbstractKeyValueRead) operation).setSamples(samples);
         }
     }
 

@@ -1,12 +1,12 @@
 package com.redis.riot;
 
-import com.redis.batch.KeyValueEvent;
-import com.redis.riot.core.function.KeyValueEventToStreamMessage;
+import com.redis.batch.KeyStructEvent;
+import com.redis.batch.operation.Xadd;
+import com.redis.riot.core.function.KeyStructEventToStreamMessage;
+import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
 import com.redis.spring.batch.item.redis.reader.KeyEventItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
-import com.redis.batch.operation.Xadd;
-import com.redis.riot.core.job.RiotStep;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
@@ -47,15 +47,15 @@ public class StreamExport extends AbstractRedisTargetExport {
         super.configureTarget(writer);
     }
 
-    private RiotStep<KeyValueEvent<String>, StreamMessage<String, String>> step() {
-        RedisLiveItemReader<String, String, KeyValueEvent<String>> reader = RedisLiveItemReader.struct(
+    private RiotStep<KeyStructEvent<String, String>, StreamMessage<String, String>> step() {
+        RedisLiveItemReader<String, String, KeyStructEvent<String, String>> reader = RedisLiveItemReader.struct(
                 StringCodec.UTF8);
         configureSource(reader);
         RedisItemWriter<String, String, StreamMessage<String, String>> writer = writer();
         configureTarget(writer);
-        ItemProcessor<KeyValueEvent<String>, StreamMessage<String, String>> processor = new KeyValueEventToStreamMessage(
+        ItemProcessor<KeyStructEvent<String, String>, StreamMessage<String, String>> processor = new KeyStructEventToStreamMessage(
                 stream);
-        RiotStep<KeyValueEvent<String>, StreamMessage<String, String>> step = step(STEP_NAME, reader, writer);
+        RiotStep<KeyStructEvent<String, String>, StreamMessage<String, String>> step = step(STEP_NAME, reader, writer);
         step.setItemProcessor(processor);
         return step;
     }

@@ -1,6 +1,7 @@
 package com.redis.riot;
 
-import com.redis.batch.KeyValueEvent;
+import com.redis.batch.KeyStructEvent;
+import com.redis.batch.KeyTtlTypeEvent;
 import com.redis.riot.core.RedisContext;
 import com.redis.riot.core.function.KeyValueEventToMap;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
@@ -33,7 +34,7 @@ public abstract class AbstractRedisExport extends AbstractExport {
         return redisArgs.redisContext();
     }
 
-    protected ItemProcessor<KeyValueEvent<String>, Map<String, Object>> mapProcessor() {
+    protected ItemProcessor<KeyStructEvent<String, String>, Map<String, Object>> mapProcessor() {
         KeyValueEventToMap mapFunction = new KeyValueEventToMap();
         if (keyRegex != null) {
             mapFunction.setKey(new RegexNamedGroupFunction(keyRegex));

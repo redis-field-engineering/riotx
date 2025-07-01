@@ -4,10 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.DoubleNode;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.redis.batch.gen.Generator;
 import com.redis.lettucemod.timeseries.Sample;
 import org.junit.jupiter.api.*;
@@ -26,17 +23,13 @@ class KeyValueEventSerdeTests {
     @BeforeAll
     void setup() {
         mapper.configure(DeserializationFeature.USE_LONG_FOR_INTS, true);
-        mapper.registerModule(new JavaTimeModule());
-        SimpleModule module = new SimpleModule();
-        module.addDeserializer(KeyValueEvent.class, new KeyValueDeserializer());
-        module.addSerializer(KeyValueEvent.class, new KeyValueSerializer());
-        mapper.registerModule(module);
+        BatchUtils.configureObjectMapper(mapper);
     }
 
     @SuppressWarnings("unchecked")
     @Test
     void deserialize() throws JsonProcessingException {
-        KeyValueEvent<String> keyValueEvent = mapper.readValue(timeseries, KeyValueEvent.class);
+        KeyStructEvent<String, String> keyValueEvent = mapper.readValue(timeseries, KeyStructEvent.class);
         Assertions.assertEquals("gen:97", keyValueEvent.getKey());
     }
 
@@ -44,10 +37,10 @@ class KeyValueEventSerdeTests {
     void serialize() throws JsonProcessingException {
         String key = "ts:1";
         Instant ttl = Instant.now();
-        KeyValueEvent<String> ts = new KeyValueEvent<>();
+        KeyStructEvent<String, String> ts = new KeyStructEvent<>();
         ts.setKey(key);
         ts.setTtl(ttl);
-        ts.setType(KeyType.TIMESERIES.getString());
+        ts.setType(KeyType.timeseries);
         Sample sample1 = Sample.of(Instant.now().toEpochMilli(), 123.456);
         Sample sample2 = Sample.of(Instant.now().toEpochMilli() + 1000, 456.123);
         ts.setValue(Arrays.asList(sample1, sample2));
@@ -64,14 +57,14 @@ class KeyValueEventSerdeTests {
     void serde(TestInfo info) throws Exception {
         Generator reader = new Generator();
         for (int i = 0; i < 17; i++) {
-            KeyValueEvent<String> item = reader.next();
+            KeyStructEvent<String, String> item = reader.next();
             String json = mapper.writeValueAsString(item);
-            KeyValueEvent<String> result = mapper.readValue(json, KeyValueEvent.class);
+            KeyStructEvent<String, String> result = mapper.readValue(json, KeyStructEvent.class);
             assertEquals(item, result);
         }
     }
 
-    private <K> void assertEquals(KeyValueEvent<K> source, KeyValueEvent<K> target) {
+    private <K, V> void assertEquals(KeyStructEvent<K, V> source, KeyStructEvent<K, V> target) {
         Assertions.assertEquals(source.getTtl(), target.getTtl());
         Assertions.assertEquals(source.getType(), target.getType());
         Assertions.assertEquals(source.getKey(), target.getKey());

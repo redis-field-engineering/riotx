@@ -5,21 +5,17 @@ import java.util.Map;
 
 public enum KeyType {
 
-    NONE("none"), HASH("hash"), JSON("ReJSON-RL"), LIST("list"), SET("set"), STREAM("stream"), STRING("string"), TIMESERIES(
-            "TSDB-TYPE"), ZSET("zset");
+    none("none"), hash("hash"), json("ReJSON-RL"), list("list"), set("set"), stream("stream"), string("string"), timeseries(
+            "TSDB-TYPE"), zset("zset"), unknown("unknown");
 
-    private final String string;
+    private final String name;
 
-    KeyType(String string) {
-        this.string = string;
+    KeyType(String name) {
+        this.name = name;
     }
 
-    public static boolean isNone(String type) {
-        return NONE.getString().equals(type);
-    }
-
-    public String getString() {
-        return string;
+    public String getName() {
+        return name;
     }
 
     private static final Map<String, KeyType> typeMap = typeMap();
@@ -27,14 +23,14 @@ public enum KeyType {
     private static Map<String, KeyType> typeMap() {
         Map<String, KeyType> map = new HashMap<>();
         for (KeyType keyType : KeyType.values()) {
-            map.put(keyType.getString().toLowerCase(), keyType);
+            map.put(keyType.getName().toLowerCase(), keyType);
         }
         return map;
     }
 
     public static KeyType of(String type) {
         if (type == null) {
-            return null;
+            return unknown;
         }
         return typeMap.get(type.toLowerCase());
     }

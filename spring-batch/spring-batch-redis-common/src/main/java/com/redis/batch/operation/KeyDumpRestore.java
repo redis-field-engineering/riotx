@@ -1,12 +1,12 @@
 package com.redis.batch.operation;
 
-import com.redis.batch.KeyValueEvent;
+import com.redis.batch.KeyDumpEvent;
 
-public class KeyDumpRestore<K, V> extends Restore<K, V, KeyValueEvent<K>> {
+public class KeyDumpRestore<K, V> extends Restore<K, V, KeyDumpEvent<K>> {
 
     public KeyDumpRestore() {
-        super(KeyValueEvent::getKey, event -> (byte[]) event.getValue());
-        setTtlFunction(KeyValueEvent::getTtl);
+        super(KeyDumpEvent::getKey, KeyDumpEvent::getDump);
+        setTtlFunction(KeyDumpEvent::getTtl);
     }
 
 }

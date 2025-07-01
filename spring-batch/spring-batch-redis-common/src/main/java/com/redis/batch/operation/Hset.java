@@ -10,7 +10,7 @@ import com.redis.batch.BatchUtils;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 
-public class Hset<K, V, T> extends AbstractValueWriteOperation<K, V, Map<K, V>, T> {
+public class Hset<K, V, T> extends AbstractValueWrite<K, V, Map<K, V>, T> {
 
     public Hset(Function<T, K> keyFunction, Function<T, Map<K, V>> valueFunction) {
         super(keyFunction, valueFunction);

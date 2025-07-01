@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 
-public class Zadd<K, V, T> extends AbstractValueWriteOperation<K, V, Collection<ScoredValue<V>>, T> {
+public class Zadd<K, V, T> extends AbstractValueWrite<K, V, Collection<ScoredValue<V>>, T> {
 
     private Function<T, ZAddArgs> argsFunction = t -> null;
 
