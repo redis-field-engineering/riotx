@@ -5,10 +5,15 @@ import com.redis.enterprise.RedisModule;
 import com.redis.enterprise.testcontainers.RedisEnterpriseContainer;
 import com.redis.enterprise.testcontainers.RedisEnterpriseServer;
 import com.redis.testcontainers.RedisContainer;
+import org.testcontainers.utility.DockerImageName;
 
 public class RedisContainerFactory {
 
     private RedisContainerFactory() {
+    }
+
+    public static RedisContainer valkey() {
+        return new RedisContainer(DockerImageName.parse("valkey/valkey").withTag("8.0.0"));
     }
 
     public static RedisContainer redis() {
