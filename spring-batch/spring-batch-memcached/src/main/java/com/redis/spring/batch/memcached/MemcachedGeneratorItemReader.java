@@ -1,7 +1,7 @@
 package com.redis.spring.batch.memcached;
 
+import com.redis.batch.Range;
 import com.redis.spring.batch.item.AbstractCountingItemReader;
-import org.springframework.batch.item.file.transform.Range;
 
 import java.time.Instant;
 import java.util.Random;
@@ -13,7 +13,7 @@ public class MemcachedGeneratorItemReader extends AbstractCountingItemReader<Mem
 
     public static final String DEFAULT_KEY_SEPARATOR = ":";
 
-    public static final Range DEFAULT_KEY_RANGE = new Range(1);
+    public static final Range DEFAULT_KEY_RANGE = new Range(1, Range.UPPER_BORDER_NOT_DEFINED);
 
     public static final Range DEFAULT_STRING_LENGTH = new Range(100, 100);
 

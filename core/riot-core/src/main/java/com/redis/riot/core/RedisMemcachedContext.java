@@ -6,18 +6,6 @@ public class RedisMemcachedContext {
 
     private MemcachedContext memcachedContext;
 
-    public static RedisMemcachedContext of(RedisContext redisContext) {
-        RedisMemcachedContext context = new RedisMemcachedContext();
-        context.setRedisContext(redisContext);
-        return context;
-    }
-
-    public static RedisMemcachedContext of(MemcachedContext memcachedContext) {
-        RedisMemcachedContext context = new RedisMemcachedContext();
-        context.setMemcachedContext(memcachedContext);
-        return context;
-    }
-
     public boolean isRedis() {
         return redisContext != null;
     }

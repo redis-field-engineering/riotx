@@ -1,5 +1,6 @@
 package com.redis.spring.batch.memcached;
 
+import com.redis.batch.Range;
 import com.redis.testcontainers.MemcachedContainer;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.transcoders.Transcoder;
@@ -8,7 +9,6 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.file.transform.Range;
 import org.springframework.util.ClassUtils;
 import org.testcontainers.utility.DockerImageName;
 

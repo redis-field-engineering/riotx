@@ -1,6 +1,7 @@
 dependencies {
     api 'org.springframework.batch:spring-batch-core'
     api group: 'com.amazonaws', name: 'elasticache-java-cluster-client', version: memcachedClientVersion
+    implementation project(':spring-batch-redis-common')
     implementation project(':spring-batch-redis-infrastructure')
     testImplementation group: 'com.redis', name: 'testcontainers-memcached', version: testcontainersRedisVersion
     testImplementation 'org.awaitility:awaitility'
