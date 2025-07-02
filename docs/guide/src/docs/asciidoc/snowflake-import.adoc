@@ -5,6 +5,9 @@ The `snowflake-import` command uses a Snowflake `STREAM` object to track changes
 The Snowflake `STREAM` is created and managed by RIOTX.
 The user credentials you provide must have the ability to create a stream in the database and schema specified by the fully qualified object name.
 
+RIOT-X optimizes stream polling by using Snowflake's https://docs.snowflake.com/en/sql-reference/functions/system_stream_has_data[`SYSTEM$STREAM_HAS_DATA`] function to check if the stream contains new data before creating expensive temporary tables.
+This reduces unnecessary processing and improves performance when no changes are available.
+
 .Side effects and limitations
 * `SAMPLE_DATABASE.SAMPLE_SCHEMA.DATA_TABLE_changestream` will be created or replaced.
 For security, this can be created in a different schema than the table you are importing from by specifying `--cdc-schema`.
