@@ -27,7 +27,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
-@EnabledIfEnvironmentVariable(named = "JDBC_URL", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "RIOT_JDBC_URL", matches = ".+")
 class SnowflakeTests extends AbstractRiotApplicationTestBase {
 
     static {
@@ -37,11 +37,11 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
     private static final RedisContainer redis = new RedisContainer(
             RedisContainer.DEFAULT_IMAGE_NAME.withTag(RedisContainer.DEFAULT_TAG));
 
-    private static final String ENV_URL = "JDBC_URL";
+    private static final String ENV_URL = "RIOT_JDBC_URL";
 
-    private static final String ENV_USERNAME = "JDBC_USERNAME";
+    private static final String ENV_USERNAME = "RIOT_JDBC_USER";
 
-    private static final String ENV_PASSWORD = "JDBC_PASSWORD";
+    private static final String ENV_PASSWORD = "RIOT_JDBC_PASS";
 
     protected Connection dbConnection;
 
@@ -148,7 +148,7 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
         sqlRunner.executeScript("db/snowflake-roles.sql");
         sqlRunner.executeScript("db/snowflake-setup-data.sql");
         execute(info, "snowflake-import-rdi", this::executeSnowflakeImport);
-        String streamKey = "riotx.raw_pos.incremental_order_header";
+        String streamKey = "data:riotx.raw_pos.incremental_order_header";
         List<StreamMessage<String, String>> messages = redisCommands.xrange(streamKey, Range.create("-", "+"));
         Assertions.assertEquals(100, messages.size());
     }
