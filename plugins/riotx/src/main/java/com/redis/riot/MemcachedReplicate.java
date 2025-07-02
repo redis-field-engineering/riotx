@@ -6,6 +6,7 @@ import com.redis.batch.KeyType;
 import com.redis.batch.operation.KeyStructWrite;
 import com.redis.riot.core.InetSocketAddressList;
 import com.redis.riot.core.MemcachedContext;
+import com.redis.riot.core.RedisContext;
 import com.redis.riot.core.RedisMemcachedContext;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
@@ -80,13 +81,19 @@ public class MemcachedReplicate extends AbstractJobCommand {
     private RedisMemcachedContext targetContext() throws Exception {
         if (targetType == ServerType.MEMCACHED) {
             InetSocketAddress address = new InetSocketAddress(targetUri.getHost(), targetUri.getPort());
-            MemcachedContext context = new MemcachedContext(Collections.singletonList(address));
-            context.setTls(targetArgs.isTls());
-            context.setSkipTlsHostnameVerification(targetArgs.isInsecure());
-            context.setHostnameForTlsVerification(targetTlsHostname);
-            return RedisMemcachedContext.of(context);
+            MemcachedContext memcachedContext = new MemcachedContext(Collections.singletonList(address));
+            memcachedContext.setTls(targetArgs.isTls());
+            memcachedContext.setSkipTlsHostnameVerification(targetArgs.isInsecure());
+            memcachedContext.setHostnameForTlsVerification(targetTlsHostname);
+            RedisMemcachedContext context = new RedisMemcachedContext();
+            context.setMemcachedContext(memcachedContext);
+            return context;
         }
-        return RedisMemcachedContext.of(targetArgs.redisContext(targetUri));
+        RedisContext redisContext = targetArgs.redisContext(targetUri);
+        redisContext.afterPropertiesSet();
+        RedisMemcachedContext context = new RedisMemcachedContext();
+        context.setRedisContext(redisContext);
+        return context;
     }
 
     private MemcachedContext sourceContext() throws GeneralSecurityException {
@@ -110,6 +117,7 @@ public class MemcachedReplicate extends AbstractJobCommand {
         }
         RedisItemWriter<String, byte[], KeyStructEvent<String, byte[]>> writer = new RedisItemWriter<>(
                 RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE), new KeyStructWrite<>());
+        targetContext.getRedisContext().configure(writer);
         RiotStep<MemcachedEntry, KeyStructEvent<String, byte[]>> step = step(STEP_NAME, reader, writer);
         step.setItemProcessor(this::keyStructEvent);
         return step;
