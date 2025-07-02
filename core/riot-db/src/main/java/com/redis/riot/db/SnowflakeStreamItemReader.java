@@ -14,6 +14,7 @@ import org.springframework.util.StringUtils;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -86,7 +87,7 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
 
     private String nextOffset;
 
-    private long lastFetchTime;
+    private Instant lastFetchTime = Instant.MIN;
 
     private Duration pollInterval = DEFAULT_POLL_INTERVAL;
 
@@ -105,6 +106,7 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
         }
         if (nextOffset == null) {
             fetch();
+            lastFetchTime = Instant.now();
         }
         if (reader == null) {
             reader = reader();
@@ -151,18 +153,22 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
                 }
                 nextOffset = null;
             }
-            if (shouldFetch() && streamHasData()) {
-                reader.close();
-                fetch();
-                reader.open(new ExecutionContext());
-                item = reader.read();
+            if (shouldFetch()) {
+                if (streamHasData()) {
+                    reader.close();
+                    fetch();
+                    reader.open(new ExecutionContext());
+                    item = reader.read();
+                }
+                // Always set the fetch time to avoid calling streamHasData repeatedly
+                lastFetchTime = Instant.now();
             }
         }
         return item;
     }
 
     private boolean shouldFetch() {
-        return Duration.ofMillis(System.currentTimeMillis() - lastFetchTime).compareTo(pollInterval) > 0;
+        return Duration.between(lastFetchTime, Instant.now()).compareTo(pollInterval) > 0;
     }
 
     private boolean streamHasData() {
@@ -194,8 +200,7 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
             throw new IllegalStateException(
                     String.format("Could not retrieve current offset for Snowflake stream '%s'", streamObject));
         } catch (SQLException ex) {
-            if (StringUtils.hasLength(ex.getMessage()) && ex.getMessage().toLowerCase()
-                    .contains("must be a valid stream name")) {
+            if (isInvalidStreamName(ex)) {
                 // the stream doesn't exist yet
                 return null;
             }
@@ -211,14 +216,11 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
                 return results.getBoolean(1);
             }
             return false;
-        } catch (SQLException ex) {
-            if (StringUtils.hasLength(ex.getMessage()) && ex.getMessage().toLowerCase()
-                    .contains("must be a valid stream name")) {
-                // the stream doesn't exist yet, assume no data
-                return false;
-            }
-            throw ex;
         }
+    }
+
+    private boolean isInvalidStreamName(SQLException ex) {
+        return StringUtils.hasLength(ex.getMessage()) && ex.getMessage().toLowerCase().contains("must be a valid stream name");
     }
 
     private String sanitize(String value) {
@@ -242,7 +244,6 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
             nextOffset = currentStreamOffset(connection);
             log.debug("Next offset: '{}'", nextOffset);
         }
-        lastFetchTime = System.currentTimeMillis();
     }
 
     private PreparedStatement streamInitStatement(Connection connection) throws Exception {
