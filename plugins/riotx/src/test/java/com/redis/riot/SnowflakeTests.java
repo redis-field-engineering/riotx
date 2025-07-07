@@ -15,6 +15,7 @@ import org.slf4j.event.Level;
 import org.slf4j.simple.SimpleLogger;
 import org.springframework.batch.core.ItemWriteListener;
 import org.springframework.batch.item.Chunk;
+import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.support.ListItemWriter;
 import picocli.CommandLine;
 
@@ -26,6 +27,7 @@ import java.sql.Statement;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @EnabledIfEnvironmentVariable(named = "RIOT_JDBC_URL", matches = ".+")
 class SnowflakeTests extends AbstractRiotApplicationTestBase {
@@ -202,6 +204,40 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
         args.setPassword(builder.password());
         args.setMaxPoolSize(builder.maximumPoolSize());
         args.setMinIdle(builder.minimumIdle());
+    }
+
+    @Test
+    void testStreamOperationMappings(TestInfo info) throws Exception {
+        sqlRunner.executeScript("db/snowflake-roles.sql");
+        sqlRunner.executeScript("db/snowflake-setup-data.sql");
+
+        SnowflakeStreamItemReader reader = reader();
+        reader.setSnapshotMode(SnowflakeStreamItemReader.SnapshotMode.NEVER);
+        reader.open(new ExecutionContext());
+        // Perform INSERT operation - match the 16 columns of incremental_order_header table
+        dbConnection.createStatement().execute("INSERT INTO tb_101.raw_pos.incremental_order_header "
+                + "(order_id, truck_id, location_id, customer_id, discount_id, shift_id, "
+                + "shift_start_time, shift_end_time, order_channel, order_ts, served_ts, "
+                + "order_currency, order_amount, order_tax_amount, order_discount_amount, order_total) "
+                + "VALUES (9999999, 999, 1.0, 12345, 'DISCOUNT_01', 99999, "
+                + "'09:00:00', '17:00:00', 'APP', CURRENT_TIMESTAMP(), '2023-01-01 12:00:00', "
+                + "'USD', 25.50, '2.50', '0.00', 28.00)");
+        SnowflakeStreamRow createRow = reader.poll(10, TimeUnit.SECONDS);
+        Assertions.assertEquals(SnowflakeStreamRow.Action.INSERT, createRow.getAction());
+        Assertions.assertFalse(createRow.isUpdate());
+
+        // Perform UPDATE operation
+        dbConnection.createStatement().execute(
+                "UPDATE tb_101.raw_pos.incremental_order_header SET location_id = 2.0, truck_id = 888 "
+                        + "WHERE order_id = 4063758");
+        SnowflakeStreamRow updateRow = reader.poll(10, TimeUnit.SECONDS);
+        Assertions.assertEquals(SnowflakeStreamRow.Action.INSERT, updateRow.getAction());
+        Assertions.assertTrue(updateRow.isUpdate());
+        // Perform DELETE operation
+        dbConnection.createStatement().execute("DELETE FROM tb_101.raw_pos.incremental_order_header WHERE order_id = 4063759");
+        SnowflakeStreamRow deleteRow = reader.poll(10, TimeUnit.SECONDS);
+        Assertions.assertEquals(SnowflakeStreamRow.Action.DELETE, deleteRow.getAction());
+
     }
 
 }
