@@ -14,6 +14,7 @@ import org.springframework.util.StringUtils;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,7 +27,11 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
 
     private static final String STREAM_HAS_DATA_SQL = "SELECT SYSTEM$STREAM_HAS_DATA(?)";
 
-    private static final String CREATE_STREAM_SQL = "CREATE OR REPLACE STREAM %s ON TABLE %s";
+    private static final String CREATE_STREAM_BASE = "CREATE OR REPLACE STREAM %s ON TABLE %s";
+
+    private static final String CREATE_STREAM_INIT = CREATE_STREAM_BASE + " SHOW_INITIAL_ROWS=?";
+
+    private static final String CREATE_STREAM_OFFSET = CREATE_STREAM_BASE + " AT (TIMESTAMP => TO_TIMESTAMP(?))";
 
     private static final String CREATE_TEMP_TABLE_SQL = "CREATE OR REPLACE TABLE %s AS SELECT * FROM %s WHERE METADATA$ACTION <> 'DELETE'";
 
@@ -82,7 +87,7 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
 
     private String nextOffset;
 
-    private long lastFetchTime;
+    private Instant lastFetchTime = Instant.MIN;
 
     private Duration pollInterval = DEFAULT_POLL_INTERVAL;
 
@@ -101,6 +106,7 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
         }
         if (nextOffset == null) {
             fetch();
+            lastFetchTime = Instant.now();
         }
         if (reader == null) {
             reader = reader();
@@ -108,7 +114,7 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
         }
     }
 
-    private String tempTable() {
+    private String tempTableName() {
         return String.format("%s_temp", streamObject.fullName());
     }
 
@@ -143,27 +149,40 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
                 offsetMap.put(OFFSET_KEY, nextOffset);
                 offsetStore.store(offsetMap);
                 try (Connection sqlConnection = initSqlDataSource.getConnection()) {
-                    sqlConnection.prepareStatement(String.format("DROP TABLE %s", tempTable())).execute();
+                    sqlConnection.prepareStatement(String.format("DROP TABLE %s", tempTableName())).execute();
                 }
                 nextOffset = null;
             }
             if (shouldFetch()) {
-                reader.close();
-                fetch();
-                reader.open(new ExecutionContext());
-                item = reader.read();
+                if (streamHasData()) {
+                    reader.close();
+                    fetch();
+                    reader.open(new ExecutionContext());
+                    item = reader.read();
+                }
+                // Always set the fetch time to avoid calling streamHasData repeatedly
+                lastFetchTime = Instant.now();
             }
         }
         return item;
     }
 
     private boolean shouldFetch() {
-        return Duration.ofMillis(System.currentTimeMillis() - lastFetchTime).compareTo(pollInterval) > 0;
+        return Duration.between(lastFetchTime, Instant.now()).compareTo(pollInterval) > 0;
+    }
+
+    private boolean streamHasData() {
+        try (Connection connection = initSqlDataSource.getConnection()) {
+            return streamHasData(connection);
+        } catch (SQLException e) {
+            log.warn("Failed to check if stream has data: {}", e.getMessage());
+            return false;
+        }
     }
 
     private JdbcCursorItemReader<SnowflakeStreamRow> reader() {
         JdbcCursorItemReaderBuilder<SnowflakeStreamRow> reader = JdbcReaderFactory.create(readerOptions);
-        String sql = String.format("SELECT * FROM %s", tempTable());
+        String sql = String.format("SELECT * FROM %s", tempTableName());
         reader.sql(sql);
         reader.name(sql);
         reader.rowMapper(new SnowflakeStreamColumnMapRowMapper());
@@ -181,8 +200,7 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
             throw new IllegalStateException(
                     String.format("Could not retrieve current offset for Snowflake stream '%s'", streamObject));
         } catch (SQLException ex) {
-            if (StringUtils.hasLength(ex.getMessage()) && ex.getMessage().toLowerCase()
-                    .contains("must be a valid stream name")) {
+            if (isInvalidStreamName(ex)) {
                 // the stream doesn't exist yet
                 return null;
             }
@@ -198,14 +216,11 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
                 return results.getBoolean(1);
             }
             return false;
-        } catch (SQLException ex) {
-            if (StringUtils.hasLength(ex.getMessage()) && ex.getMessage().toLowerCase()
-                    .contains("must be a valid stream name")) {
-                // the stream doesn't exist yet, assume no data
-                return false;
-            }
-            throw ex;
         }
+    }
+
+    private boolean isInvalidStreamName(SQLException ex) {
+        return StringUtils.hasLength(ex.getMessage()) && ex.getMessage().toLowerCase().contains("must be a valid stream name");
     }
 
     private String sanitize(String value) {
@@ -214,50 +229,45 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
 
     private void fetch() throws Exception {
         try (Connection connection = initSqlDataSource.getConnection()) {
-            String createStreamSQL = String.format(CREATE_STREAM_SQL, streamObject.fullName(), table);
-            Map<String, Object> offsetMap = offsetStore.getOffset();
-            if (offsetMap == null) {
-                offsetMap = new HashMap<>();
+            try (PreparedStatement statement = streamInitStatement(connection)) {
+                statement.execute();
+                log.debug("Initialized stream");
             }
-            String offset = (String) offsetMap.get(OFFSET_KEY);
-            if (!StringUtils.hasLength(offset) || offset.equals("0")) {
-                String initialSQL = createStreamSQL;
-                if (snapshotMode == SnapshotMode.INITIAL) {
-                    initialSQL += " SHOW_INITIAL_ROWS=TRUE";
-                }
-                try (Statement statement = connection.createStatement()) {
-                    statement.execute(initialSQL);
-                }
-                log.debug("Initialized Snowflake stream: '{}'", initialSQL);
-            } else {
-                String offsetSQL = createStreamSQL + " AT (TIMESTAMP => TO_TIMESTAMP(?))";
-                try (PreparedStatement statement = connection.prepareStatement(offsetSQL)) {
-                    statement.setString(1, offset);
-                    statement.execute();
-                }
-                log.debug("Initialized Snowflake stream with offset {}: '{}'", offset, offsetSQL);
-            }
-            
-            // Check if stream has data before creating expensive temporary table
-            if (!streamHasData(connection)) {
-                log.debug("Stream '{}' has no data, skipping temporary table creation", streamObject.fullName());
-                nextOffset = currentStreamOffset(connection);
-                lastFetchTime = System.currentTimeMillis();
-                return;
-            }
-            
-            String tempTableSQL = String.format(CREATE_TEMP_TABLE_SQL, tempTable(), streamObject.fullName());
             try (Statement statement = connection.createStatement()) {
-                statement.execute(tempTableSQL);
+                String sql = String.format(CREATE_TEMP_TABLE_SQL, tempTableName(), streamObject.fullName());
+                log.debug("Initializing temp table: '{}'", sql);
+                statement.execute(sql);
+                log.debug("Initialized temp table");
             }
-            log.debug("Initialized temp table: '{}'", tempTableSQL);
             // now that data has been copied from temp table get the new current offset
             // don't commit it to redis until the current batch is successful
-
             nextOffset = currentStreamOffset(connection);
             log.debug("Next offset: '{}'", nextOffset);
         }
-        lastFetchTime = System.currentTimeMillis();
+    }
+
+    private PreparedStatement streamInitStatement(Connection connection) throws Exception {
+        Map<String, Object> offsetMap = offsetStore.getOffset();
+        if (offsetMap == null) {
+            offsetMap = new HashMap<>();
+        }
+        String offset = (String) offsetMap.get(OFFSET_KEY);
+        if (!StringUtils.hasLength(offset) || offset.equals("0")) {
+            String sql = createStreamSql(CREATE_STREAM_INIT);
+            log.debug("Initializing Snowflake stream: '{}'", sql);
+            PreparedStatement statement = connection.prepareStatement(sql);
+            statement.setBoolean(1, snapshotMode == SnapshotMode.INITIAL);
+            return statement;
+        }
+        String sql = createStreamSql(CREATE_STREAM_OFFSET);
+        log.debug("Initializing Snowflake stream with offset {}: '{}'", offset, sql);
+        PreparedStatement statement = connection.prepareStatement(sql);
+        statement.setString(1, offset);
+        return statement;
+    }
+
+    private String createStreamSql(String sql) {
+        return String.format(sql, streamObject.fullName(), table);
     }
 
     public String getStreamDatabase() {

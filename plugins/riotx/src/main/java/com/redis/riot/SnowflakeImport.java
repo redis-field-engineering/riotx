@@ -66,7 +66,7 @@ public class SnowflakeImport extends AbstractRedisImport {
     @CommandLine.Option(names = "--offset-prefix", defaultValue = "${RIOT_OFFSET_PREFIX:-riotx:offset:}", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
     private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
 
-    @CommandLine.Option(names = "--offset-key", defaultValue = "${RIOT_OFFSET_KEY:-offset}", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
+    @CommandLine.Option(names = "--offset-key", defaultValue = "${RIOT_OFFSET_KEY:-metadata:debezium:offsets}", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
     private String offsetKey = DEFAULT_OFFSET_KEY;
 
     @Option(names = "--snapshot", defaultValue = "${RIOT_SNAPSHOT:-INITIAL}", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
