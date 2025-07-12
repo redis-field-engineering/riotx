@@ -58,7 +58,7 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
         builder.password(System.getenv(ENV_PASSWORD));
         builder.driver(SnowflakeImport.SNOWFLAKE_DRIVER);
         builder.minimumIdle(1);
-        builder.maximumPoolSize(3);
+        builder.maximumPoolSize(10);
         return builder;
     }
 
