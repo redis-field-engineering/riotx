@@ -11,7 +11,11 @@ public interface FlowFactoryBean extends FactoryBean<Flow> {
     String getName();
 
     static CompositeFlowFactoryBean parallel(String name, FlowFactoryBean... flows) {
-        return composite(CompositeFlowFactoryBean.Type.PARRALLEL, name, Arrays.asList(flows));
+        return parallel(name, Arrays.asList(flows));
+    }
+
+    static CompositeFlowFactoryBean parallel(String name, List<FlowFactoryBean> flows) {
+        return composite(CompositeFlowFactoryBean.Type.PARRALLEL, name, flows);
     }
 
     static CompositeFlowFactoryBean sequential(String name, List<FlowFactoryBean> flows) {

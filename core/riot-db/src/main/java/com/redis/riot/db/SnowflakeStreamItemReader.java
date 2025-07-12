@@ -245,7 +245,6 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
             validateSourceTable(connection);
 
             try (PreparedStatement statement = streamInitStatement(connection)) {
-                log.debug("Executing stream initialization statement: {}", statement);
                 statement.execute();
                 log.debug("Initialized stream: {}", streamObject.fullName());
             }

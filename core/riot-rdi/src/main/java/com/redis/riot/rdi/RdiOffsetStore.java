@@ -21,12 +21,15 @@ public class RdiOffsetStore implements OffsetStore {
 
     private final AbstractRedisClient client;
 
+    private final String table;
+
     private String key = DEFAULT_KEY;
 
     private String server = DEFAULT_SERVER;
 
-    public RdiOffsetStore(AbstractRedisClient client) {
+    public RdiOffsetStore(AbstractRedisClient client, String table) {
         this.client = client;
+        this.table = table;
     }
 
     private StatefulRedisModulesConnection<String, String> connection() {
@@ -43,6 +46,7 @@ public class RdiOffsetStore implements OffsetStore {
     private String field() throws JsonProcessingException {
         Map<String, String> field = new HashMap<>();
         field.put("server", server);
+        field.put("table", table);
         return mapper.writeValueAsString(field);
     }
 
