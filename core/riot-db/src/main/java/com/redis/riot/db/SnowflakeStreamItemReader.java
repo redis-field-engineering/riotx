@@ -105,12 +105,25 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
             streamObject.setTable(String.format("%s_changestream", tableObject.getTable()));
         }
         if (nextOffset == null) {
-            fetch();
-            lastFetchTime = Instant.now();
+            try {
+                fetch();
+                lastFetchTime = Instant.now();
+            } catch (Exception e) {
+                log.error("Failed to fetch initial data from Snowflake stream for table '{}': {}", table, e.getMessage());
+                throw new RuntimeException("Failed to initialize Snowflake stream reader for table: " + table + 
+                    ". Please verify: 1) Table exists and is accessible, 2) Proper permissions for stream and temp table creation, " +
+                    "3) Role and warehouse are correctly configured", e);
+            }
         }
         if (reader == null) {
-            reader = reader();
-            reader.open(new ExecutionContext());
+            try {
+                reader = reader();
+                reader.open(new ExecutionContext());
+            } catch (Exception e) {
+                log.error("Failed to open JDBC reader for temp table '{}': {}", tempTableName(), e.getMessage());
+                throw new RuntimeException("Failed to open reader for temp table: " + tempTableName() + 
+                    ". This usually indicates the temp table was not created successfully", e);
+            }
         }
     }
 
@@ -229,20 +242,51 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
 
     private void fetch() throws Exception {
         try (Connection connection = initSqlDataSource.getConnection()) {
+            // First validate that the source table exists
+            validateSourceTable(connection);
+            
             try (PreparedStatement statement = streamInitStatement(connection)) {
+                log.debug("Executing stream initialization statement: {}", statement);
                 statement.execute();
-                log.debug("Initialized stream");
+                log.debug("Initialized stream: {}", streamObject.fullName());
+            } catch (SQLException e) {
+                log.error("Failed to initialize stream '{}': {}", streamObject.fullName(), e.getMessage());
+                throw new RuntimeException("Failed to initialize Snowflake stream: " + streamObject.fullName(), e);
             }
             try (Statement statement = connection.createStatement()) {
                 String sql = String.format(CREATE_TEMP_TABLE_SQL, tempTableName(), streamObject.fullName());
                 log.debug("Initializing temp table: '{}'", sql);
                 statement.execute(sql);
-                log.debug("Initialized temp table");
+                log.debug("Initialized temp table: {}", tempTableName());
+            } catch (SQLException e) {
+                log.error("Failed to create temp table '{}' from stream '{}': {}", tempTableName(), streamObject.fullName(), e.getMessage());
+                throw new RuntimeException("Failed to create temp table from Snowflake stream. This could be due to: " +
+                    "1) Stream doesn't exist or isn't accessible, " +
+                    "2) Insufficient permissions to create temp table, " +
+                    "3) Source table doesn't exist or isn't accessible", e);
             }
             // now that data has been copied from temp table get the new current offset
             // don't commit it to redis until the current batch is successful
-            nextOffset = currentStreamOffset(connection);
-            log.debug("Next offset: '{}'", nextOffset);
+            try {
+                nextOffset = currentStreamOffset(connection);
+                log.debug("Next offset: '{}'", nextOffset);
+            } catch (SQLException e) {
+                log.error("Failed to get current stream offset for '{}': {}", streamObject.fullName(), e.getMessage());
+                throw new RuntimeException("Failed to get current stream offset", e);
+            }
+        }
+    }
+
+    private void validateSourceTable(Connection connection) throws SQLException {
+        String sql = "SELECT 1 FROM " + table + " LIMIT 1";
+        try (Statement statement = connection.createStatement()) {
+            log.debug("Validating source table exists: {}", table);
+            statement.executeQuery(sql);
+            log.debug("Source table validated: {}", table);
+        } catch (SQLException e) {
+            log.error("Source table '{}' does not exist or is not accessible: {}", table, e.getMessage());
+            throw new SQLException("Source table '" + table + "' does not exist or is not accessible. " +
+                "Please verify the table name and your permissions.", e);
         }
     }
 
