@@ -105,24 +105,18 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
             streamObject.setTable(String.format("%s_changestream", tableObject.getTable()));
         }
         if (nextOffset == null) {
-            try {
-                fetch();
-                lastFetchTime = Instant.now();
-            } catch (Exception e) {
-                log.error("Failed to fetch initial data from Snowflake stream for table '{}': {}", table, e.getMessage());
-                throw new RuntimeException("Failed to initialize Snowflake stream reader for table: " + table + 
-                    ". Please verify: 1) Table exists and is accessible, 2) Proper permissions for stream and temp table creation, " +
-                    "3) Role and warehouse are correctly configured", e);
-            }
+            fetch();
+            lastFetchTime = Instant.now();
         }
         if (reader == null) {
             try {
                 reader = reader();
                 reader.open(new ExecutionContext());
             } catch (Exception e) {
-                log.error("Failed to open JDBC reader for temp table '{}': {}", tempTableName(), e.getMessage());
-                throw new RuntimeException("Failed to open reader for temp table: " + tempTableName() + 
-                    ". This usually indicates the temp table was not created successfully", e);
+                log.error(
+                        "Failed to open JDBC reader for temp table '{}'. This usually indicates the temp table was not created successfully",
+                        tempTableName(), e);
+                throw e;
             }
         }
     }
@@ -188,7 +182,7 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
         try (Connection connection = initSqlDataSource.getConnection()) {
             return streamHasData(connection);
         } catch (SQLException e) {
-            log.warn("Failed to check if stream has data: {}", e.getMessage());
+            log.warn("Failed to check if stream has data", e);
             return false;
         }
     }
@@ -244,26 +238,25 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
         try (Connection connection = initSqlDataSource.getConnection()) {
             // First validate that the source table exists
             validateSourceTable(connection);
-            
+
             try (PreparedStatement statement = streamInitStatement(connection)) {
                 log.debug("Executing stream initialization statement: {}", statement);
                 statement.execute();
                 log.debug("Initialized stream: {}", streamObject.fullName());
-            } catch (SQLException e) {
-                log.error("Failed to initialize stream '{}': {}", streamObject.fullName(), e.getMessage());
-                throw new RuntimeException("Failed to initialize Snowflake stream: " + streamObject.fullName(), e);
             }
             try (Statement statement = connection.createStatement()) {
-                String sql = String.format(CREATE_TEMP_TABLE_SQL, tempTableName(), streamObject.fullName());
-                log.debug("Initializing temp table: '{}'", sql);
-                statement.execute(sql);
-                log.debug("Initialized temp table: {}", tempTableName());
-            } catch (SQLException e) {
-                log.error("Failed to create temp table '{}' from stream '{}': {}", tempTableName(), streamObject.fullName(), e.getMessage());
-                throw new RuntimeException("Failed to create temp table from Snowflake stream. This could be due to: " +
-                    "1) Stream doesn't exist or isn't accessible, " +
-                    "2) Insufficient permissions to create temp table, " +
-                    "3) Source table doesn't exist or isn't accessible", e);
+                String tempTable = tempTableName();
+                String sql = String.format(CREATE_TEMP_TABLE_SQL, tempTable, streamObject.fullName());
+                log.debug("Initializing temp table '{}' with statement: {}", tempTable, sql);
+                try {
+                    statement.execute(sql);
+                } catch (SQLException e) {
+                    log.error(
+                            "Failed to create temp table '{}' from Snowflake stream '{}'. This could be due to: 1) Stream doesn't exist or isn't accessible, 2) Insufficient permissions to create temp table, 3) Source table doesn't exist or isn't accessible",
+                            tempTable, streamObject.fullName(), e);
+                    throw e;
+                }
+                log.debug("Initialized temp table: {}", tempTable);
             }
             // now that data has been copied from temp table get the new current offset
             // don't commit it to redis until the current batch is successful
@@ -271,22 +264,25 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
                 nextOffset = currentStreamOffset(connection);
                 log.debug("Next offset: '{}'", nextOffset);
             } catch (SQLException e) {
-                log.error("Failed to get current stream offset for '{}': {}", streamObject.fullName(), e.getMessage());
-                throw new RuntimeException("Failed to get current stream offset", e);
+                log.error("Failed to get current stream offset for '{}'", streamObject.fullName(), e);
+                throw e;
             }
         }
     }
 
     private void validateSourceTable(Connection connection) throws SQLException {
-        String sql = "SELECT 1 FROM " + table + " LIMIT 1";
+        String sql = String.format("SELECT 1 FROM %s LIMIT 1", table);
         try (Statement statement = connection.createStatement()) {
             log.debug("Validating source table exists: {}", table);
-            statement.executeQuery(sql);
+            try {
+                statement.executeQuery(sql);
+            } catch (SQLException e) {
+                log.error(
+                        "Source table '{}' does not exist or is not accessible. Please verify the table name and your permissions.",
+                        table, e);
+                throw e;
+            }
             log.debug("Source table validated: {}", table);
-        } catch (SQLException e) {
-            log.error("Source table '{}' does not exist or is not accessible: {}", table, e.getMessage());
-            throw new SQLException("Source table '" + table + "' does not exist or is not accessible. " +
-                "Please verify the table name and your permissions.", e);
         }
     }
 
