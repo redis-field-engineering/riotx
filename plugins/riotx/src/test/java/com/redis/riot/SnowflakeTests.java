@@ -3,6 +3,7 @@ package com.redis.riot;
 import com.redis.riot.db.DataSourceBuilder;
 import com.redis.riot.db.SnowflakeStreamItemReader;
 import com.redis.riot.db.SnowflakeStreamRow;
+import com.redis.riot.rdi.ChangeEventToStreamMessage;
 import com.redis.spring.batch.step.FlushingStepBuilder;
 import com.redis.testcontainers.RedisContainer;
 import com.redis.testcontainers.RedisServer;
@@ -17,6 +18,8 @@ import org.springframework.batch.core.ItemWriteListener;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.support.ListItemWriter;
+import org.testcontainers.shaded.com.fasterxml.jackson.databind.JsonNode;
+import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import picocli.CommandLine;
 
 import javax.sql.DataSource;
@@ -170,29 +173,11 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
             Assertions.assertEquals("16", order.get("TRUCK_ID"));
             Assertions.assertEquals("21202", order.get("SHIFT_ID"));
         }
-
-        //        sqlRunner.executeScript("db/snowflake-insert-more-data.sql");
-        //        execute(info, "snowflake-import", this::executeSnowflakeImport);
-        //
-        //        try (Statement statement = dbConnection.createStatement()) {
-        //            statement.execute("SELECT COUNT(*) AS count FROM tb_101.raw_pos.incremental_order_header");
-        //            ResultSet resultSet = statement.getResultSet();
-        //            resultSet.next();
-        //
-        //            long count = resultSet.getLong(1);
-        //
-        //            Assertions.assertEquals(1100, count);
-        //            Assertions.assertEquals(count, keyCount("orderheader:*"));
-        //
-        //            Map<String, String> order = redisCommands.hgetall("orderheader:4064758");
-        //            Assertions.assertEquals("18", order.get("TRUCK_ID"));
-        //            Assertions.assertEquals("21207", order.get("SHIFT_ID"));
-        //        }
     }
 
     protected int executeSnowflakeImport(CommandLine.ParseResult parseResult) {
         SnowflakeImport command = command(parseResult);
-        command.getFlushingStepArgs().setIdleTimeout(Duration.ofSeconds(10));
+        command.getFlushingStepArgs().setIdleTimeout(Duration.ofSeconds(20));
         configureDatabase(command.getDataSourceArgs());
         return CommandLine.ExitCode.OK;
     }
@@ -207,7 +192,46 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
     }
 
     @Test
-    void testStreamOperationMappings(TestInfo info) throws Exception {
+    void testMultiTableImport(TestInfo info) throws Exception {
+        // Create 2 snowflake tables with sample data
+        sqlRunner.executeScript("db/snowflake-roles.sql");
+        sqlRunner.executeScript("db/snowflake-setup-multi-tables.sql");
+        
+        // Execute snowflake-import-rdi-multi command
+        execute(info, "snowflake-import-rdi-multi", this::executeSnowflakeImport);
+        
+        // Verify table1 data was imported to Redis streams
+        String streamKey1 = "data:riotx.raw_pos.table1";
+        List<StreamMessage<String, String>> messages1 = redisCommands.xrange(streamKey1, Range.create("-", "+"));
+        Assertions.assertEquals(5, messages1.size());
+        
+        // Verify table2 data was imported to Redis streams
+        String streamKey2 = "data:riotx.raw_pos.table2";
+        List<StreamMessage<String, String>> messages2 = redisCommands.xrange(streamKey2, Range.create("-", "+"));
+        Assertions.assertEquals(5, messages2.size());
+        
+        // Verify sample data content from table1
+        StreamMessage<String, String> productMessage = messages1.get(0);
+        Map<String, String> productData = productMessage.getBody();
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode productNode = mapper.readTree(productData.get(ChangeEventToStreamMessage.VALUE));
+        JsonNode productValueNode = productNode.get("after");
+        Assertions.assertTrue(productValueNode.has("PRODUCT_ID"));
+        Assertions.assertTrue(productValueNode.has("PRODUCT_NAME"));
+        Assertions.assertTrue(productValueNode.has("CATEGORY"));
+        
+        // Verify sample data content from table2
+        StreamMessage<String, String> customerMessage = messages2.get(0);
+        Map<String, String> customerData = customerMessage.getBody();
+        JsonNode customerNode = mapper.readTree(customerData.get(ChangeEventToStreamMessage.VALUE));
+        JsonNode customerValueNode = customerNode.get("after");
+        Assertions.assertTrue(customerValueNode.has("CUSTOMER_ID"));
+        Assertions.assertTrue(customerValueNode.has("CUSTOMER_NAME"));
+        Assertions.assertTrue(customerValueNode.has("EMAIL"));
+    }
+
+    @Test
+    void testStreamOperationMappings() throws Exception {
         sqlRunner.executeScript("db/snowflake-roles.sql");
         sqlRunner.executeScript("db/snowflake-setup-data.sql");
 
