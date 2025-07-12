@@ -3,7 +3,9 @@ package com.redis.riot;
 import com.redis.batch.gen.Generator;
 import com.redis.batch.operation.Xadd;
 import com.redis.riot.core.*;
+import com.redis.riot.core.job.FlowFactoryBean;
 import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.core.job.StepFlowFactoryBean;
 import com.redis.riot.db.DatabaseObject;
 import com.redis.riot.db.SnowflakeStreamItemReader;
 import com.redis.riot.db.SnowflakeStreamRow;
@@ -18,7 +20,6 @@ import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.util.CollectionUtils;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
@@ -26,11 +27,9 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @CommandLine.Command(name = "snowflake-import", description = "Import from a snowflake table (uses Snowflake Streams to track changes).")
 public class SnowflakeImport extends AbstractRedisImport {
@@ -38,8 +37,6 @@ public class SnowflakeImport extends AbstractRedisImport {
     public static final String SNOWFLAKE_DRIVER = "net.snowflake.client.jdbc.SnowflakeDriver";
 
     public static final SnowflakeStreamItemReader.SnapshotMode DEFAULT_SNAPSHOT_MODE = SnowflakeStreamItemReader.SnapshotMode.INITIAL;
-
-    private static final String STEP_NAME = "snowflake-import";
 
     public static final String DEFAULT_OFFSET_PREFIX = "riotx:offset:";
 
@@ -57,8 +54,8 @@ public class SnowflakeImport extends AbstractRedisImport {
     @ArgGroup(exclusive = false)
     private DatabaseReaderArgs readerArgs = new DatabaseReaderArgs();
 
-    @Parameters(arity = "1", defaultValue = "${RIOT_TABLE}", description = "Fully qualified Snowflake Table or Materialized View, eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
-    private DatabaseObject table;
+    @Parameters(arity = "1..*", defaultValue = "${RIOT_TABLE}", description = "Fully qualified Snowflake table(s) or materialized view(s), eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
+    private List<DatabaseObject> tables = new ArrayList<>();
 
     @ArgGroup(exclusive = false)
     private DebeziumStreamArgs debeziumStreamArgs = new DebeziumStreamArgs();
@@ -107,49 +104,64 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     @Override
     protected Job job() throws Exception {
-        return job(step());
+        List<RiotStep<?, ?>> steps = new ArrayList<>();
+        for (DatabaseObject table : tables) {
+            steps.add(step(table));
+        }
+        return job(FlowFactoryBean.parallel("snowflakeImportFlow",
+                steps.stream().map(StepFlowFactoryBean::new).collect(Collectors.toList())));
     }
 
-    private RiotStep<?, ?> step() {
-        AbstractCountingItemReader<SnowflakeStreamRow> reader = reader();
+    private RiotStep<?, ?> step(DatabaseObject table) {
+        String stepName = "snowflake-import-" + table;
+        AbstractCountingItemReader<SnowflakeStreamRow> reader = reader(table);
         if (count > 0) {
             reader.setMaxItemCount(count);
         }
         if (hasOperations()) {
             ItemProcessor<SnowflakeStreamRow, Map<String, Object>> processor = RiotUtils.processor(new RowFilter(),
-                    new FunctionItemProcessor<>(SnowflakeStreamRow::getColumns), operationProcessor());
-            RiotStep<SnowflakeStreamRow, Map<String, Object>> step = step(STEP_NAME, reader, operationWriter());
+                    new RowToMapProcessor(), operationProcessor());
+            RiotStep<SnowflakeStreamRow, Map<String, Object>> step = step(stepName, reader, operationWriter());
             step.setItemProcessor(processor);
             return step;
         }
         ItemProcessor<SnowflakeStreamRow, StreamMessage<String, String>> processor = RiotUtils.processor(new RowFilter(),
-                new FunctionItemProcessor<>(this::changeEvent), new ChangeEventToStreamMessage(rdiStreamKey()));
-        RiotStep<SnowflakeStreamRow, StreamMessage<String, String>> step = step(STEP_NAME, reader, rdiWriter());
+                new RowToChangeEventProcessor(table, keyColumns), new ChangeEventToStreamMessage(rdiStreamKey(table)));
+        RiotStep<SnowflakeStreamRow, StreamMessage<String, String>> step = step(stepName, reader, rdiWriter(table));
         step.setItemProcessor(processor);
         return step;
     }
 
-    private ItemWriter<StreamMessage<String, String>> rdiWriter() {
-        String streamKey = rdiStreamKey();
+    private static class RowToMapProcessor implements ItemProcessor<SnowflakeStreamRow, Map<String, Object>> {
+
+        @Override
+        public Map<String, Object> process(SnowflakeStreamRow row) throws Exception {
+            return row.getColumns();
+        }
+
+    }
+
+    private ItemWriter<StreamMessage<String, String>> rdiWriter(DatabaseObject table) {
+        String streamKey = rdiStreamKey(table);
         Xadd<String, String, StreamMessage<String, String>> xadd = new Xadd<>(m -> streamKey, Arrays::asList);
         RedisItemWriter<String, String, StreamMessage<String, String>> writer = new RedisItemWriter<>(StringCodec.UTF8, xadd);
         configureTarget(writer);
         if (debeziumStreamArgs.getStreamLimit() > 0) {
-            return RiotUtils.writer(backpressureWriter(), writer);
+            return RiotUtils.writer(backpressureWriter(table), writer);
         }
         return writer;
     }
 
-    private BackpressureItemWriter<StreamMessage<String, String>> backpressureWriter() {
+    private BackpressureItemWriter<StreamMessage<String, String>> backpressureWriter(DatabaseObject table) {
         BackpressureItemWriter<StreamMessage<String, String>> writer = new BackpressureItemWriter<>();
         StreamLengthBackpressureStatusSupplier statusSupplier = new StreamLengthBackpressureStatusSupplier(
-                targetRedisContext.getConnection(), rdiStreamKey());
+                targetRedisContext.getConnection(), rdiStreamKey(table));
         statusSupplier.setLimit(debeziumStreamArgs.getStreamLimit());
         writer.setStatusSupplier(statusSupplier);
         return writer;
     }
 
-    private String rdiStreamKey() {
+    private String rdiStreamKey(DatabaseObject table) {
         return String.format(STREAM_FORMAT, debeziumStreamArgs.getStreamPrefix(), SOURCE_NAME, table.getSchema(),
                 table.getTable());
     }
@@ -168,43 +180,57 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     }
 
-    private ChangeEvent changeEvent(SnowflakeStreamRow row) {
-        ChangeEvent.Builder event = ChangeEvent.builder();
-        event.key(changeEventKey(row));
-        event.columns(row.getColumns());
-        event.operation(operation(row));
-        event.source(SOURCE_NAME);
-        event.connector(CONNECTOR_NAME);
-        event.database(table.getDatabase());
-        event.table(table.getTable());
-        event.schema(table.getSchema());
-        return event.build();
-    }
+    private static class RowToChangeEventProcessor implements ItemProcessor<SnowflakeStreamRow, ChangeEvent> {
 
-    private Object changeEventKey(SnowflakeStreamRow row) {
-        if (CollectionUtils.isEmpty(keyColumns)) {
-            return row.getColumns();
-        }
-        Map<String, Object> keyMap = new HashMap<>();
-        for (String column : keyColumns) {
-            keyMap.put(column, row.getColumns().get(column));
-        }
-        return keyMap;
-    }
+        private final DatabaseObject table;
 
-    private ChangeEventValue.Operation operation(SnowflakeStreamRow row) {
-        return switch (row.getAction()) {
-            case INSERT -> {
-                if (row.isUpdate()) {
-                    yield ChangeEventValue.Operation.UPDATE;
+        private final Set<String> keyColumns;
+
+        private RowToChangeEventProcessor(DatabaseObject table, Set<String> keyColumns) {
+            this.table = table;
+            this.keyColumns = keyColumns;
+        }
+
+        @Override
+        public ChangeEvent process(SnowflakeStreamRow row) throws Exception {
+            ChangeEvent.Builder event = ChangeEvent.builder();
+            event.key(changeEventKey(row));
+            event.columns(row.getColumns());
+            event.operation(operation(row));
+            event.source(SOURCE_NAME);
+            event.connector(CONNECTOR_NAME);
+            event.database(table.getDatabase());
+            event.table(table.getTable());
+            event.schema(table.getSchema());
+            return event.build();
+        }
+
+        private ChangeEventValue.Operation operation(SnowflakeStreamRow row) {
+            return switch (row.getAction()) {
+                case INSERT -> {
+                    if (row.isUpdate()) {
+                        yield ChangeEventValue.Operation.UPDATE;
+                    }
+                    yield ChangeEventValue.Operation.CREATE;
                 }
-                yield ChangeEventValue.Operation.CREATE;
+                case DELETE -> ChangeEventValue.Operation.DELETE;
+            };
+        }
+
+        private Object changeEventKey(SnowflakeStreamRow row) {
+            if (CollectionUtils.isEmpty(keyColumns)) {
+                return row.getColumns();
             }
-            case DELETE -> ChangeEventValue.Operation.DELETE;
-        };
+            Map<String, Object> keyMap = new HashMap<>();
+            for (String column : keyColumns) {
+                keyMap.put(column, row.getColumns().get(column));
+            }
+            return keyMap;
+        }
+
     }
 
-    protected AbstractCountingItemReader<SnowflakeStreamRow> reader() {
+    protected AbstractCountingItemReader<SnowflakeStreamRow> reader(DatabaseObject table) {
         if (!CollectionUtils.isEmpty(genColumns)) {
             return new SnowflakeStreamRowGeneratorItemReader(genColumns);
         }
@@ -218,16 +244,16 @@ public class SnowflakeImport extends AbstractRedisImport {
         reader.setWarehouse(warehouse);
         reader.setSnapshotMode(snapshotMode);
         reader.setTable(table.fullName());
-        reader.setOffsetStore(offsetStore());
+        reader.setOffsetStore(offsetStore(table));
         return reader;
     }
 
-    private OffsetStore offsetStore() {
+    private OffsetStore offsetStore(DatabaseObject table) {
         if (hasOperations()) {
             String key = offsetPrefix + table.fullName();
             return new RedisStringOffsetStore(targetRedisContext.client(), key);
         }
-        RdiOffsetStore store = new RdiOffsetStore(targetRedisContext.client());
+        RdiOffsetStore store = new RdiOffsetStore(targetRedisContext.client(), table.fullName());
         store.setKey(offsetKey);
         return store;
     }
@@ -341,12 +367,12 @@ public class SnowflakeImport extends AbstractRedisImport {
         this.readerArgs = readerArgs;
     }
 
-    public DatabaseObject getTable() {
-        return table;
+    public List<DatabaseObject> getTables() {
+        return tables;
     }
 
-    public void setTable(DatabaseObject table) {
-        this.table = table;
+    public void setTables(List<DatabaseObject> tables) {
+        this.tables = tables;
     }
 
     public DataSourceArgs getDataSourceArgs() {

@@ -63,11 +63,7 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
     }
 
     protected Job job(RiotStep<?, ?> step) throws Exception {
-        return job(stepFlow(step));
-    }
-
-    protected <I, O> StepFlowFactoryBean<I, O> stepFlow(RiotStep<I, O> step) {
-        return new StepFlowFactoryBean<>(step);
+        return job(new StepFlowFactoryBean<>(step));
     }
 
     protected Job job(FlowFactoryBean flow) throws Exception {

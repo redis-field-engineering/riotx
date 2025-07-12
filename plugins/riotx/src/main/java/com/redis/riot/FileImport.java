@@ -2,13 +2,13 @@ package com.redis.riot;
 
 import com.redis.batch.BatchUtils;
 import com.redis.batch.KeyStructEvent;
-import com.redis.batch.KeyTtlTypeEvent;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.function.MapToFieldFunction;
 import com.redis.riot.core.function.RegexNamedGroupFunction;
 import com.redis.riot.core.function.ToMapFunction;
 import com.redis.riot.core.job.FlowFactoryBean;
 import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.core.job.StepFlowFactoryBean;
 import com.redis.riot.file.*;
 import com.redis.riot.parquet.ParquetFileItemReader;
 import com.redis.riot.parquet.ParquetFileNameMap;
@@ -109,7 +109,8 @@ public class FileImport extends AbstractRedisImport {
         for (String file : files) {
             steps.add(step(resourceFactory.resource(file, readOptions)));
         }
-        return job(FlowFactoryBean.sequential("importFlow", steps.stream().map(this::stepFlow).collect(Collectors.toList())));
+        return job(FlowFactoryBean.sequential("importFlow",
+                steps.stream().map(StepFlowFactoryBean::new).collect(Collectors.toList())));
     }
 
     @SuppressWarnings("rawtypes")
