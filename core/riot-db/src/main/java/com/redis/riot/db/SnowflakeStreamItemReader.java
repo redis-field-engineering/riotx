@@ -155,8 +155,10 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
                 Map<String, Object> offsetMap = new HashMap<>();
                 offsetMap.put(OFFSET_KEY, nextOffset);
                 offsetStore.store(offsetMap);
-                try (Connection sqlConnection = initSqlDataSource.getConnection()) {
-                    sqlConnection.prepareStatement(String.format("DROP TABLE %s", tempTableName())).execute();
+                try (Connection sqlConnection = connection();
+                        PreparedStatement dropStatement = sqlConnection.prepareStatement(
+                                String.format("DROP TABLE %s", tempTableName()))) {
+                    dropStatement.execute();
                 }
                 nextOffset = null;
             }
@@ -174,13 +176,27 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
         return item;
     }
 
+    private Connection connection() throws SQLException {
+        return initSqlDataSource.getConnection();
+    }
+
     private boolean shouldFetch() {
         return Duration.between(lastFetchTime, Instant.now()).compareTo(pollInterval) > 0;
     }
 
     private boolean streamHasData() {
-        try (Connection connection = initSqlDataSource.getConnection()) {
-            return streamHasData(connection);
+        log.debug("Checking if stream has data");
+        try (Connection connection = connection();
+                PreparedStatement statement = connection.prepareStatement(STREAM_HAS_DATA_SQL)) {
+            statement.setString(1, streamObject.fullName());
+            ResultSet results = statement.executeQuery();
+            if (results.next()) {
+                boolean result = results.getBoolean(1);
+                log.debug("Stream has data: {}", result);
+                return result;
+            }
+            log.debug("No results from stream has data");
+            return false;
         } catch (SQLException e) {
             log.warn("Failed to check if stream has data", e);
             return false;
@@ -215,17 +231,6 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
         }
     }
 
-    private boolean streamHasData(Connection connection) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement(STREAM_HAS_DATA_SQL)) {
-            statement.setString(1, streamObject.fullName());
-            ResultSet results = statement.executeQuery();
-            if (results.next()) {
-                return results.getBoolean(1);
-            }
-            return false;
-        }
-    }
-
     private boolean isInvalidStreamName(SQLException ex) {
         return StringUtils.hasLength(ex.getMessage()) && ex.getMessage().toLowerCase().contains("must be a valid stream name");
     }
@@ -235,7 +240,7 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
     }
 
     private void fetch() throws Exception {
-        try (Connection connection = initSqlDataSource.getConnection()) {
+        try (Connection connection = connection()) {
             // First validate that the source table exists
             validateSourceTable(connection);
 
