@@ -54,16 +54,22 @@ public class SnowflakeImport extends AbstractRedisImport {
     @ArgGroup(exclusive = false)
     private DatabaseReaderArgs readerArgs = new DatabaseReaderArgs();
 
-    @Parameters(arity = "1..*", defaultValue = "${RIOT_TABLE}", description = "Fully qualified Snowflake table(s) or materialized view(s), eg: DB.SCHEMA.TABLE", paramLabel = "TABLE")
+    @Parameters(arity = "1..*", defaultValue = "${RIOT_TABLE}", description = "Snowflake table(s) or materialized view(s) to import. Can be fully qualified. Example: DB.SCHEMA.TABLE, customers.", paramLabel = "TABLE")
     private List<DatabaseObject> tables = new ArrayList<>();
+
+    @Option(names = "--database", defaultValue = "${RIOT_DATABASE}", description = "Snowflake database for the specified table(s).", paramLabel = "<name>")
+    private String database;
+
+    @Option(names = "--schema", defaultValue = "${RIOT_SCHEMA}", description = "Snowflake schema for the specified table(s).", paramLabel = "<name>")
+    private String schema;
 
     @ArgGroup(exclusive = false)
     private DebeziumStreamArgs debeziumStreamArgs = new DebeziumStreamArgs();
 
-    @CommandLine.Option(names = "--offset-prefix", defaultValue = "${RIOT_OFFSET_PREFIX:-riotx:offset:}", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
+    @Option(names = "--offset-prefix", defaultValue = "${RIOT_OFFSET_PREFIX:-riotx:offset:}", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
     private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
 
-    @CommandLine.Option(names = "--offset-key", defaultValue = "${RIOT_OFFSET_KEY:-metadata:debezium:offsets}", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
+    @Option(names = "--offset-key", defaultValue = "${RIOT_OFFSET_KEY:-metadata:debezium:offsets}", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
     private String offsetKey = DEFAULT_OFFSET_KEY;
 
     @Option(names = "--snapshot", defaultValue = "${RIOT_SNAPSHOT:-INITIAL}", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
@@ -106,6 +112,12 @@ public class SnowflakeImport extends AbstractRedisImport {
     protected Job job() throws Exception {
         List<RiotStep<?, ?>> steps = new ArrayList<>();
         for (DatabaseObject table : tables) {
+            if (table.getSchema() == null) {
+                table.setSchema(schema);
+            }
+            if (table.getDatabase() == null) {
+                table.setDatabase(database);
+            }
             steps.add(step(table));
         }
         return job(FlowFactoryBean.parallel("snowflakeImportFlow",
