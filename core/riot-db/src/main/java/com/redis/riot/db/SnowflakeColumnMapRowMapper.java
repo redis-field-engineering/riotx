@@ -23,19 +23,16 @@ public class SnowflakeColumnMapRowMapper extends ColumnMapRowMapper {
     @Override
     protected Object getColumnValue(ResultSet rs, int index) throws SQLException {
         Object value = super.getColumnValue(rs, index);
-        if (value == null) {
-            return null;
-        }
-        String columnTypeName = rs.getMetaData().getColumnTypeName(index);
-        if (TYPE_VARIANT.equalsIgnoreCase(columnTypeName)) {
-            String valueString = String.valueOf(value);
-            try {
-                JsonNode jsonNode = mapper.readTree(valueString);
-                value = convertJsonNode(jsonNode);
-                return value;
-            } catch (JsonProcessingException e) {
-                log.debug("Could not parse VARIANT value as JSON: {}", value);
-                return value;
+        if (value != null) {
+            String columnTypeName = rs.getMetaData().getColumnTypeName(index);
+            if (TYPE_VARIANT.equalsIgnoreCase(columnTypeName)) {
+                String valueString = String.valueOf(value);
+                try {
+                    JsonNode jsonNode = mapper.readTree(valueString);
+                    value = convertJsonNode(jsonNode);
+                } catch (JsonProcessingException e) {
+                    log.debug("Could not parse VARIANT value as JSON: {}", value);
+                }
             }
         }
         return value;
