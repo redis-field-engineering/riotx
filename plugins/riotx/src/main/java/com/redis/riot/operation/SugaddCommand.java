@@ -4,6 +4,7 @@ import com.redis.batch.BatchUtils;
 import com.redis.lettucemod.search.Suggestion;
 import com.redis.riot.core.TemplateExpression;
 import com.redis.batch.operation.Sugadd;
+import org.springframework.expression.EvaluationContext;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -28,15 +29,15 @@ public class SugaddCommand extends AbstractOperationCommand {
     private ScoreArgs scoreArgs = new ScoreArgs();
 
     @Override
-    public Sugadd<byte[], byte[], Map<String, Object>> operation() {
-        Sugadd<byte[], byte[], Map<String, Object>> operation = new Sugadd<>(keyFunction(), suggestion());
+    public Sugadd<byte[], byte[], Map<String, Object>> operation(EvaluationContext context) {
+        Sugadd<byte[], byte[], Map<String, Object>> operation = new Sugadd<>(keyFunction(context), suggestion(context));
         operation.setIncr(increment);
         return operation;
     }
 
-    private Function<Map<String, Object>, Suggestion<byte[]>> suggestion() {
+    private Function<Map<String, Object>, Suggestion<byte[]>> suggestion(EvaluationContext context) {
         ToDoubleFunction<Map<String, Object>> score = score(scoreArgs);
-        return t -> suggestion(evaluate(string, t), score.applyAsDouble(t), evaluate(payload, t));
+        return t -> suggestion(evaluate(string, context, t), score.applyAsDouble(t), evaluate(payload, context, t));
     }
 
     private Suggestion<byte[]> suggestion(String string, double score, String payload) {

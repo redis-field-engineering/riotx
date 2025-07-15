@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import com.redis.batch.BatchUtils;
+import org.springframework.expression.EvaluationContext;
 import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -35,8 +36,8 @@ public class SetCommand extends AbstractOperationCommand {
     private String root;
 
     @Override
-    public Set<byte[], byte[], Map<String, Object>> operation() {
-        return new Set<>(keyFunction(), value().andThen(BatchUtils.STRING_KEY_TO_BYTES));
+    public Set<byte[], byte[], Map<String, Object>> operation(EvaluationContext context) {
+        return new Set<>(keyFunction(context), value().andThen(BatchUtils.STRING_KEY_TO_BYTES));
     }
 
     private Function<Map<String, Object>, String> value() {

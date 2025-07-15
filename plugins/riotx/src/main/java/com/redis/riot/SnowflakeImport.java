@@ -20,6 +20,7 @@ import io.lettuce.core.codec.StringCodec;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.CollectionUtils;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
@@ -48,6 +49,10 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     private static final String STREAM_FORMAT = "%s%s.%s.%s";
 
+    private static final String DEFAULT_METADATA_FIELD_PREFIX = "_";
+
+    private static final String TABLE_VAR = "table";
+
     @ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
 
@@ -65,6 +70,9 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     @ArgGroup(exclusive = false)
     private DebeziumStreamArgs debeziumStreamArgs = new DebeziumStreamArgs();
+
+    @Option(names = "--meta-field-prefix", description = "Character to use to prefix metadata fields like database schema or table (default: ${DEFAULT-VALUE}).", paramLabel = "<str>", hidden = true)
+    private String metadataFieldPrefix = DEFAULT_METADATA_FIELD_PREFIX;
 
     @Option(names = "--offset-prefix", defaultValue = "${RIOT_OFFSET_PREFIX:-riotx:offset:}", description = "Key prefix for offset stored in Redis (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
     private String offsetPrefix = DEFAULT_OFFSET_PREFIX;
@@ -131,9 +139,11 @@ public class SnowflakeImport extends AbstractRedisImport {
             reader.setMaxItemCount(count);
         }
         if (hasOperations()) {
+            StandardEvaluationContext evaluationContext = evaluationContext();
+            evaluationContext.setVariable(TABLE_VAR, table);
             ItemProcessor<SnowflakeStreamRow, Map<String, Object>> processor = RiotUtils.processor(new RowFilter(),
-                    new RowToMapProcessor(), operationProcessor());
-            RiotStep<SnowflakeStreamRow, Map<String, Object>> step = step(stepName, reader, operationWriter());
+                    new RowToMapProcessor(), operationProcessor(evaluationContext));
+            RiotStep<SnowflakeStreamRow, Map<String, Object>> step = step(stepName, reader, operationWriter(evaluationContext));
             step.setItemProcessor(processor);
             return step;
         }
@@ -147,7 +157,7 @@ public class SnowflakeImport extends AbstractRedisImport {
     private static class RowToMapProcessor implements ItemProcessor<SnowflakeStreamRow, Map<String, Object>> {
 
         @Override
-        public Map<String, Object> process(SnowflakeStreamRow row) throws Exception {
+        public Map<String, Object> process(SnowflakeStreamRow row) {
             return row.getColumns();
         }
 
@@ -175,7 +185,7 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     private String rdiStreamKey(DatabaseObject table) {
         return String.format(STREAM_FORMAT, debeziumStreamArgs.getStreamPrefix(), SOURCE_NAME, table.getSchema(),
-                table.getTable());
+                table.getName());
     }
 
     private static class RowFilter implements ItemProcessor<SnowflakeStreamRow, SnowflakeStreamRow> {
@@ -212,7 +222,7 @@ public class SnowflakeImport extends AbstractRedisImport {
             event.source(SOURCE_NAME);
             event.connector(CONNECTOR_NAME);
             event.database(table.getDatabase());
-            event.table(table.getTable());
+            event.table(table.getName());
             event.schema(table.getSchema());
             return event.build();
         }
@@ -449,6 +459,30 @@ public class SnowflakeImport extends AbstractRedisImport {
 
     public Set<String> getKeyColumns() {
         return keyColumns;
+    }
+
+    public String getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(String database) {
+        this.database = database;
+    }
+
+    public String getSchema() {
+        return schema;
+    }
+
+    public void setSchema(String schema) {
+        this.schema = schema;
+    }
+
+    public String getMetadataFieldPrefix() {
+        return metadataFieldPrefix;
+    }
+
+    public void setMetadataFieldPrefix(String metadataFieldPrefix) {
+        this.metadataFieldPrefix = metadataFieldPrefix;
     }
 
 }

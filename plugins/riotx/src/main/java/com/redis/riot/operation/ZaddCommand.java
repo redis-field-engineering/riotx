@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import com.redis.batch.operation.Zadd;
 
 import io.lettuce.core.ScoredValue;
+import org.springframework.expression.EvaluationContext;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 
@@ -19,8 +20,8 @@ public class ZaddCommand extends AbstractMemberOperationCommand {
     private ScoreArgs scoreArgs = new ScoreArgs();
 
     @Override
-    public Zadd<byte[], byte[], Map<String, Object>> operation() {
-        return new Zadd<>(keyFunction(), t -> scoredValues(memberFunction(), score(scoreArgs), t));
+    public Zadd<byte[], byte[], Map<String, Object>> operation(EvaluationContext context) {
+        return new Zadd<>(keyFunction(context), t -> scoredValues(memberFunction(context), score(scoreArgs), t));
     }
 
     private Collection<ScoredValue<byte[]>> scoredValues(Function<Map<String, Object>, Collection<byte[]>> member,

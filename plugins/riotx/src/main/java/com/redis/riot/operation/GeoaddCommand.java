@@ -2,6 +2,7 @@ package com.redis.riot.operation;
 
 import com.redis.batch.operation.Geoadd;
 import io.lettuce.core.GeoValue;
+import org.springframework.expression.EvaluationContext;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -37,11 +38,11 @@ public class GeoaddCommand extends AbstractMemberOperationCommand {
 	}
 
 	@Override
-	public Geoadd<byte[], byte[], Map<String, Object>> operation() {
-		Function<Map<String, Object>, Collection<byte[]>> members = memberFunction();
+	public Geoadd<byte[], byte[], Map<String, Object>> operation(EvaluationContext context) {
+		Function<Map<String, Object>, Collection<byte[]>> members = memberFunction(context);
 		ToDoubleFunction<Map<String, Object>> lon = toDouble(longitude, 0);
 		ToDoubleFunction<Map<String, Object>> lat = toDouble(latitude, 0);
-		return new Geoadd<>(keyFunction(), t -> value(members, lon, lat, t));
+		return new Geoadd<>(keyFunction(context), t -> value(members, lon, lat, t));
 	}
 
 	private Collection<GeoValue<byte[]>> value(Function<Map<String, Object>, Collection<byte[]>> members, ToDoubleFunction<Map<String, Object>> lon, ToDoubleFunction<Map<String, Object>> lat, Map<String, Object> map) {

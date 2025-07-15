@@ -7,8 +7,6 @@ import org.springframework.expression.EvaluationContext;
 
 public interface OperationCommand {
 
-    void setEvaluationContext(EvaluationContext context);
-
-    RedisBatchOperation<byte[], byte[], Map<String, Object>, Object> operation();
+    RedisBatchOperation<byte[], byte[], Map<String, Object>, Object> operation(EvaluationContext context);
 
 }

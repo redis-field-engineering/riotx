@@ -3,6 +3,7 @@ package com.redis.riot.operation;
 import com.redis.batch.operation.Xadd;
 import io.lettuce.core.StreamMessage;
 import io.lettuce.core.XAddArgs;
+import org.springframework.expression.EvaluationContext;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -34,14 +35,14 @@ public class XaddCommand extends AbstractOperationCommand {
     }
 
     @Override
-    public Xadd<byte[], byte[], Map<String, Object>> operation() {
-        Xadd<byte[], byte[], Map<String, Object>> operation = new Xadd<>(keyFunction(), messageFunction());
+    public Xadd<byte[], byte[], Map<String, Object>> operation(EvaluationContext context) {
+        Xadd<byte[], byte[], Map<String, Object>> operation = new Xadd<>(keyFunction(context), messageFunction(context));
         operation.setArgs(xAddArgs());
         return operation;
     }
 
-    private Function<Map<String, Object>, Collection<StreamMessage<byte[], byte[]>>> messageFunction() {
-        Function<Map<String, Object>, byte[]> keyFunction = keyFunction();
+    private Function<Map<String, Object>, Collection<StreamMessage<byte[], byte[]>>> messageFunction(EvaluationContext context) {
+        Function<Map<String, Object>, byte[]> keyFunction = keyFunction(context);
         Function<Map<String, Object>, Map<byte[], byte[]>> mapFunction = fieldFilterArgs.mapFunction();
         return m -> Collections.singletonList(new StreamMessage<>(keyFunction.apply(m), null, mapFunction.apply(m)));
     }

@@ -102,7 +102,7 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
             streamObject = new DatabaseObject();
             streamObject.setDatabase(streamDatabase == null ? tableObject.getDatabase() : streamDatabase);
             streamObject.setSchema(streamSchema == null ? tableObject.getSchema() : streamSchema);
-            streamObject.setTable(String.format("%s_changestream", tableObject.getTable()));
+            streamObject.setName(String.format("%s_changestream", tableObject.getName()));
         }
         if (nextOffset == null) {
             fetch();

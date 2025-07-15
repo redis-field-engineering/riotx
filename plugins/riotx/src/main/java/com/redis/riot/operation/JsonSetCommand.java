@@ -8,6 +8,7 @@ import com.redis.batch.operation.JsonSet;
 import io.lettuce.core.json.JsonPath;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.core.serializer.support.SerializationFailedException;
+import org.springframework.expression.EvaluationContext;
 import org.springframework.util.StringUtils;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -32,8 +33,8 @@ public class JsonSetCommand extends AbstractOperationCommand {
     private String valueField;
 
     @Override
-    public JsonSet<byte[], byte[], Map<String, Object>> operation() {
-        JsonSet<byte[], byte[], Map<String, Object>> operation = new JsonSet<>(keyFunction(),
+    public JsonSet<byte[], byte[], Map<String, Object>> operation(EvaluationContext context) {
+        JsonSet<byte[], byte[], Map<String, Object>> operation = new JsonSet<>(keyFunction(context),
                 valueFunction().andThen(BatchUtils.STRING_KEY_TO_BYTES));
         if (pathField == null) {
             operation.setPath(path);

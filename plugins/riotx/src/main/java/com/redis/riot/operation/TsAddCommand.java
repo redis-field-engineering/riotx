@@ -13,6 +13,7 @@ import java.util.function.ToLongFunction;
 
 import com.redis.batch.BatchUtils;
 import com.redis.riot.core.TemplateExpression;
+import org.springframework.expression.EvaluationContext;
 import org.springframework.util.CollectionUtils;
 
 import com.redis.lettucemod.timeseries.AddOptions;
@@ -44,21 +45,21 @@ public class TsAddCommand extends AbstractOperationCommand {
     private Map<String, TemplateExpression> labels = new LinkedHashMap<>();
 
     @Override
-    public TsAdd<byte[], byte[], Map<String, Object>> operation() {
-        TsAdd<byte[], byte[], Map<String, Object>> operation = new TsAdd<>(keyFunction(), valueFunction());
-        operation.setOptionsFunction(this::addOptions);
+    public TsAdd<byte[], byte[], Map<String, Object>> operation(EvaluationContext context) {
+        TsAdd<byte[], byte[], Map<String, Object>> operation = new TsAdd<>(keyFunction(context), valueFunction());
+        operation.setOptionsFunction(t -> addOptions(context, t));
         return operation;
     }
 
     @SuppressWarnings("unchecked")
-    private AddOptions<byte[], byte[]> addOptions(Map<String, Object> source) {
+    private AddOptions<byte[], byte[]> addOptions(EvaluationContext context, Map<String, Object> source) {
         Builder<byte[], byte[]> builder = AddOptions.builder();
         builder.policy(duplicatePolicy);
         if (!CollectionUtils.isEmpty(labels)) {
             List<KeyValue<byte[], byte[]>> labelList = new ArrayList<>();
             for (Entry<String, TemplateExpression> label : labels.entrySet()) {
                 labelList.add(KeyValue.just(BatchUtils.STRING_KEY_TO_BYTES.apply(label.getKey()),
-                        BatchUtils.STRING_VALUE_TO_BYTES.apply(evaluate(label.getValue(), source))));
+                        BatchUtils.STRING_VALUE_TO_BYTES.apply(evaluate(label.getValue(), context, source))));
             }
             builder.labels(labelList.toArray(new KeyValue[0]));
         }

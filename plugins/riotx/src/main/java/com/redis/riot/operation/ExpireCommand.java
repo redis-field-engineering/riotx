@@ -3,6 +3,7 @@ package com.redis.riot.operation;
 import com.redis.batch.RedisBatchOperation;
 import com.redis.batch.operation.Expire;
 import com.redis.batch.operation.ExpireAt;
+import org.springframework.expression.EvaluationContext;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 
@@ -17,9 +18,9 @@ public class ExpireCommand extends AbstractOperationCommand {
     private ExpireTtlArgs ttlArgs = new ExpireTtlArgs();
 
     @Override
-    public RedisBatchOperation<byte[], byte[], Map<String, Object>, Object> operation() {
+    public RedisBatchOperation<byte[], byte[], Map<String, Object>, Object> operation(EvaluationContext context) {
         if (ttlArgs.getTimeField() != null || ttlArgs.getTime() != null) {
-            ExpireAt<byte[], byte[], Map<String, Object>> operation = new ExpireAt<>(keyFunction());
+            ExpireAt<byte[], byte[], Map<String, Object>> operation = new ExpireAt<>(keyFunction(context));
             if (ttlArgs.getTime() == null) {
                 ToLongFunction<Map<String, Object>> longFunction = toLong(ttlArgs.getTimeField());
                 operation.setTimestampFunction(t -> Instant.ofEpochMilli(longFunction.applyAsLong(t)));
@@ -28,7 +29,7 @@ public class ExpireCommand extends AbstractOperationCommand {
             }
             return operation;
         }
-        Expire<byte[], byte[], Map<String, Object>> operation = new Expire<>(keyFunction());
+        Expire<byte[], byte[], Map<String, Object>> operation = new Expire<>(keyFunction(context));
         if (ttlArgs.getTtl() == null) {
             operation.setTtlFunction(toLong(ttlArgs.getTtlField()));
         } else {

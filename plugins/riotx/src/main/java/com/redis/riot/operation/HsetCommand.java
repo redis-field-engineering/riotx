@@ -4,6 +4,7 @@ import java.util.Map;
 
 import com.redis.batch.operation.Hset;
 
+import org.springframework.expression.EvaluationContext;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 
@@ -14,8 +15,8 @@ public class HsetCommand extends AbstractOperationCommand {
     private FieldFilterArgs fieldFilterArgs = new FieldFilterArgs();
 
     @Override
-    public Hset<byte[], byte[], Map<String, Object>> operation() {
-        return new Hset<>(keyFunction(), fieldFilterArgs.mapFunction());
+    public Hset<byte[], byte[], Map<String, Object>> operation(EvaluationContext context) {
+        return new Hset<>(keyFunction(context), fieldFilterArgs.mapFunction());
     }
 
     public FieldFilterArgs getFieldFilterArgs() {
