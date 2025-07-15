@@ -83,7 +83,7 @@ public class LoggingMixin {
         mixin().showLogName = show;
     }
 
-    @Option(names = "--log-short", description = "Include last component of logger instance name in log messages. True by default.", negatable = true, defaultValue = "true", fallbackValue = "true", hidden = true)
+    @Option(names = "--log-short", description = "Only show last component of logger instance name in log messages.", hidden = true)
     public void setShowShortLogName(boolean show) {
         mixin().showShortLogName = show;
     }
