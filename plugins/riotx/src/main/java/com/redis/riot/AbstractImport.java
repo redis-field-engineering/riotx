@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Command(subcommands = { ExpireCommand.class, DelCommand.class, GeoaddCommand.class, HsetCommand.class, LpushCommand.class,
-        RpushCommand.class, SaddCommand.class, SetCommand.class, XaddCommand.class, ZaddCommand.class, SugaddCommand.class,
-        JsonSetCommand.class,
+@Command(subcommands = { ExpireCommand.class, DelCommand.class, GeoaddCommand.class, HsetCommand.class,
+        LogOperationCommand.class, LpushCommand.class, RpushCommand.class, SaddCommand.class, SetCommand.class,
+        XaddCommand.class, ZaddCommand.class, SugaddCommand.class, JsonSetCommand.class,
         TsAddCommand.class }, subcommandsRepeatable = true, synopsisSubcommandLabel = "[REDIS COMMAND...]", commandListHeading = "Redis commands:%n")
 public abstract class AbstractImport extends AbstractJobCommand {
 
