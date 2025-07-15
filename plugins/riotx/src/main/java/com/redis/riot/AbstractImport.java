@@ -51,8 +51,6 @@ public abstract class AbstractImport extends AbstractJobCommand {
 
     protected RedisContext targetRedisContext;
 
-    private StandardEvaluationContext evaluationContext;
-
     @Override
     protected String taskName(RiotStep<?, ?> step) {
         return TASK_NAME;
@@ -63,10 +61,6 @@ public abstract class AbstractImport extends AbstractJobCommand {
         super.initialize();
         targetRedisContext = targetRedisContext();
         targetRedisContext.afterPropertiesSet();
-        log.info("Creating SpEL evaluation context with {}", evaluationContextArgs);
-        evaluationContext = evaluationContextArgs.evaluationContext();
-        evaluationContext.setVariable(VAR_REDIS, targetRedisContext.getConnection().sync());
-        evaluationContext.addPropertyAccessor(new QuietMapAccessor());
     }
 
     @Override
@@ -77,13 +71,17 @@ public abstract class AbstractImport extends AbstractJobCommand {
         super.teardown();
     }
 
-    protected List<RedisBatchOperation<byte[], byte[], Map<String, Object>, Object>> operations() {
-        return importOperationCommands.stream().map(this::operation).collect(Collectors.toList());
+    private List<RedisBatchOperation<byte[], byte[], Map<String, Object>, Object>> operations(
+            StandardEvaluationContext evaluationContext) {
+        return importOperationCommands.stream().map(c -> c.operation(evaluationContext)).collect(Collectors.toList());
     }
 
-    private RedisBatchOperation<byte[], byte[], Map<String, Object>, Object> operation(OperationCommand command) {
-        command.setEvaluationContext(evaluationContext);
-        return command.operation();
+    protected StandardEvaluationContext evaluationContext() {
+        log.info("Creating SpEL evaluation context with {}", evaluationContextArgs);
+        StandardEvaluationContext evaluationContext = evaluationContextArgs.evaluationContext();
+        evaluationContext.setVariable(VAR_REDIS, targetRedisContext.getConnection().sync());
+        evaluationContext.addPropertyAccessor(new QuietMapAccessor());
+        return evaluationContext;
     }
 
     protected boolean hasOperations() {
@@ -91,7 +89,11 @@ public abstract class AbstractImport extends AbstractJobCommand {
     }
 
     protected ItemProcessor<Map<String, Object>, Map<String, Object>> operationProcessor() {
-        return processor(evaluationContext, processorArgs);
+        return operationProcessor(evaluationContext());
+    }
+
+    protected ItemProcessor<Map<String, Object>, Map<String, Object>> operationProcessor(StandardEvaluationContext context) {
+        return processor(context, processorArgs);
     }
 
     protected abstract RedisContext targetRedisContext();
@@ -109,8 +111,13 @@ public abstract class AbstractImport extends AbstractJobCommand {
     }
 
     protected RedisItemWriter<byte[], byte[], Map<String, Object>> operationWriter() {
+        return operationWriter(evaluationContext());
+    }
+
+    protected RedisItemWriter<byte[], byte[], Map<String, Object>> operationWriter(
+            StandardEvaluationContext evaluationContext) {
         RedisItemWriter<byte[], byte[], Map<String, Object>> writer = new RedisItemWriter<>(ByteArrayCodec.INSTANCE,
-                new MultiOperation<>(operations()));
+                new MultiOperation<>(operations(evaluationContext)));
         configureTarget(writer);
         return writer;
     }

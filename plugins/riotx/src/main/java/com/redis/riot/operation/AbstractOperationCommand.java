@@ -40,8 +40,6 @@ public abstract class AbstractOperationCommand extends BaseCommand implements Op
     @Option(names = "--ignore-missing", description = "Ignore missing fields.")
     private boolean ignoreMissingFields;
 
-    protected EvaluationContext evaluationContext;
-
     protected Function<Map<String, Object>, String> toString(String field) {
         if (field == null) {
             return s -> null;
@@ -57,23 +55,23 @@ public abstract class AbstractOperationCommand extends BaseCommand implements Op
         return new IdFunctionBuilder().separator(keySeparator).remove(removeFields).prefix(prefix).fields(fields).build();
     }
 
-    protected Function<Map<String, Object>, byte[]> keyFunction() {
-        return stringKeyFunction().andThen(BatchUtils.STRING_KEY_TO_BYTES);
+    protected Function<Map<String, Object>, byte[]> keyFunction(EvaluationContext context) {
+        return stringKeyFunction(context).andThen(BatchUtils.STRING_KEY_TO_BYTES);
     }
 
-    private Function<Map<String, Object>, String> stringKeyFunction() {
+    protected String key(EvaluationContext context, Map<String, Object> map) {
+        return evaluate(key, context, map);
+    }
+
+    protected String evaluate(TemplateExpression expression, EvaluationContext context, Map<String, Object> map) {
+        return expression.getValue(context, map);
+    }
+
+    private Function<Map<String, Object>, String> stringKeyFunction(EvaluationContext context) {
         if (key == null) {
             return idFunction(keyspace, keyFields);
         }
-        return this::key;
-    }
-
-    protected String key(Map<String, Object> map) {
-        return evaluate(key, map);
-    }
-
-    protected String evaluate(TemplateExpression expression, Map<String, Object> map) {
-        return expression.getValue(evaluationContext, map);
+        return t -> key(context, t);
     }
 
     protected ToDoubleFunction<Map<String, Object>> score(ScoreArgs args) {
@@ -92,11 +90,6 @@ public abstract class AbstractOperationCommand extends BaseCommand implements Op
             return m -> 0;
         }
         return fieldExtractorFactory().longField(field);
-    }
-
-    @Override
-    public void setEvaluationContext(EvaluationContext context) {
-        this.evaluationContext = context;
     }
 
     public String getKeyspace() {

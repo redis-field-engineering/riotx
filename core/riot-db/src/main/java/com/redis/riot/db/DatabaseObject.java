@@ -2,14 +2,11 @@ package com.redis.riot.db;
 
 import org.springframework.util.Assert;
 
-import javax.xml.crypto.Data;
-import java.util.Arrays;
-
 public class DatabaseObject {
 
     private static final String IDENTIFIER_PATTERN = "[a-zA-Z0-9_$]+";
 
-    private String table;
+    private String name;
 
     private String database;
 
@@ -41,19 +38,19 @@ public class DatabaseObject {
         this.schema = schema;
     }
 
-    public String getTable() {
-        return table;
+    public String getName() {
+        return name;
     }
 
-    public void setTable(String table) {
-        this.table = table;
+    public void setName(String name) {
+        this.name = name;
     }
 
     /**
      * Returns the fully qualified name as DATABASE.SCHEMA.TABLE
      */
     public String fullName() {
-        return String.format("%s.%s.%s", database, schema, table);
+        return String.format("%s.%s.%s", database, schema, name);
     }
 
     @Override
@@ -71,7 +68,7 @@ public class DatabaseObject {
         DatabaseObject table = new DatabaseObject();
         table.setDatabase(parts[0]);
         table.setSchema(parts[1]);
-        table.setTable(parts[2]);
+        table.setName(parts[2]);
         return table;
     }
 

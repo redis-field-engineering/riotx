@@ -808,6 +808,13 @@ class StackRiotTests extends RiotTests {
         }
     }
 
+    @Test
+    void snowflakeImportHsetTable(TestInfo info) throws Exception {
+        execute(info, "snowflake-import-gen-hset-table");
+        Assertions.assertEquals(123, redisCommands.keys("table1:*").size());
+        Assertions.assertEquals(123, redisCommands.keys("table2:*").size());
+    }
+
     @SuppressWarnings("unchecked")
     @Test
     void rdiStreamGenKeyColumns(TestInfo info) throws Exception {

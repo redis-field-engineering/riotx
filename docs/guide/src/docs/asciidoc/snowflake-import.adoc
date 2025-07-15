@@ -94,6 +94,21 @@ This command uses the example db, schema and table names from the minimal role s
 
 The command above imports CDC data from the Snowflake table `tb_101.raw_pos.incremental_order_header` into Redis hashes in the keyspace `orderheader`.
 
+TIP: You can specify multiple tables to import. If you need to reference table information in the operation you can use the `#table` variable which exposes `name`, `database`, and `schema` fields.
+
+.Import Multiple Tables
+[source,console,subs="verbatim,attributes"]
+----
+{app} snowflake-import \
+      db1.public.table1 db1.public.table2 \ # <1>
+      ...
+      hset #{#table.name}:{id} # <2>
+----
+<1> Specify all tables to import
+<2> Use table name as key prefix
+
+This command would generate keys `table1:abc`, `table2:def`, etc.
+
 If you only need to do a one time import of data from Snowflake you can use the `db-import` command.
 This command will read all of the rows output from your SQL query and will write them to Redis.
 For more information see the link:https://redis.github.io/riot/#_db_import[db-import] command.
