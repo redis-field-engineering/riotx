@@ -174,7 +174,7 @@ processors:
 [source,yaml]
 -----
 source:
-  table: "*"
+  table: incremental_order_header
 
 output:
   - uses: redis.write
