@@ -6,6 +6,7 @@ import com.redis.riot.core.*;
 import com.redis.riot.core.job.FlowFactoryBean;
 import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.job.StepFlowFactoryBean;
+import com.redis.riot.db.DataSourceBuilder;
 import com.redis.riot.db.DatabaseObject;
 import com.redis.riot.db.SnowflakeStreamItemReader;
 import com.redis.riot.db.SnowflakeStreamRow;
@@ -27,6 +28,7 @@ import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+import javax.sql.DataSource;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -260,7 +262,7 @@ public class SnowflakeImport extends AbstractRedisImport {
         reader.setReaderOptions(readerArgs.readerOptions());
         reader.setStreamDatabase(cdcDatabase);
         reader.setStreamSchema(cdcSchema);
-        reader.setDataSource(dataSourceArgs.dataSourceBuilder().driver(SNOWFLAKE_DRIVER).build());
+        reader.setDataSource(dataSource());
         reader.setPollInterval(pollInterval);
         reader.setRole(role);
         reader.setWarehouse(warehouse);
@@ -268,6 +270,12 @@ public class SnowflakeImport extends AbstractRedisImport {
         reader.setTable(table.fullName());
         reader.setOffsetStore(offsetStore(table));
         return reader;
+    }
+
+    private DataSource dataSource() {
+        DataSourceBuilder builder = dataSourceArgs.dataSourceBuilder();
+        builder.driver(SNOWFLAKE_DRIVER);
+        return builder.build();
     }
 
     private OffsetStore offsetStore(DatabaseObject table) {

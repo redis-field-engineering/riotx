@@ -23,6 +23,12 @@ import java.util.concurrent.TimeUnit;
 
 public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReader<SnowflakeStreamRow> {
 
+    private static final String SNOWFLAKE_LOGGER = "net.snowflake.jdbc.loggerImpl";
+
+    static {
+        System.setProperty(SNOWFLAKE_LOGGER, "net.snowflake.client.log.SLF4JLogger");
+    }
+
     private static final String OFFSET_SQL = "SELECT SYSTEM$STREAM_GET_TABLE_TIMESTAMP(?)";
 
     private static final String STREAM_HAS_DATA_SQL = "SELECT SYSTEM$STREAM_HAS_DATA(?)";
@@ -41,7 +47,6 @@ public class SnowflakeStreamItemReader extends AbstractCountingPollableItemReade
 
     public enum SnapshotMode {
         INITIAL, NEVER;
-
     }
 
     private final Logger log = LoggerFactory.getLogger(getClass());

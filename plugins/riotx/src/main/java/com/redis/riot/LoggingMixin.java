@@ -148,11 +148,17 @@ public class LoggingMixin {
         setLogLevel("com.redis.spring.batch.step.FlushingFaultTolerantStepBuilder", Level.ERROR);
         setLogLevel("org.springframework.batch.core.step.builder.FaultTolerantStepBuilder", Level.ERROR);
         setLogLevel("org.springframework.batch.core.step.item.ChunkMonitor", Level.ERROR);
+        setLogLevel("net.snowflake", Level.WARN);
+        setLogLevel("net.snowflake.client.core.FileUtil", "OFF");
         mixin.levels.forEach(this::setLogLevel);
     }
 
     private void setLogLevel(String key, Level level) {
-        System.setProperty(SimpleLogger.LOG_KEY_PREFIX + key, level.name());
+        setLogLevel(key, level.name());
+    }
+
+    private void setLogLevel(String key, String level) {
+        System.setProperty(SimpleLogger.LOG_KEY_PREFIX + key, level);
     }
 
     private void setBoolean(String property, boolean value) {
