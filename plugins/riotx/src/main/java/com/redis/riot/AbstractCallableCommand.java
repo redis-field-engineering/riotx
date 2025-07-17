@@ -1,18 +1,13 @@
 package com.redis.riot;
 
-import java.util.concurrent.Callable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
+
+import java.util.concurrent.Callable;
 
 @Command
 public abstract class AbstractCallableCommand extends BaseCommand implements Callable<Integer> {
-
-    @Option(names = "--help", usageHelp = true, description = "Show this help message and exit.")
-    private boolean helpRequested;
 
     protected Logger log;
 
@@ -45,14 +40,6 @@ public abstract class AbstractCallableCommand extends BaseCommand implements Cal
 
     public void setLog(Logger log) {
         this.log = log;
-    }
-
-    public boolean isHelpRequested() {
-        return helpRequested;
-    }
-
-    public void setHelpRequested(boolean helpRequested) {
-        this.helpRequested = helpRequested;
     }
 
 }
