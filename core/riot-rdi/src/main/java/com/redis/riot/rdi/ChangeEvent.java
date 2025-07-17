@@ -121,7 +121,11 @@ public class ChangeEvent {
 
         private ChangeEventValue value() {
             ChangeEventValue value = new ChangeEventValue();
-            value.setAfter(columns);
+            if (operation == ChangeEventValue.Operation.DELETE) {
+                value.setBefore(columns);
+            } else {
+                value.setAfter(columns);
+            }
             value.setOp(operation);
             value.setTs_ms(instant.toEpochMilli());
             value.setTs_us(micros(instant));
