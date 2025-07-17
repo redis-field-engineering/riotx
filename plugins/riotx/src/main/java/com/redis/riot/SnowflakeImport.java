@@ -82,6 +82,9 @@ public class SnowflakeImport extends AbstractRedisImport {
     @Option(names = "--offset-key", defaultValue = "${RIOT_OFFSET_KEY:-metadata:debezium:offsets}", description = "Key name for Debezium offset (default: ${DEFAULT-VALUE}).", paramLabel = "<str>")
     private String offsetKey = DEFAULT_OFFSET_KEY;
 
+    @Option(names = "--offset-clear", description = "Clear existing offset if any.")
+    private boolean clearOffset;
+
     @Option(names = "--snapshot", defaultValue = "${RIOT_SNAPSHOT:-INITIAL}", description = "Snapshot mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private SnowflakeStreamItemReader.SnapshotMode snapshotMode = DEFAULT_SNAPSHOT_MODE;
 
@@ -268,7 +271,11 @@ public class SnowflakeImport extends AbstractRedisImport {
         reader.setWarehouse(warehouse);
         reader.setSnapshotMode(snapshotMode);
         reader.setTable(table.fullName());
-        reader.setOffsetStore(offsetStore(table));
+        OffsetStore offsetStore = offsetStore(table);
+        if (clearOffset) {
+            offsetStore.clear();
+        }
+        reader.setOffsetStore(offsetStore);
         return reader;
     }
 
@@ -281,9 +288,9 @@ public class SnowflakeImport extends AbstractRedisImport {
     private OffsetStore offsetStore(DatabaseObject table) {
         if (hasOperations()) {
             String key = offsetPrefix + table.fullName();
-            return new RedisStringOffsetStore(targetRedisContext.client(), key);
+            return new RedisStringOffsetStore(targetRedisContext.getConnection(), key);
         }
-        RdiOffsetStore store = new RdiOffsetStore(targetRedisContext.client(), table.fullName());
+        RdiOffsetStore store = new RdiOffsetStore(targetRedisContext.getConnection(), table.fullName());
         store.setKey(offsetKey);
         return store;
     }

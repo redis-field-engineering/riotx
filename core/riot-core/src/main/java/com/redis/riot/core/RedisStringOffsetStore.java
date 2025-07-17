@@ -15,8 +15,8 @@ public class RedisStringOffsetStore implements OffsetStore {
 
     private final StatefulRedisModulesConnection<String, String> connection;
 
-    public RedisStringOffsetStore(AbstractRedisClient client, String key) {
-        this.connection = ConnectionBuilder.client(client).connection();
+    public RedisStringOffsetStore(StatefulRedisModulesConnection<String, String> connection, String key) {
+        this.connection = connection;
         this.key = key;
     }
 
@@ -32,6 +32,11 @@ public class RedisStringOffsetStore implements OffsetStore {
     @Override
     public void store(Map<String, Object> offset) throws Exception {
         connection.sync().set(key, mapper.writeValueAsString(offset));
+    }
+
+    @Override
+    public void clear() {
+        connection.sync().del(key);
     }
 
 }

@@ -19,7 +19,7 @@ public class RdiOffsetStore implements OffsetStore {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    private final AbstractRedisClient client;
+    private final StatefulRedisModulesConnection<String, String> connection;
 
     private final String table;
 
@@ -27,20 +27,19 @@ public class RdiOffsetStore implements OffsetStore {
 
     private String server = DEFAULT_SERVER;
 
-    public RdiOffsetStore(AbstractRedisClient client, String table) {
-        this.client = client;
+    public RdiOffsetStore(StatefulRedisModulesConnection<String, String> connection, String table) {
+        this.connection = connection;
         this.table = table;
-    }
-
-    private StatefulRedisModulesConnection<String, String> connection() {
-        return ConnectionBuilder.client(client).connection();
     }
 
     @Override
     public void store(Map<String, Object> offset) throws JsonProcessingException {
-        try (StatefulRedisModulesConnection<String, String> connection = connection()) {
-            connection.sync().hset(key, field(), mapper.writeValueAsString(offset));
-        }
+        connection.sync().hset(key, field(), mapper.writeValueAsString(offset));
+    }
+
+    @Override
+    public void clear() {
+        connection.sync().del(key);
     }
 
     private String field() throws JsonProcessingException {
@@ -53,13 +52,11 @@ public class RdiOffsetStore implements OffsetStore {
     @SuppressWarnings("unchecked")
     @Override
     public Map<String, Object> getOffset() throws JsonProcessingException {
-        try (StatefulRedisModulesConnection<String, String> connection = connection()) {
-            String value = connection.sync().hget(key, field());
-            if (StringUtils.hasLength(value)) {
-                return mapper.readValue(value, Map.class);
-            }
-            return null;
+        String value = connection.sync().hget(key, field());
+        if (StringUtils.hasLength(value)) {
+            return mapper.readValue(value, Map.class);
         }
+        return null;
     }
 
     public String getKey() {

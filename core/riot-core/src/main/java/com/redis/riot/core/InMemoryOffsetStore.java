@@ -16,4 +16,9 @@ public class InMemoryOffsetStore implements OffsetStore {
         return offset;
     }
 
+    @Override
+    public void clear() {
+        offset = null;
+    }
+
 }
