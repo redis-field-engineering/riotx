@@ -2,12 +2,12 @@ package com.redis.riot.replicate;
 
 import com.redis.batch.KeyEvent;
 import com.redis.batch.KeyTtlTypeEvent;
+import com.redis.batch.RedisBatchOperation;
+import com.redis.batch.RedisInfo;
 import com.redis.batch.operation.*;
 import com.redis.riot.AbstractCompareCommand;
-import com.redis.riot.MetricsArgs;
 import com.redis.riot.RedisWriterArgs;
 import com.redis.riot.core.CompareMode;
-import com.redis.riot.core.RedisContext;
 import com.redis.riot.core.ReplicationMode;
 import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.job.FlowFactoryBean;
@@ -15,8 +15,6 @@ import com.redis.riot.core.job.RiotStep;
 import com.redis.riot.core.job.StepFlowFactoryBean;
 import com.redis.spring.batch.item.redis.RedisItemReader;
 import com.redis.spring.batch.item.redis.RedisItemWriter;
-import com.redis.batch.RedisInfo;
-import com.redis.batch.RedisBatchOperation;
 import com.redis.spring.batch.item.redis.reader.KeyComparison;
 import com.redis.spring.batch.item.redis.reader.RedisLiveItemReader;
 import com.redis.spring.batch.item.redis.reader.RedisScanItemReader;
@@ -60,9 +58,6 @@ public class Replicate extends AbstractCompareCommand {
 
     @Option(names = "--compare", defaultValue = "${RIOT_COMPARE:-QUICK}", description = "Compare mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).", paramLabel = "<mode>")
     private CompareMode compareMode = DEFAULT_COMPARE_MODE;
-
-    @ArgGroup(exclusive = false, heading = "Metrics options%n")
-    private MetricsArgs metricsArgs = new MetricsArgs();
 
     @Option(names = "--remove-source-keys", defaultValue = "${RIOT_REMOVE_SOURCE_KEYS}", description = "Delete keys from source after they have been successfully replicated.")
     private boolean removeSourceKeys;
@@ -191,12 +186,6 @@ public class Replicate extends AbstractCompareCommand {
         this.struct = struct;
     }
 
-    @Override
-    protected void initialize() throws Exception {
-        super.initialize();
-        metricsArgs.configureMetrics();
-    }
-
     private void unsupportedRedis(RedisInfo info) {
         throw new UnsupportedOperationException(message(info));
     }
@@ -206,20 +195,6 @@ public class Replicate extends AbstractCompareCommand {
             return info.getOS();
         }
         return info.getServerName();
-    }
-
-    @Override
-    protected RedisContext sourceRedisContext() {
-        RedisContext context = super.sourceRedisContext();
-        metricsArgs.configure(context);
-        return context;
-    }
-
-    @Override
-    protected RedisContext targetRedisContext() {
-        RedisContext context = super.targetRedisContext();
-        metricsArgs.configure(context);
-        return context;
     }
 
     public RedisWriterArgs getTargetRedisWriterArgs() {
@@ -252,14 +227,6 @@ public class Replicate extends AbstractCompareCommand {
 
     public void setMode(ReplicationMode mode) {
         this.mode = mode;
-    }
-
-    public MetricsArgs getMetricsArgs() {
-        return metricsArgs;
-    }
-
-    public void setMetricsArgs(MetricsArgs metricsArgs) {
-        this.metricsArgs = metricsArgs;
     }
 
     public boolean isRemoveSourceKeys() {
