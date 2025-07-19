@@ -4,6 +4,7 @@ import com.redis.riot.core.PrefixedNumber;
 import com.redis.riot.faker.FakerItemReader;
 import com.redis.riot.core.job.RiotStep;
 import org.springframework.batch.core.Job;
+import org.springframework.util.Assert;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;

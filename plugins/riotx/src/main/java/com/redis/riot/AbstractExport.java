@@ -31,6 +31,7 @@ public abstract class AbstractExport extends AbstractJobCommand {
         super.initialize();
         register(flushingStepArgs);
         sourceRedisContext = sourceRedisContext();
+        configure(sourceRedisContext);
         sourceRedisContext.afterPropertiesSet();
     }
 

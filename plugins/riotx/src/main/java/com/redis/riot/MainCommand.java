@@ -46,6 +46,7 @@ public class MainCommand extends BaseCommand implements Callable<Integer>, IO {
         setOut(commandLine.getOut());
         setErr(commandLine.getErr());
         commandLine.setCaseInsensitiveEnumValuesAllowed(true);
+        commandLine.setAllowSubcommandsAsOptionParameters(true);
         commandLine.setUnmatchedOptionsAllowedAsOptionParameters(false);
         if (!disableExceptionMessageHandling) {
             commandLine.setExecutionExceptionHandler(new PrintExceptionMessageHandler());

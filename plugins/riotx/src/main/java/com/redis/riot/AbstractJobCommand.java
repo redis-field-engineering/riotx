@@ -1,5 +1,6 @@
 package com.redis.riot;
 
+import com.redis.riot.core.RedisContext;
 import com.redis.riot.core.job.FlowFactoryBean;
 import com.redis.riot.core.job.JobExecutor;
 import com.redis.riot.core.job.RiotStep;
@@ -28,6 +29,9 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
     @ArgGroup(exclusive = false, heading = "Job options%n")
     private StepArgs stepArgs = new StepArgs();
 
+    @ArgGroup(exclusive = false, heading = "Metrics options%n")
+    private MetricsArgs metricsArgs = new MetricsArgs();
+
     private final JobExecutor jobExecutor = new JobExecutor();
 
     private final Set<StepConfigurer> stepConfigurers = new HashSet<>();
@@ -45,6 +49,11 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
         }
         jobExecutor.afterPropertiesSet();
         super.initialize();
+        metricsArgs.configureMetrics();
+    }
+
+    protected void configure(RedisContext context) {
+        metricsArgs.configure(context);
     }
 
     private void configureJobInfra(RiotStep<?, ?> step) {
@@ -149,6 +158,14 @@ public abstract class AbstractJobCommand extends AbstractCallableCommand {
 
     public JobExecutor getJobExecutor() {
         return jobExecutor;
+    }
+
+    public MetricsArgs getMetricsArgs() {
+        return metricsArgs;
+    }
+
+    public void setMetricsArgs(MetricsArgs metricsArgs) {
+        this.metricsArgs = metricsArgs;
     }
 
 }

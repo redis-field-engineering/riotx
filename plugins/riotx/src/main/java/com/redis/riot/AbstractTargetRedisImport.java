@@ -24,6 +24,7 @@ public abstract class AbstractTargetRedisImport extends AbstractImport {
     protected void initialize() throws Exception {
         super.initialize();
         sourceRedisContext = sourceRedisContext();
+        configure(sourceRedisContext);
         sourceRedisContext.afterPropertiesSet();
     }
 

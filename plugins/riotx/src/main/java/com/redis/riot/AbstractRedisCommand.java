@@ -18,6 +18,7 @@ public abstract class AbstractRedisCommand extends AbstractJobCommand {
     protected void initialize() throws Exception {
         super.initialize();
         redisContext = redisArgs.redisContext();
+        configure(redisContext);
         redisContext.afterPropertiesSet();
     }
 

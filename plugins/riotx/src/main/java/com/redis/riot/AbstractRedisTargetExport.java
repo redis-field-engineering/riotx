@@ -30,6 +30,7 @@ public abstract class AbstractRedisTargetExport extends AbstractExport {
     protected void initialize() throws Exception {
         super.initialize();
         targetRedisContext = targetRedisContext();
+        configure(targetRedisContext);
         targetRedisContext.afterPropertiesSet();
     }
 
