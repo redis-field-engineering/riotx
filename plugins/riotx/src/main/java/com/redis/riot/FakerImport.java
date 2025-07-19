@@ -1,10 +1,11 @@
 package com.redis.riot;
 
 import com.redis.riot.core.PrefixedNumber;
-import com.redis.riot.faker.FakerItemReader;
+import com.redis.riot.core.RiotUtils;
 import com.redis.riot.core.job.RiotStep;
+import com.redis.riot.faker.FakerItemReader;
 import org.springframework.batch.core.Job;
-import org.springframework.util.Assert;
+import org.springframework.batch.item.ItemProcessor;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -22,7 +23,7 @@ public class FakerImport extends AbstractRedisImport {
 
     private static final String STEP_NAME = "faker-import-step";
 
-    @Parameters(arity = "1..*", description = "Faker expressions in the form field1=\"exp\" field2=\"exp\" etc. For details see http://www.datafaker.net/documentation/expressions", paramLabel = "EXPRESSION")
+    @Parameters(arity = "0..*", description = "Faker expressions in the form field1=\"exp\" field2=\"exp\" etc. For details see http://www.datafaker.net/documentation/expressions", paramLabel = "EXPRESSION")
     private Map<String, String> fields = new LinkedHashMap<>();
 
     @Option(names = "--count", description = "Number of items to generate, e.g. 100 10k 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<int>")
@@ -34,8 +35,18 @@ public class FakerImport extends AbstractRedisImport {
     @Override
     protected Job job() throws Exception {
         RiotStep<Map<String, Object>, Map<String, Object>> step = step(STEP_NAME, reader(), operationWriter());
-        step.setItemProcessor(operationProcessor());
+        step.setItemProcessor(RiotUtils.processor(operationProcessor(), new InternalFieldRemover()));
         return job(step);
+    }
+
+    private static class InternalFieldRemover implements ItemProcessor<Map<String, Object>, Map<String, Object>> {
+
+        @Override
+        public Map<String, Object> process(Map<String, Object> item) throws Exception {
+            item.remove(FakerItemReader.INDEX);
+            return item;
+        }
+
     }
 
     private FakerItemReader reader() {

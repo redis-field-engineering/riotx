@@ -16,57 +16,61 @@ import java.util.stream.Collectors;
  */
 public class FakerItemReader extends AbstractCountingItemReader<Map<String, Object>> {
 
-	public static final Locale DEFAULT_LOCALE = Locale.getDefault();
+    public static final Locale DEFAULT_LOCALE = Locale.getDefault();
 
-	private Map<String, String> expressions = new LinkedHashMap<>();
-	private Locale locale = DEFAULT_LOCALE;
+    public static final String INDEX = "_index";
 
-	private final Object lock = new Object();
+    private Map<String, String> expressions = new LinkedHashMap<>();
 
-	private Faker faker;
-	private Map<String, String> fields;
+    private Locale locale = DEFAULT_LOCALE;
 
-	public void setLocale(Locale locale) {
-		this.locale = locale;
-	}
+    private final Object lock = new Object();
 
-	public void setExpressions(Map<String, String> fields) {
-		this.expressions = fields;
-	}
+    private Faker faker;
 
-	@Override
-	protected synchronized void doOpen() {
-		Assert.notEmpty(expressions, "No field specified");
-		if (fields == null) {
-			fields = expressions.entrySet().stream().map(this::normalizeField)
-					.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
-		}
-		faker = new Faker(locale);
-	}
+    private Map<String, String> fields;
 
-	private Entry<String, String> normalizeField(Entry<String, String> field) {
-		if (field.getValue().startsWith("#{")) {
-			return field;
-		}
-		return new AbstractMap.SimpleEntry<>(field.getKey(), "#{" + field.getValue() + "}");
-	}
+    public void setLocale(Locale locale) {
+        this.locale = locale;
+    }
 
-	@Override
-	protected Map<String, Object> doRead() {
-		Map<String, Object> map = new HashMap<>();
-		for (Entry<String, String> field : fields.entrySet()) {
-			String value;
-			synchronized (lock) {
-				value = faker.expression(field.getValue());
-			}
-			map.put(field.getKey(), value);
-		}
-		return map;
-	}
+    public void setExpressions(Map<String, String> fields) {
+        this.expressions = fields;
+    }
 
-	@Override
-	protected synchronized void doClose() {
-		faker = null;
-	}
+    @Override
+    protected synchronized void doOpen() {
+        if (fields == null) {
+            fields = expressions.entrySet().stream().map(this::normalizeField)
+                    .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+        }
+        faker = new Faker(locale);
+    }
+
+    private Entry<String, String> normalizeField(Entry<String, String> field) {
+        if (field.getValue().startsWith("#{")) {
+            return field;
+        }
+        return new AbstractMap.SimpleEntry<>(field.getKey(), "#{" + field.getValue() + "}");
+    }
+
+    @Override
+    protected Map<String, Object> doRead() {
+        Map<String, Object> map = new HashMap<>();
+        map.put(INDEX, getCurrentItemCount());
+        for (Entry<String, String> field : fields.entrySet()) {
+            String value;
+            synchronized (lock) {
+                value = faker.expression(field.getValue());
+            }
+            map.put(field.getKey(), value);
+        }
+        return map;
+    }
+
+    @Override
+    protected synchronized void doClose() {
+        faker = null;
+    }
 
 }

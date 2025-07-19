@@ -146,6 +146,7 @@ public class LoggingMixin {
         setLogLevel("org.springframework.batch.core.step.item.ChunkMonitor", Level.ERROR);
         setLogLevel("net.snowflake", Level.WARN);
         setLogLevel("net.snowflake.client.core.FileUtil", "OFF");
+        setLogLevel("io.netty.resolver.dns", Level.ERROR);
         mixin.levels.forEach(this::setLogLevel);
     }
 
