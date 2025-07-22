@@ -225,11 +225,11 @@ Resources:
               Value: !Ref TargetTlsVerify
             - Name: RIOT_SOURCE_USER
               Value: !Ref SourceUser
-            - Name: RIOT_SOURCE_PASSWORD
+            - Name: RIOT_SOURCE_PASS
               Value: !Ref SourcePassword
             - Name: RIOT_TARGET_USER
               Value: !Ref TargetUser
-            - Name: RIOT_TARGET_PASSWORD
+            - Name: RIOT_TARGET_PASS
               Value: !Ref TargetPassword
             - Name: RIOT_BATCH
               Value: !Ref BatchSize

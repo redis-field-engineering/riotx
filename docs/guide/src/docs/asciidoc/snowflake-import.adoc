@@ -192,7 +192,7 @@ Run this command to start RIOT-X:
 
 [source,console]
 -----
-riotx snowflake-import -h <target_host> -p <target_port> tb_101.raw_pos.incremental_order_header --role riotx_cdc --warehouse compute_wh --cdc-schema raw_pos_cdc --jdbc-url "jdbc:snowflake://<account>.snowflakecomputing.com" --jdbc-user $JDBC_USERNAME --jdbc-pass $JDBC_PASSWORD
+riotx snowflake-import -h <target_host> -p <target_port> tb_101.raw_pos.incremental_order_header --role riotx_cdc --warehouse compute_wh --cdc-schema raw_pos_cdc --jdbc-url "jdbc:snowflake://<account>.snowflakecomputing.com" --jdbc-user $JDBC_USER --jdbc-pass $JDBC_PASS
 -----
 
 RIOT-X will perform initial load of the `incremental_order_header` table which should translate to 1000 hashes in the target Redis database.
