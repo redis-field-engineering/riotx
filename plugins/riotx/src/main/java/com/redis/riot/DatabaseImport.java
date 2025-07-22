@@ -24,7 +24,7 @@ public class DatabaseImport extends AbstractRedisImport {
     @ArgGroup(exclusive = false)
     private DataSourceArgs dataSourceArgs = new DataSourceArgs();
 
-    @Parameters(arity = "1", description = "SQL SELECT statement", paramLabel = "SQL")
+    @Parameters(arity = "1", defaultValue = "${RIOT_SQL}", description = "SQL SELECT statement", paramLabel = "SQL")
     protected String sql;
 
     @ArgGroup(exclusive = false)

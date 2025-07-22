@@ -15,7 +15,7 @@ public class SourceRedisArgs implements RedisArgs {
     @Option(names = "--source-user", defaultValue = "${RIOT_SOURCE_USER}", description = "Source ACL style 'AUTH username pass'. Needs password.", paramLabel = "<name>")
     private String username;
 
-    @Option(names = "--source-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_SOURCE_PASSWORD}", description = "Password to use when connecting to the source server.", paramLabel = "<pwd>")
+    @Option(names = "--source-pass", arity = "0..1", interactive = true, defaultValue = "${RIOT_SOURCE_PASS}", description = "Password to use when connecting to the source server.", paramLabel = "<pwd>")
     private char[] password;
 
     @Option(names = "--source-timeout", defaultValue = "${RIOT_SOURCE_TIMEOUT:-60s}", description = "Source Redis command timeout, e.g. 30s or 5m (default: ${DEFAULT-VALUE}).", paramLabel = "<dur>")
