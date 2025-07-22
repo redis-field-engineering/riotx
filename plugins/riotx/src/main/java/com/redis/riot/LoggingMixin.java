@@ -15,12 +15,6 @@ import picocli.CommandLine.Spec;
 
 public class LoggingMixin {
 
-    public static final boolean DEFAULT_SHOW_DATE_TIME = true;
-
-    public static final boolean DEFAULT_SHOW_THREAD_NAME = true;
-
-    public static final boolean DEFAULT_SHOW_LOG_NAME = true;
-
     public static final Level DEFAULT_LEVEL = Level.WARN;
 
     /**
@@ -31,15 +25,15 @@ public class LoggingMixin {
 
     private String file;
 
-    private boolean showDateTime = DEFAULT_SHOW_DATE_TIME;
+    private boolean hideDateTime;
 
     private String dateTimeFormat;
 
     private boolean showThreadId;
 
-    private boolean showThreadName = DEFAULT_SHOW_THREAD_NAME;
+    private boolean showThreadName;
 
-    private boolean showLogName = DEFAULT_SHOW_LOG_NAME;
+    private boolean showLogName;
 
     private boolean showShortLogName;
 
@@ -58,9 +52,9 @@ public class LoggingMixin {
         mixin().file = file;
     }
 
-    @Option(names = "--log-time", description = "Include current date and time in log messages. True by default.", negatable = true, defaultValue = "true", fallbackValue = "true")
-    public void setShowDateTime(boolean show) {
-        mixin().showDateTime = show;
+    @Option(names = "--no-log-time", description = "Do not show current date and time in log messages.")
+    public void setHideDateTime(boolean hide) {
+        mixin().hideDateTime = hide;
     }
 
     @Option(names = "--log-time-fmt", defaultValue = "yyyy-MM-dd HH:mm:ss.SSS", description = "Date and time format to be used in log messages (default: ${DEFAULT-VALUE}). Use with --log-time.", paramLabel = "<f>")
@@ -68,17 +62,17 @@ public class LoggingMixin {
         mixin().dateTimeFormat = format;
     }
 
-    @Option(names = "--log-thread-id", description = "Include current thread ID in log messages.", hidden = true)
+    @Option(names = "--log-thread-id", description = "Show current thread ID in log messages.", hidden = true)
     public void setShowThreadId(boolean show) {
         mixin().showThreadId = show;
     }
 
-    @Option(names = "--log-thread", description = "Show current thread name in log messages. True by default.", negatable = true, defaultValue = "true", fallbackValue = "true", hidden = true)
+    @Option(names = "--log-thread", description = "Show current thread name in log messages.", hidden = true)
     public void setShowThreadName(boolean show) {
         mixin().showThreadName = show;
     }
 
-    @Option(names = "--log-name", description = "Show logger instance name in log messages. True by default.", negatable = true, defaultValue = "true", fallbackValue = "true", hidden = true)
+    @Option(names = "--log-name", description = "Show logger instance name in log messages.", hidden = true)
     public void setShowLogName(boolean show) {
         mixin().showLogName = show;
     }
@@ -135,7 +129,7 @@ public class LoggingMixin {
         if (mixin.file != null) {
             System.setProperty(SimpleLogger.LOG_FILE_KEY, mixin.file);
         }
-        setBoolean(SimpleLogger.SHOW_DATE_TIME_KEY, mixin.showDateTime);
+        setBoolean(SimpleLogger.SHOW_DATE_TIME_KEY, !mixin.hideDateTime);
         if (mixin.dateTimeFormat != null) {
             System.setProperty(SimpleLogger.DATE_TIME_FORMAT_KEY, mixin.dateTimeFormat);
         }
@@ -144,12 +138,15 @@ public class LoggingMixin {
         setBoolean(SimpleLogger.SHOW_LOG_NAME_KEY, mixin.showLogName);
         setBoolean(SimpleLogger.SHOW_SHORT_LOG_NAME_KEY, mixin.showShortLogName);
         setBoolean(SimpleLogger.LEVEL_IN_BRACKETS_KEY, mixin.levelInBrackets);
+        setLogLevel("com.redis.riot.CommandLatencyEventPrinter", Level.INFO);
+        setLogLevel("com.redis.riot.ProgressStepExecutionListener", Level.INFO);
         setLogLevel("com.amazonaws.internal", Level.ERROR);
         setLogLevel("com.redis.spring.batch.step.FlushingFaultTolerantStepBuilder", Level.ERROR);
         setLogLevel("org.springframework.batch.core.step.builder.FaultTolerantStepBuilder", Level.ERROR);
         setLogLevel("org.springframework.batch.core.step.item.ChunkMonitor", Level.ERROR);
         setLogLevel("net.snowflake", Level.WARN);
         setLogLevel("net.snowflake.client.core.FileUtil", "OFF");
+        setLogLevel("io.netty.resolver.dns", Level.ERROR);
         mixin.levels.forEach(this::setLogLevel);
     }
 

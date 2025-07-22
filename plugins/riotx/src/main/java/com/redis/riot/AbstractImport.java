@@ -15,6 +15,7 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.function.FunctionItemProcessor;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -27,7 +28,8 @@ import java.util.stream.Collectors;
 
 @Command(subcommands = { ExpireCommand.class, DelCommand.class, GeoaddCommand.class, HsetCommand.class,
         LogOperationCommand.class, LpushCommand.class, RpushCommand.class, SaddCommand.class, SetCommand.class,
-        XaddCommand.class, ZaddCommand.class, SugaddCommand.class, JsonSetCommand.class,
+        XaddCommand.class, ZaddCommand.class, SugaddCommand.class, JsonSetCommand.class, SearchCommand.class,
+        AggregateCommand.class,
         TsAddCommand.class }, subcommandsRepeatable = true, synopsisSubcommandLabel = "[REDIS COMMAND...]", commandListHeading = "Redis commands:%n")
 public abstract class AbstractImport extends AbstractJobCommand {
 
@@ -60,6 +62,7 @@ public abstract class AbstractImport extends AbstractJobCommand {
     protected void initialize() throws Exception {
         super.initialize();
         targetRedisContext = targetRedisContext();
+        configure(targetRedisContext);
         targetRedisContext.afterPropertiesSet();
     }
 
@@ -73,6 +76,7 @@ public abstract class AbstractImport extends AbstractJobCommand {
 
     private List<RedisBatchOperation<byte[], byte[], Map<String, Object>, Object>> operations(
             StandardEvaluationContext evaluationContext) {
+        Assert.isTrue(hasOperations(), "No Redis command specified");
         return importOperationCommands.stream().map(c -> c.operation(evaluationContext)).collect(Collectors.toList());
     }
 

@@ -147,3 +147,65 @@ For example this filter will only keep records where the `value` field is a seri
 {app} file-import --filter "value matches '\\d+'" ...
 ----
 
+== Redis Search Operations
+
+{project-title} supports RediSearch commands for full-text search and aggregation operations as part of import workflows.
+
+=== Search Command
+
+Execute `FT.SEARCH` queries against RediSearch indexes during data import.
+
+.Syntax
+[source,console,subs="verbatim,attributes"]
+----
+{app} <cmd> ... search INDEX QUERY [OPTIONS...]
+----
+
+**Parameters:**
+
+* `INDEX` - Template expression for the search index name
+* `QUERY` - Template expression for the search query  
+* `OPTIONS` - Optional search parameters (e.g., `limit 0 10`, `withpayloads`, `sortby field`)
+
+.Basic search example
+[source,console,subs="verbatim,attributes"]
+----
+{app} faker id="numerify '####'" search myindex "*"
+----
+
+.Search with limit
+[source,console,subs="verbatim,attributes"]
+----
+{app} faker id="numerify '####'" search myindex "@title:redis" limit 0 10
+----
+
+.Search with sorting and field selection
+[source,console,subs="verbatim,attributes"]
+----
+{app} faker id="numerify '####'" search products "@category:electronics" return 3 name price rating sortby price desc
+----
+
+=== Aggregate Command
+
+Execute `FT.AGGREGATE` aggregations for complex data analysis and reporting during import operations.
+
+.Syntax
+[source,console,subs="verbatim,attributes"]
+----
+{app} <cmd> ... aggregate INDEX QUERY [OPTIONS...]
+----
+
+**Parameters:**
+
+* `INDEX` - Template expression for the search index name
+* `QUERY` - Template expression for the query to aggregate over
+* `OPTIONS` - Aggregation pipeline expressions (groupby, reduce, sortby, etc.)
+
+.Group by field and calculate average
+[source,console,subs="verbatim,attributes"]
+----
+{app} faker id="numerify '##########'" --count 1m --metrics-redis log --progress none aggregate beers "*" "groupby" "1" "@style_name" reduce avg 1 "@abv" as abv sortby 2 "@abv" desc
+----
+
+NOTE: Both search and aggregate commands are available as Redis operations in any import command context. Template expressions support SpEL for dynamic field/query generation and integrate with {project-title}'s batching and backpressure mechanisms. Results can be processed through standard {project-title} processing pipelines.
+
