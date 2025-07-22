@@ -238,6 +238,7 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
         SnowflakeStreamItemReader reader = reader();
         reader.setSnapshotMode(SnowflakeStreamItemReader.SnapshotMode.NEVER);
         reader.open(new ExecutionContext());
+        long pollSeconds = reader.getPollTimeout().toSeconds() * 5;
         // Perform INSERT operation - match the 16 columns of incremental_order_header table
         dbConnection.createStatement().execute("INSERT INTO tb_101.raw_pos.incremental_order_header "
                 + "(order_id, truck_id, location_id, customer_id, discount_id, shift_id, "
@@ -246,7 +247,7 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
                 + "VALUES (9999999, 999, 1.0, 12345, 'DISCOUNT_01', 99999, "
                 + "'09:00:00', '17:00:00', 'APP', CURRENT_TIMESTAMP(), '2023-01-01 12:00:00', "
                 + "'USD', 25.50, '2.50', '0.00', 28.00)");
-        SnowflakeStreamRow createRow = reader.poll(10, TimeUnit.SECONDS);
+        SnowflakeStreamRow createRow = reader.poll(pollSeconds, TimeUnit.SECONDS);
         Assertions.assertEquals(SnowflakeStreamRow.Action.INSERT, createRow.getAction());
         Assertions.assertFalse(createRow.isUpdate());
 
@@ -254,12 +255,12 @@ class SnowflakeTests extends AbstractRiotApplicationTestBase {
         dbConnection.createStatement().execute(
                 "UPDATE tb_101.raw_pos.incremental_order_header SET location_id = 2.0, truck_id = 888 "
                         + "WHERE order_id = 4063758");
-        SnowflakeStreamRow updateRow = reader.poll(10, TimeUnit.SECONDS);
+        SnowflakeStreamRow updateRow = reader.poll(pollSeconds, TimeUnit.SECONDS);
         Assertions.assertEquals(SnowflakeStreamRow.Action.INSERT, updateRow.getAction());
         Assertions.assertTrue(updateRow.isUpdate());
         // Perform DELETE operation
         dbConnection.createStatement().execute("DELETE FROM tb_101.raw_pos.incremental_order_header WHERE order_id = 4063759");
-        SnowflakeStreamRow deleteRow = reader.poll(10, TimeUnit.SECONDS);
+        SnowflakeStreamRow deleteRow = reader.poll(pollSeconds, TimeUnit.SECONDS);
         Assertions.assertEquals(SnowflakeStreamRow.Action.DELETE, deleteRow.getAction());
 
     }
