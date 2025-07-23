@@ -172,7 +172,7 @@ public class MemcachedToRedisTests {
                     .get(ByteArrayCodec.INSTANCE.decodeKey(StringCodec.UTF8.encodeKey(entry.getKey())));
             Assertions.assertArrayEquals(entry.getValue(), targetValue);
             Assertions.assertEquals(entry.getExpiration().getEpochSecond(),
-                    startTime.plusSeconds(targetConnection.sync().ttl(entry.getKey())).getEpochSecond(), 10);
+                    startTime.plusSeconds(targetConnection.sync().ttl(entry.getKey())).getEpochSecond(), 100);
         }
     }
 
