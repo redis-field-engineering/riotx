@@ -55,6 +55,8 @@ In this example the Redis options will not be taken into account:
 ----
 ====
 
+TIP: The `_index` field is a monotonous sequence and is available in processors. You can for example do this: `{app} faker text="lorem.words 2" --proc id="_index" hset test:#{id}"
+
 [[_datagen_faker_keys]]
 === Keys
 
