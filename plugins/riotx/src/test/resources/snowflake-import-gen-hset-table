@@ -1,1 +1,0 @@
-riotx snowflake-import db1.schema1.table1 db2.schema2.table2 --gen id name desc --count 123 hset #{#table.name}:#{id}

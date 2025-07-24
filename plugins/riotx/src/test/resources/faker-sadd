@@ -1,1 +1,0 @@
-riotx faker name="GameOfThrones.character" --count 1000 sadd got:characters --member "#{name}"

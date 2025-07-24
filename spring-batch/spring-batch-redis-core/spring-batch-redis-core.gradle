@@ -1,5 +1,0 @@
-dependencies {
-    api project(':spring-batch-redis-common')
-    api 'org.springframework.batch:spring-batch-core'
-    api project(':spring-batch-redis-infrastructure')
-}

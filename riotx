@@ -1,4 +1,0 @@
-#!/usr/bin/env sh
-
-./gradlew --quiet -Prelease=true --console plain :riot:installDist
-./plugins/riotx/build/install/riotx/bin/riotx "$@"

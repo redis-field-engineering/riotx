@@ -1,6 +1,0 @@
-dependencies {
-    implementation project(':spring-batch-redis-common')
-    implementation 'org.springframework.batch:spring-batch-infrastructure'
-    implementation 'org.springframework:spring-beans'
-    implementation 'org.springframework:spring-tx'
-}

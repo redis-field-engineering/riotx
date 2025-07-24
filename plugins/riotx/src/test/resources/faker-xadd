@@ -1,1 +1,0 @@
-riotx faker category="Number.random_digit" xadd teststream:#{category}

@@ -1,1 +1,0 @@
-riotx file-import http://storage.googleapis.com/jrx/sample.tsv --type tsv --header hset sample:#{id}

@@ -1,1 +1,0 @@
-riotx replicate --mode live redis://source redis://target

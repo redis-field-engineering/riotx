@@ -1,1 +1,0 @@
-riotx db-import "SELECT * FROM orders" --jdbc-url "jdbc:postgresql://host:port/database" --jdbc-user appuser --jdbc-pass passwd hset order:#{order_id}

@@ -1,1 +1,0 @@
-riotx file-import http://storage.googleapis.com/jrx/sample.dat --type csv --delimiter "|" --header hset sample:#{id}

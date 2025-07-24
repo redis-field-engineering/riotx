@@ -1,1 +1,0 @@
-riotx file-import http://storage.googleapis.com/jrx/airports.csv --header --skip 3 geoadd airportgeo --member "#{AirportID}" --lon Longitude --lat Latitude

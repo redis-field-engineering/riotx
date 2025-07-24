@@ -1,1 +1,0 @@
-riotx faker value="Random.next_double" future="BackToTheFuture.character" lebowski="Lebowski.character" --count 1000 --rate 1k ts.add ts:gen:#{future}:#{lebowski} --value value --label character1=#{future} character2=#{lebowski}

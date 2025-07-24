@@ -1,1 +1,0 @@
-riotx replicate redis://source redis://target --mode live --key-exclude "bad:*"

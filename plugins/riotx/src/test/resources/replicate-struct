@@ -1,1 +1,0 @@
-riotx replicate --struct redis://source redis://target

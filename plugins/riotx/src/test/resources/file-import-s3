@@ -1,1 +1,0 @@
-riotx file-import s3://riotx/beers.json --s3-region us-west-1 hset beer:#{id}

@@ -1,6 +1,0 @@
-description = "Starter for using Spring Batch Redis with the LettuceMod client"
-
-dependencies {
-    api project(':spring-batch-redis-core')
-    api 'org.springframework.boot:spring-boot-starter-batch'
-}

@@ -1,1 +1,0 @@
-riotx file-import s3://riotx/userdata1.parquet --s3-region us-west-1 hset user:#{id}

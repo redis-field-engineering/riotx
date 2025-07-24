@@ -1,1 +1,0 @@
-riotx file-import http://storage.googleapis.com/jrx/beers.csv --header hset beer:#{id} expire beer:#{id} --ttl 1h

@@ -1,7 +1,0 @@
-DROP TABLE IF EXISTS orders;
-
-CREATE TABLE orders (
-    order_id SERIAL PRIMARY KEY,
-    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
