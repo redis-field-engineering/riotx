@@ -10,7 +10,7 @@ import picocli.CommandLine.Command;
         FakerImport.class, FileExport.class, FileImport.class, Generate.class, Ping.class, Replicate.class, Compare.class,
         GenerateCompletion.class, RedisImport.class, StreamImport.class, StreamExport.class, MemcachedReplicate.class,
         SnowflakeImport.class,
-        Stats.class }, description = "RIOT-X: Get data in and out of Redis.", footerHeading = "%nRun 'riotx COMMAND --help' for more information on a command.%n%nFor more help on how to use RIOT-X, head to https://redis-field-engineering.github.io/riotx%n")
+        Stats.class }, description = "RIOT-X: Get data in and out of Redis.", footerHeading = "%nRun 'riotx COMMAND --help' for more information on a command.%n%nFor more help on how to use RIOT-X, head to https://redis.github.io/riotx%n")
 public class Riotx extends MainCommand {
 
     @Override

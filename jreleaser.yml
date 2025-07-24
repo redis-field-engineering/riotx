@@ -9,8 +9,8 @@ project:
   longDescription: |
     RIOT-X is a RIOT extension for the enterprise.
   links:
-    homepage: https://github.com/redis-field-engineering/riotx-dist
-    documentation: https://redis-field-engineering.github.io/riotx/
+    homepage: https://github.com/redis/riotx-dist
+    documentation: https://redis.github.io/riotx/
   authors:
     - Julien Ruaux
   license: Apache-2.0
@@ -109,7 +109,7 @@ announce:
   slack:
     active: RELEASE
     channel: '#field-engineering-announcements'
-    message: '🧯️ RIOT-X {{projectVersion}} has been released! https://github.com/redis-field-engineering/riotx-dist/releases/tag/v{{projectEffectiveVersion}}'
+    message: '🧯️ RIOT-X {{projectVersion}} has been released! https://github.com/redis/riotx-dist/releases/tag/v{{projectEffectiveVersion}}'
 
 assemble:
   jlink:

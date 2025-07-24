@@ -18,5 +18,5 @@ Data Generators::
 
 <<_replication,Replication>>:: Redis -> Redis
 
-{project-title} is supported by Redis, Inc. To report bugs, request features, or receive assistance, please https://github.com/redis-field-engineering/riotx-dist/issues[file an issue] or contact your Redis account team.
+{project-title} is supported by Redis, Inc. To report bugs, request features, or receive assistance, please https://github.com/redis/riotx-dist/issues[file an issue] or contact your Redis account team.
 

@@ -24,7 +24,7 @@ asciidoctor {
             'testdir'              : '../../../../../plugins/riotx/src/test/resources',
             'app'                  : 'riotx',
             'toclevels'            : 3,
-            'site-url'             : 'https://redis-field-engineering.github.io/riotx'
+            'site-url'             : 'https://redis.github.io/riotx'
 
     ]
     dependsOn ':aggregateCopyDocFiles'

@@ -26,7 +26,7 @@ scoop install riotx
 [[_install_manual]]
 [discrete]
 == Manual Installation (All Platforms)
-Download the pre-compiled binary from link:https://github.com/redis-field-engineering/riotx-dist/releases[RIOT-X Releases], uncompress and copy to the desired location.
+Download the pre-compiled binary from link:https://github.com/redis/riotx-dist/releases[RIOT-X Releases], uncompress and copy to the desired location.
 
 [NOTE]
 ====

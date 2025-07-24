@@ -148,7 +148,7 @@ asciidoctor {
 }
 
 gitPublish {
-    repoUri = 'https://github.com/redis-field-engineering/riotx'
+    repoUri = 'https://github.com/redis/riotx'
     branch = 'gh-pages'
 
     contents {

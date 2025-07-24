@@ -9,7 +9,7 @@ The `riotx-dist` repository includes a Docker compose configuration that set ups
 
 [source,console]
 -----
-git clone https://github.com/redis-field-engineering/riotx-dist.git
+git clone https://github.com/redis/riotx-dist.git
 cd riotx-dist
 docker compose up
 -----

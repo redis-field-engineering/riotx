@@ -1,5 +1,5 @@
 :linkattrs:
-:project-owner:   redis-field-engineering
+:project-owner:   redis
 :project-name:    riotx
 :project-group:   com.redis
 :project-version: 0.9.3
@@ -13,12 +13,12 @@ image::docs/guide/src/docs/resources/images/riotx.svg[RIOT-X]
 
 == Releases
 
-* https://github.com/redis-field-engineering/riotx-dist/releases/[Releases]
-* https://github.com/redis-field-engineering/riotx-dist/releases/latest[Latest Release]
+* https://github.com/redis/riotx-dist/releases/[Releases]
+* https://github.com/redis/riotx-dist/releases/latest[Latest Release]
 
 == Documentation
 
-link:https://redis-field-engineering.github.io/riotx/[redis-field-engineering.github.io/riotx]
+link:https://redis.github.io/riotx/[redis.github.io/riotx]
 
 Documentation for RIOT is available here: https://redis.github.io/riot
 

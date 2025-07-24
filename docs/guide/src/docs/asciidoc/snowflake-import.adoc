@@ -165,9 +165,6 @@ targets:
       type: redis
       host: # Target database hostname
       port: # Target database port
-processors:
-
-
 -----
 
 .Job Config
